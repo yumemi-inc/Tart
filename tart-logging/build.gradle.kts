@@ -29,7 +29,6 @@ kotlin {
                 // put your multiplatform dependencies here
                 implementation(project(":tart-core"))
                 implementation(libs.logger.kermit)
-                implementation(libs.coroutines.core)
             }
         }
         val commonTest by getting {
