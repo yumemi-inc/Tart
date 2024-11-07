@@ -51,7 +51,6 @@ class ComposeStore<S : State, A : Action, E : Event> private constructor(
             )
         }
 
-        @Composable
         fun <S : State, A : Action, E : Event> mock(state: S, dispatch: (action: A) -> Unit = {}, eventFlow: Flow<E> = emptyFlow()): ComposeStore<S, A, E> {
             return ComposeStore(
                 state = state,
