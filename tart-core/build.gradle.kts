@@ -27,7 +27,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // put your multiplatform dependencies here
-                implementation(libs.coroutines.core)
+                api(libs.coroutines.core)
             }
         }
         val commonTest by getting {
