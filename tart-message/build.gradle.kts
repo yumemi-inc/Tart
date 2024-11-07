@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.vanniktech.mavenPublish)
 }
 
-group = "io.yumemi.something"
-version = "0.0.1"
+group = "io.yumemi.tart"
+version = "1.0.0-beta01"
 
 kotlin {
     androidTarget {
@@ -27,6 +27,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // put your multiplatform dependencies here
+                implementation(project(":tart-core"))
+                implementation(libs.coroutines.core)
             }
         }
         val commonTest by getting {
@@ -38,7 +40,7 @@ kotlin {
 }
 
 android {
-    namespace = "io.yumemi.something.library"
+    namespace = "io.yumemi.tart.message"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -52,13 +54,13 @@ mavenPublishing {
         signAllPublications()
     }
 
-    coordinates(group.toString(), "library", version.toString())
+    coordinates(group.toString(), "tart-message", version.toString())
 
     pom {
-        name = "My library"
-        description = "A library."
+        name = "Tart"
+        description = "A Kotlin Multiplatform Flux framework."
         inceptionYear = "2024"
-        url = "https://github.com/yumemi-inc/something/"
+        url = "https://github.com/yumemi-inc/Tart/"
         licenses {
             license {
                 name = "MIT"
@@ -74,9 +76,9 @@ mavenPublishing {
             }
         }
         scm {
-            url = "https://github.com/yumemi-inc/something/"
-            connection = "scm:git:git://github.com/yumemi-inc/something.git"
-            developerConnection = "scm:git:git://github.com/yumemi-inc/something.git"
+            url = "https://github.com/yumemi-inc/Tart/"
+            connection = "scm:git:git://github.com/yumemi-inc/Tart.git"
+            developerConnection = "scm:git:git://github.com/yumemi-inc/Tart.git"
         }
     }
 }

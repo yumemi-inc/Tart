@@ -13,5 +13,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "multiplatform-library-template"
-include(":library")
+rootProject.name = "Tart"
+include(":tart-core")
+include(":tart-compose")
+include(":tart-logging")
+include(":tart-message")
