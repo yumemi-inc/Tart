@@ -35,11 +35,11 @@ abstract class MessageSendMiddleware<S : State, A : Action, E : Event> : Middlew
 
     final override suspend fun afterEventEmit(state: S, event: E) {
         coroutineScope.launch(exceptionHandler) {
-            onEvent(event, this@MessageSendMiddleware::send, store, coroutineScope)
+            onEvent(event, this@MessageSendMiddleware::send, store)
         }
     }
 
-    protected abstract suspend fun onEvent(event: E, send: SendFun, store: Store<S, A, E>, coroutineScope: CoroutineScope)
+    protected abstract suspend fun onEvent(event: E, send: SendFun, store: Store<S, A, E>)
 
     protected open fun onError(error: Throwable) {
         throw error
@@ -73,12 +73,12 @@ abstract class MessageReceiveMiddleware<S : State, A : Action, E : Event> : Midd
     final override suspend fun onInit(store: Store<S, A, E>, coroutineScope: CoroutineScope) {
         coroutineScope.launch(exceptionHandler) {
             MessageHub.messages.collect {
-                receive(it, store, coroutineScope)
+                receive(it, store)
             }
         }
     }
 
-    protected abstract suspend fun receive(message: Message, store: Store<S, A, E>, coroutineScope: CoroutineScope)
+    protected abstract suspend fun receive(message: Message, store: Store<S, A, E>)
 
     protected open fun onError(error: Throwable) {
         throw error
