@@ -20,7 +20,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private val processInitialStateEnter: Boolean,
     private val latestState: suspend (state: S) -> Unit,
     onError: (error: Throwable) -> Unit,
-    coroutineContext: CoroutineContext
+    coroutineContext: CoroutineContext,
 ) : Store<S, A, E> {
     private val _state: MutableStateFlow<S> = MutableStateFlow(initialState)
     final override val state: StateFlow<S> by lazy {
