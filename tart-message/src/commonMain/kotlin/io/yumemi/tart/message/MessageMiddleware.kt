@@ -5,11 +5,11 @@ import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 interface Message
 
@@ -26,24 +26,19 @@ internal object MessageHub {
 abstract class MessageSendMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
     private lateinit var store: Store<S, A, E>
     private lateinit var coroutineScope: CoroutineScope
-    private val exceptionHandler: CoroutineExceptionHandler = CoroutineExceptionHandler { _, exception -> onError(exception) }
 
-    final override suspend fun onInit(store: Store<S, A, E>, coroutineScope: CoroutineScope) {
+    final override suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {
         this.store = store
-        this.coroutineScope = coroutineScope
+        this.coroutineScope = CoroutineScope(coroutineContext)
     }
 
     final override suspend fun afterEventEmit(state: S, event: E) {
-        coroutineScope.launch(exceptionHandler) {
+        coroutineScope.launch { // launch coroutine to avoid Store being blocked
             onEvent(event, this@MessageSendMiddleware::send, store)
         }
     }
 
     protected abstract suspend fun onEvent(event: E, send: SendFun, store: Store<S, A, E>)
-
-    protected open fun onError(error: Throwable) {
-        throw error
-    }
 
     private suspend fun send(message: Message) {
         MessageHub.send(message)
@@ -68,10 +63,8 @@ abstract class MessageSendMiddleware<S : State, A : Action, E : Event> : Middlew
 
 @Suppress("unused")
 abstract class MessageReceiveMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
-    private val exceptionHandler: CoroutineExceptionHandler = CoroutineExceptionHandler { _, exception -> onError(exception) }
-
-    final override suspend fun onInit(store: Store<S, A, E>, coroutineScope: CoroutineScope) {
-        coroutineScope.launch(exceptionHandler) {
+    final override suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {
+        CoroutineScope(coroutineContext).launch {
             MessageHub.messages.collect {
                 receive(it, store)
             }
@@ -79,10 +72,6 @@ abstract class MessageReceiveMiddleware<S : State, A : Action, E : Event> : Midd
     }
 
     protected abstract suspend fun receive(message: Message, store: Store<S, A, E>)
-
-    protected open fun onError(error: Throwable) {
-        throw error
-    }
 
     final override suspend fun beforeActionDispatch(state: S, action: A) {}
     final override suspend fun afterActionDispatch(state: S, action: A, nextState: S) {}

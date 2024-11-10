@@ -2,6 +2,7 @@ package io.yumemi.tart.core
 
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -12,13 +13,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.CoroutineContext
 
 open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private val initialState: S,
     private val processInitialStateEnter: Boolean,
     private val latestState: suspend (state: S) -> Unit,
-    private val onError: (error: Throwable) -> Unit,
-    private val coroutineScope: CoroutineScope,
+    onError: (error: Throwable) -> Unit,
+    coroutineContext: CoroutineContext
 ) : Store<S, A, E> {
     private val _state: MutableStateFlow<S> = MutableStateFlow(initialState)
     final override val state: StateFlow<S> by lazy {
@@ -33,13 +35,13 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
 
-    private val mutex = Mutex()
+    private val coroutineScope = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception -> onError(exception) })
 
-    private val exceptionHandler: CoroutineExceptionHandler = CoroutineExceptionHandler { _, exception -> onError(exception) }
+    private val mutex = Mutex()
 
     final override fun dispatch(action: A) {
         state // initialize if need
-        coroutineScope.launch(exceptionHandler) {
+        coroutineScope.launch {
             mutex.withLock {
                 onActionDispatched(currentState, action)
             }
@@ -47,13 +49,13 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     final override fun collectState(state: (state: S) -> Unit) {
-        coroutineScope.launch(exceptionHandler) {
+        coroutineScope.launch {
             this@TartStore.state.collect { state(it) }
         }
     }
 
     final override fun collectEvent(event: (event: E) -> Unit) {
-        coroutineScope.launch(exceptionHandler) {
+        coroutineScope.launch {
             this@TartStore.event.collect { event(it) }
         }
     }
@@ -73,11 +75,11 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     private fun init() {
-        coroutineScope.launch(exceptionHandler) {
+        coroutineScope.launch {
             mutex.withLock {
                 coroutineScope {
                     middlewares.map {
-                        launch { it.onInit(this@TartStore, this@TartStore.coroutineScope) }
+                        launch { it.onInit(this@TartStore, coroutineScope.coroutineContext) }
                     }
                 }
                 if (processInitialStateEnter) {
