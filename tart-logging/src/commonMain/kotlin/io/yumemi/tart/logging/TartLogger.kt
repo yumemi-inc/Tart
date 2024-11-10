@@ -25,6 +25,7 @@ class TartLogger : Logger {
 
     companion object {
         private var isDisabled = false
+
         @Suppress("unused")
         fun disable() {
             isDisabled = true

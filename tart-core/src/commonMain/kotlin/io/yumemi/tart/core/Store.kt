@@ -29,7 +29,7 @@ interface Store<S : State, A : Action, E : Event> {
         processInitialStateEnter: Boolean = true,
         latestState: suspend (state: S) -> Unit = {},
         onError: (error: Throwable) -> Unit = { throw it },
-        coroutineContext: CoroutineContext = Dispatchers.Default
+        coroutineContext: CoroutineContext = Dispatchers.Default,
     ) : TartStore<S, A, E>(
         initialState = initialState,
         processInitialStateEnter = processInitialStateEnter,
