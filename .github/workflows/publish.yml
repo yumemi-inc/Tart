@@ -3,7 +3,7 @@ on:
   release:
     types: [ prereleased ]
 jobs:
-  test:
+  build:
     uses: ./.github/workflows/gradle.yml
   publish:
     name: Release build and publish
