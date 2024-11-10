@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.yumemi.tart"
-version = "1.0.0-beta01"
+version = libs.versions.tart.get()
 
 kotlin {
     androidTarget {
