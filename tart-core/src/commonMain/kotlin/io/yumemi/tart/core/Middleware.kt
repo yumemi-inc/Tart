@@ -1,9 +1,9 @@
 package io.yumemi.tart.core
 
-import kotlinx.coroutines.CoroutineScope
+import kotlin.coroutines.CoroutineContext
 
 interface Middleware<S : State, A : Action, E : Event> {
-    suspend fun onInit(store: Store<S, A, E>, coroutineScope: CoroutineScope) {}
+    suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {}
     suspend fun beforeActionDispatch(state: S, action: A) {}
     suspend fun afterActionDispatch(state: S, action: A, nextState: S) {}
     suspend fun beforeEventEmit(state: S, event: E) {}

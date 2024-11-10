@@ -1,12 +1,11 @@
 package io.yumemi.tart.core
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlin.coroutines.CoroutineContext
 
 interface Store<S : State, A : Action, E : Event> {
 
@@ -30,13 +29,13 @@ interface Store<S : State, A : Action, E : Event> {
         processInitialStateEnter: Boolean = true,
         latestState: suspend (state: S) -> Unit = {},
         onError: (error: Throwable) -> Unit = { throw it },
-        coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+        coroutineContext: CoroutineContext = Dispatchers.Default
     ) : TartStore<S, A, E>(
         initialState = initialState,
         processInitialStateEnter = processInitialStateEnter,
         latestState = latestState,
         onError = onError,
-        coroutineScope = coroutineScope,
+        coroutineContext = coroutineContext,
     )
 
     companion object {
@@ -46,10 +45,10 @@ interface Store<S : State, A : Action, E : Event> {
                 override val state: StateFlow<S> = MutableStateFlow(state)
                 override val event: Flow<E> = emptyFlow()
                 override val currentState: S = state
-                override fun dispose() {}
-                override fun collectEvent(event: (event: E) -> Unit) {}
-                override fun collectState(state: (state: S) -> Unit) {}
                 override fun dispatch(action: A) {}
+                override fun collectState(state: (state: S) -> Unit) {}
+                override fun collectEvent(event: (event: E) -> Unit) {}
+                override fun dispose() {}
             }
         }
     }
