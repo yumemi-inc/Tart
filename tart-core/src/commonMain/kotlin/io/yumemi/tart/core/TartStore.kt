@@ -77,10 +77,12 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private fun init() {
         coroutineScope.launch {
             mutex.withLock {
-                coroutineScope {
-                    middlewares.map {
-                        launch { it.onInit(this@TartStore, coroutineScope.coroutineContext) }
-                    }
+                try {
+                    processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
+                } catch (e: MiddlewareError) {
+                    throw e.original
+                } catch (t: Throwable) {
+                    throw t
                 }
                 if (processInitialStateEnter) {
                     onStateEntered(initialState)
@@ -105,6 +107,9 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
+            if (t is MiddlewareError) {
+                throw t.original
+            }
             onErrorOccurred(currentState, t)
         }
     }
@@ -125,116 +130,89 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 onStateEntered(nextState, inErrorHandling = inErrorHandling)
             }
         } catch (t: Throwable) {
-            if (!inErrorHandling) {
-                onErrorOccurred(currentState, t)
-            } else {
+            if (t is MiddlewareError) {
+                throw t.original
+            }
+            if (inErrorHandling) {
                 throw t
             }
+            onErrorOccurred(currentState, t)
         }
     }
 
     private suspend fun onErrorOccurred(state: S, throwable: Throwable) {
-        val nextState = processError(state, throwable)
+        try {
+            val nextState = processError(state, throwable)
 
-        if (state::class != nextState::class) {
-            processStateExit(state)
-        }
+            if (state::class != nextState::class) {
+                processStateExit(state)
+            }
 
-        if (state != nextState) {
-            processStateChange(state, nextState)
-        }
+            if (state != nextState) {
+                processStateChange(state, nextState)
+            }
 
-        if (state::class != nextState::class) {
-            onStateEntered(nextState, inErrorHandling = true)
+            if (state::class != nextState::class) {
+                onStateEntered(nextState, inErrorHandling = true)
+            }
+        } catch (t: Throwable) {
+            if (t is MiddlewareError) {
+                throw t.original
+            }
+            throw t
         }
     }
 
     private suspend fun processActonDispatch(state: S, action: A): S {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeActionDispatch(state, action) }
-            }
-        }
+        processMiddleware { beforeActionDispatch(state, action) }
         val nextState = onDispatch(state, action, ::emit)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterActionDispatch(state, action, nextState) }
-            }
-        }
+        processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
     private suspend fun processEventEmit(state: S, event: E) {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeEventEmit(state, event) }
-            }
-        }
+        processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterEventEmit(state, event) }
-            }
-        }
+        processMiddleware { afterEventEmit(state, event) }
     }
 
     private suspend fun processStateEnter(state: S): S {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeStateEnter(state) }
-            }
-        }
+        processMiddleware { beforeStateEnter(state) }
         val nextState = onEnter(state, ::emit)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterStateEnter(state, nextState) }
-            }
-        }
+        processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeStateExit(state) }
-            }
-        }
+        processMiddleware { beforeStateExit(state) }
         onExit(state, ::emit)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterStateExit(state) }
-            }
-        }
+        processMiddleware { afterStateExit(state) }
     }
 
     private suspend fun processStateChange(state: S, nextState: S) {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeStateChange(state, nextState) }
-            }
-        }
+        processMiddleware { beforeStateChange(state, nextState) }
         _state.update { nextState }
         latestState(nextState)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterStateChange(nextState, state) }
-            }
-        }
+        processMiddleware { afterStateChange(nextState, state) }
     }
 
     private suspend fun processError(state: S, throwable: Throwable): S {
-        coroutineScope {
-            middlewares.map {
-                launch { it.beforeError(state, throwable) }
-            }
-        }
+        processMiddleware { beforeError(state, throwable) }
         val nextState = onError(state, throwable, ::emit)
-        coroutineScope {
-            middlewares.map {
-                launch { it.afterError(state, nextState, throwable) }
-            }
-        }
+        processMiddleware { afterError(state, nextState, throwable) }
         return nextState
+    }
+
+    private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
+        try {
+            coroutineScope {
+                middlewares.map {
+                    launch { block(it) }
+                }
+            }
+        } catch (t: Throwable) {
+            throw MiddlewareError(t)
+        }
     }
 
     private suspend fun emit(event: E) {
@@ -244,4 +222,6 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     protected fun interface EmitFun<E> {
         suspend operator fun invoke(event: E)
     }
+
+    private class MiddlewareError(val original: Throwable) : Throwable(original)
 }
