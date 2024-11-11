@@ -207,7 +207,13 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         try {
             coroutineScope {
                 middlewares.map {
-                    launch { block(it) }
+                    launch {
+                        try {
+                            block(it)
+                        } catch (t: Throwable) {
+                            it.onMiddlewareError(t)
+                        }
+                    }
                 }
             }
         } catch (t: Throwable) {
