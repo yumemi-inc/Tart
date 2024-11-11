@@ -16,4 +16,7 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun afterStateChange(state: S, prevState: S) {}
     suspend fun beforeError(state: S, error: Throwable) {}
     suspend fun afterError(state: S, nextState: S, error: Throwable) {}
+    suspend fun onMiddlewareError(throwable: Throwable) {
+        throw throwable
+    }
 }
