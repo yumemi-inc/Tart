@@ -219,9 +219,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         processEventEmit(currentState, event)
     }
 
-    protected fun interface EmitFun<E> {
-        suspend operator fun invoke(event: E)
-    }
-
     private class MiddlewareError(val original: Throwable) : Throwable(original)
 }
+
+typealias EmitFun<T> = suspend (T) -> Unit
