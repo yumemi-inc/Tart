@@ -44,10 +44,6 @@ abstract class MessageSendMiddleware<S : State, A : Action, E : Event> : Middlew
         MessageHub.send(message)
     }
 
-    protected fun interface SendFun {
-        suspend operator fun invoke(message: Message)
-    }
-
     final override suspend fun beforeActionDispatch(state: S, action: A) {}
     final override suspend fun afterActionDispatch(state: S, action: A, nextState: S) {}
     final override suspend fun beforeEventEmit(state: S, event: E) {}
@@ -86,3 +82,5 @@ abstract class MessageReceiveMiddleware<S : State, A : Action, E : Event> : Midd
     final override suspend fun beforeError(state: S, error: Throwable) {}
     final override suspend fun afterError(state: S, nextState: S, error: Throwable) {}
 }
+
+typealias SendFun = suspend (Message) -> Unit
