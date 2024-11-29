@@ -64,14 +64,19 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineScope.cancel()
     }
 
-    protected open suspend fun onEnter(state: S, emit: EmitFun<E>): S = state
+    protected open suspend fun onEnter(state: S): S = state
 
-    protected open suspend fun onExit(state: S, emit: EmitFun<E>) {}
+    protected open suspend fun onExit(state: S) {}
 
-    protected open suspend fun onDispatch(state: S, action: A, emit: EmitFun<E>): S = state
+    protected open suspend fun onDispatch(state: S, action: A): S = state
 
-    protected open suspend fun onError(state: S, error: Throwable, emit: EmitFun<E>): S {
+    protected open suspend fun onError(state: S, error: Throwable): S {
         throw error
+    }
+
+    @Suppress("unused")
+    protected suspend fun emit(event: E) {
+        processEventEmit(currentState, event)
     }
 
     private fun init() {
@@ -165,27 +170,21 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onDispatch(state, action, ::emit)
+        val nextState = onDispatch(state, action)
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
-    private suspend fun processEventEmit(state: S, event: E) {
-        processMiddleware { beforeEventEmit(state, event) }
-        _event.emit(event)
-        processMiddleware { afterEventEmit(state, event) }
-    }
-
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        val nextState = onEnter(state, ::emit)
+        val nextState = onEnter(state)
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
         processMiddleware { beforeStateExit(state) }
-        onExit(state, ::emit)
+        onExit(state)
         processMiddleware { afterStateExit(state) }
     }
 
@@ -198,9 +197,15 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processError(state: S, throwable: Throwable): S {
         processMiddleware { beforeError(state, throwable) }
-        val nextState = onError(state, throwable, ::emit)
+        val nextState = onError(state, throwable)
         processMiddleware { afterError(state, nextState, throwable) }
         return nextState
+    }
+
+    private suspend fun processEventEmit(state: S, event: E) {
+        processMiddleware { beforeEventEmit(state, event) }
+        _event.emit(event)
+        processMiddleware { afterEventEmit(state, event) }
     }
 
     private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
@@ -215,11 +220,5 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         }
     }
 
-    private suspend fun emit(event: E) {
-        processEventEmit(currentState, event)
-    }
-
     private class MiddlewareError(val original: Throwable) : Throwable(original)
 }
-
-typealias EmitFun<T> = suspend (T) -> Unit
