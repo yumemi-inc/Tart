@@ -17,7 +17,6 @@ import kotlin.coroutines.CoroutineContext
 
 open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private val initialState: S,
-    private val processInitialStateEnter: Boolean,
     private val latestState: suspend (state: S) -> Unit,
     onError: (error: Throwable) -> Unit,
     coroutineContext: CoroutineContext,
@@ -84,13 +83,12 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
             mutex.withLock {
                 try {
                     processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
-                } catch (e: MiddlewareError) {
-                    throw e.original
-                } catch (t: Throwable) {
-                    throw t
-                }
-                if (processInitialStateEnter) {
                     onStateEntered(initialState)
+                } catch (t: Throwable) {
+                    if (t is MiddlewareError) {
+                        throw t.original
+                    }
+                    throw t
                 }
             }
         }
