@@ -5,49 +5,416 @@ Tart is a Flux framework for Kotlin Multiplatform.
 - Data flow is one-way, making it easy to understand.
 - Since the state during processing is unchanged, there is no need to be aware of side effects.
 - Code becomes declarative.
-- Works on multiple platforms.
+- Works on multiple platforms (Currently on Android and iOS).
 
 I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.
 
 ## Installation
 
-```kotlin
+```kt
 implementation("io.yumemi.tart:tart-core:<latest-release>")
 ```
 
 ## Usage
 
-**Under preparation..**
+### Basic
+
+Take a simple counter as an example.
+First, prepare classes for *State*, *Action*, and *Event*.
+
+- *State*: state of the UI
+- *Action*: action on the UI by the application user
+- *Event*: event that is notified to the UI
+
+```kt
+data class CounterState(val count: Int) : State
+
+sealed interface CounterAction : Action {
+    data class Set(val count: Int) : CounterAction
+    data object Increment : CounterAction
+    data object Decrement : CounterAction
+}
+
+sealed interface CounterEvent : Event {} // currently empty
+```
+
+Create a *Store* class from `Store.Base` by specifying the initial state.
+Keep the *Store* class instance in the ViewModel etc.
+
+```kt
+class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState(count = 0),
+)
+```
+
+Overrides the `onDispatch()` method and define how the *State* is changed by *Action*.
+
+```kt
+class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState(count = 0),
+) {
+    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
+        is CounterAction.Set -> {
+            state.copy(count = action.count)
+        }
+
+        is CounterAction.Increment -> {
+            state.copy(count = state.count + 1)
+        }
+
+        is CounterAction.Decrement -> {
+            if (0 < state.count) {
+                state.copy(count = state.count - 1)
+            } else {
+                state // do not change State
+            }
+        }
+    }
+}
+```
+
+Issue an *Action* from the UI using the Store's `dispatch()` method.
+
+```kt
+// example in Compose
+Button(
+    onClick = { store.dispatch(CounterAction.Increment) },
+) {
+    Text(text = "increment")
+}
+```
+
+The new *State* will be reflected in the Store's `.state` (StateFlow), so draw it to the UI.
+
+### Notify event to UI
+
+Prepare classes for *Event*.
+
+```kt
+sealed interface CounterEvent : Event {
+    data class ShowToast(val message: String) : CounterEvent
+    data object NavigateToNextScreen : CounterEvent
+}
+```
+
+In the `dispatch()` method body, issue an *Event* using the `emit()` method.
+
+```kt
+is CounterAction.Decrement -> {
+    if (0 < state.count) {
+        state.copy(count = state.count - 1)
+    } else {
+        emit(CounterEvent.ShowToast("Can not Decrement.")) // issue event
+        state
+    }
+}
+```
+
+Subscribe to the Store's `.event` (Flow) on the UI, and process it.
+
+### Access to Repository, UseCase, etc.
+
+Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method.
+
+```kt
+class CounterStore(
+    private val counterRepository: CounterRepository, // inject to Store
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState(count = 0),
+) {
+    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
+        CounterAction.Load -> {
+            val count = counterRepository.get() // load
+            state.copy(count = count)
+        }
+
+        is CounterAction.Increment -> {
+            val count = state.count + 1
+            state.copy(count = count).apply {
+                counterRepository.set(count) // save
+            }
+        }
+
+        // ...
+```
+
+### Multiple states and transitions
+
+In the previous examples, the state was single.
+However, in actual application development, multiple states exist, such as the UI during data loading.
+In that case, prepare multiple *States*.
+
+```kt
+sealed interface CounterState : State {
+    data object Loading: CounterState 
+    data class Main(val count: Int): CounterState
+}
+```
+
+```kt
+class CounterStore(
+    private val counterRepository: CounterRepository,
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading, // start from loading
+) {
+    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (state) {
+        CounterState.Loading -> when (action) {
+            CounterAction.Load -> {
+                val count = counterRepository.get()
+                CounterState.Main(count = count) // transition to next state
+            }
+
+            else -> state
+        }
+
+        is CounterState.Main -> when (action) {
+            is CounterAction.Increment -> {
+                // ...
+```
+
+In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
+Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` method.
+
+```kt
+override suspend fun onEnter(state: CounterState): CounterState = when (state) {
+    CounterState.Loading -> {
+        val count = counterRepository.get()
+        CounterState.Main(count = count)
+    }
+
+    else -> state
+}
+
+override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (state) {
+    is CounterState.Main -> when (action) {
+        is CounterAction.Increment -> {
+            // ...
+```
+
+The state diagram is as follows:
+
+![image](doc/diagram.png)
+
+Similarly, you can override the `onExit()` method.
+This framework works well with state diagrams.
+It would be a good idea to document it and share it with your team if necessary.
+
+<details>
+<summary>Tips: define extension functions for each State</summary>
+
+Normally, code for all States is written in the body of the `onDispatch()` method.
+
+```kt
+override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
+    is MainState.StateA -> when (action) {
+        is MainAction.ActionA -> {
+            // do something..
+        }
+
+        is MainAction.ActionB -> {
+            // do something..
+        }
+
+        // ...
+
+        else -> state
+    }
+
+    is MainState.StateB -> when (action) {
+        // ...
+    }
+
+    // ...
+```
+
+This is fine if the code is simple, but if the code becomes long, define an extension function for each State.
+Code for each State becomes easier to understand.
+
+```kt
+override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
+    is MainState.StateA -> state.process(action)
+    is MainState.StateB -> state.process(action)
+    // ...
+}
+
+private suspend fun MainState.StateA.process(action: MainAction): MainState = when (action) {
+    is MainAction.ActionA -> {
+        // do something..
+    }
+
+    is MainAction.ActionB -> {
+        // do something..
+    }
+
+    // ...
+
+    else -> this
+}
+
+// ...
+```
+
+In addition, you can also define extension functions for `MainAction.ActionA`.
+
+```kt
+override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
+    is MainState.StateA -> state.process(action)
+    is MainState.StateB -> state.process(action)
+    // ...
+}
+
+private suspend fun MainState.StateA.process(action: MainAction): MainState = when (action) {
+    is MainAction.ActionA -> process(action)
+    is MainAction.ActionB -> process(action)
+    // ...
+    else -> this
+}
+
+// this does not include when branches
+private suspend fun MainState.StateA.process(action: MainAction.ActionA): MainState {
+    // do something..
+}
+```
+
+In any case, the `onDispatch()` method is a simple method that simply returns a new State from the current State and Action, so you can design the code as you like.
+</details>
+
+### Error handling
+
+If you prepare a *State* for the error UI and handle the error, it will look like this:
+
+```kt
+sealed interface CounterState : State {
+    // ...
+    data class Error(val error: Throwable) : CounterState
+}
+```
+
+```kt
+override suspend fun onEnter(state: CounterState): CounterState = when (state) {
+    CounterState.Loading -> {
+        try {
+            val count = counterRepository.get()
+            CounterState.Main(count = count)
+        } catch (t: Throwable) {
+            CounterState.Error(error = t)
+        }
+    }
+
+    // ...
+```
+
+This is fine, but you can also handle errors by overriding the `onError()` method.
+
+```kt
+override suspend fun onEnter(state: CounterState): CounterState = when (state) {
+    CounterState.Loading -> {
+        val count = counterRepository.get()
+        CounterState.Main(count = count)
+    }
+
+    else -> state
+}
+
+override suspend fun onError(state: CounterState, error: Throwable): CounterState {
+    return CounterState.Error(error = error)
+}
+```
+
+Errors can be caught not only in `onEnter()` method but also in `onDispatch()` and `onExit()` methods.
+The above example uniformly transitions to the `CounterState.Error` state, but of course it is also possible to branch the process depending on the `state` or `error` input.
+
+### Constructor arguments when creating a Store
+
+#### initialState [required]
+
+Specify the first *state*.
+
+```kt
+class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+)
+```
+
+#### coroutineContext [option]
+
+You can pass any `CoroutieneContext`, but if it is an Android ViewModel, it will be `viewModelScope.coroutineContext`.
+
+```kt
+class CounterStore(
+    coroutineContext: CoroutineContext, // pass to Store.Base
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+    coroutineContext = coroutineContext,
+)
+
+// ...
+
+class CounterViewModel : ViewModel() {
+    val store = CounterStore(viewModelScope.coroutineContext)
+}
+```
+
+In this case, the Store's Coroutines will be disposed of according to the ViewModel's lifecycle.
+If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on Android.
+
+In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, create an instance of Store in ViewModel or Activity to pass them, and inject Repository, UseCase, etc. to ViewModel or Activity.
+
+```kt
+class CounterViewModel(
+    counterRepository: CounterRepository, // inject to ViewModel
+) : ViewModel() {
+    val store = CounterStore(
+        counterRepository = counterRepository,
+        coroutineContext = viewModelScope.coroutineContext,
+    )
+}
+```
+
+If not, you can create an instance of Store with the DI library.
+
+#### latestState [option]
+
+Latest *State* is notified by callback.
+When saving and restoring the *State*, save the *State* notified by this callback and pass it to `initialState` when restoring.
+
+#### onError [option]
+
+Uncaught errors can be received with a callback.
 
 ### For iOS
 
-Store's `.state(StateFlow)` and `.event(Flow)` cannot be used, so use `.collectState()` and `.collectEvent()`. If the State and Event change, you will be notified with a callback.
+Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use `.collectState()` and `.collectEvent()`. If the State and Event change, you will be notified with a callback.
 
 ### Disposal of Coroutines
 
-If you are not using an automatically destroyed scope like Android's ViewModelScope, call the `.dispose()` method on the Store.
+If you are not using an automatically disposed scope like Android's ViewModelScope or LificycleScope, call the `.dispose()` method explicitly when Store is no longer needed.
+Then, processing of all Coroutines will stop.
 
 ## Compose
 
-You may use `.state(StateFlow)`, `.event(Flow)`, `.dispatch()`, etc. provided by the Store, but we provide a mechanism for Compose.
+<details>
+<summary>contents</summary>
 
-```kotlin
+You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` on the UI side, but we provide a mechanism for Compose.
+
+```kt
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
 Create an instance of the `ViewStore` from a Store instance using the `ViewStore#create()` method.
 For example, if you have a Store in your ViewModel, it would look like this:
 
-```kotlin
-@AndroidEntryPoint
+```kt
 class MainActivity : ComponentActivity() {
+
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // create ViewStore instance
+            // create ViewStore instance at top level of Comopse
             val viewStore = ViewStore.create(mainViewModel.store)
 
             MyApplicationTheme {
@@ -63,101 +430,125 @@ class MainActivity : ComponentActivity() {
 
 ### Rendering using State
 
-Use `ViewStore.state` value.
+If the *State* is single, just use ViewStore's `.state`.
 
-```kotlin
+```kt
 Text(
-    text = state.test,
+    text = viewStore.state.count.toString(),
 )
 ```
 
-Use `ViewStore.render()` method with target State.
+If there are multiple *States*, use `.render()` method with target *State*.
 
-```kotlin
-viewStore.render<YourState.Stable> {
-    YourComposableComponent()
+```kt
+viewStore.render<CounterState.Main> {
+    Text(
+        text = state.count.toString(),
+    )
 }
 ```
 
-If it does not match the current State, the `{ }` block will not be executed.
-Therefore, you can define views for each State side by side.
+When drawing the UI, if it does not match the target *State*, the `.render()` will not be executed.
+Therefore, you can define components for each *State* side by side.
 
-```kotlin
-viewStore.render<YourState.Loading> {
-    YourComposableComponent_A()
+```kt
+viewStore.render<CounterState.Loading> {
+    Text(
+        text = "loading..",
+    )
 }
 
-viewStore.render<YourState.Stable> {
-    YourComposableComponent_B()
+viewStore.render<CounterState.Main> {
+    Text(
+        text = state.count.toString(),
+    )
 }
 ```
 
-State properties can be accessed with `this` scope.
+In this case, `this` inside the `render()` block is a new *ViewStore* instance according to *State*.
+If you use another component in the `render()` block, pass its instance.
 
-```kotlin
-viewStore.render<YourState.Stable> {
-    YourComposableComponent(url = this.url) // this. can be omitted
+```kt
+store.render<CounterState.Main> {
+    YourComposableComponent(
+        viewStore = this, // ViewStore instance for CounterState.Main
+    )
+}
+
+// ...
+
+@Composable
+fun YourComposableComponent(
+    viewStore: ViewStore<CounterState.Main, CounterAction, CounterEvent>,
+) {
+    // Main state is confirmed
+    Text(text = viewStore.state.count.toString())
 }
 ```
 
 ### Dispatch Action
 
-Use `ViewStore.dispatch()` method with target Action.
+Use ViewStore's `.dispatch()` method with target *Action*.
 
-```kotlin
+```kt
 Button(
-    onClick = { viewStore.dispatch(MainAction.ClickButton) },
+    onClick = { viewStore.dispatch(CounterAction.Increment) },
 ) {
-// ...
+    Text(text = "increment")
+}
 ```
 
 ### Event handling
 
-Use `ViewStore.handle()` method with target State.
+Use ViewStore's `.handle()` method with target *Event*.
 
-```kotlin
-viewStore.handle<MainEvent.ShowToast> { event ->
+```kt
+viewStore.handle<CounterEvent.ShowToast> { event ->
     // do something..
 }
 ```
 
-You can also subscribe to parent Event types.
+You can also subscribe to parent *Event* types.
 
-```kotlin
-viewStore.handle<MainEvent> { event ->
+```kt
+viewStore.handle<CounterEvent> { event ->
     when (event) {
-        is MainEvent.ShowToast -> // do something..
-        is MainEvent.GoBack -> // do something..
+        is CounterEvent.ShowToast -> // do something..
+        is CounterEvent.GoBack -> // do something..
         // ...
     }
 ```
 
 ### Mock for preview and testing
 
-Use `ViewStore#mock()` method with target State.
+Create a mock instance using `ViewStore.mock()`.
 
-```kotlin
+```kt
 @Preview
 @Composable
 fun LoadingPreview() {
     MyApplicationTheme {
         YourComposableComponent(
             viewStore = ViewStore.mock(
-                state = MainState.Loading,
+                state = CounterState.Loading,
             ),
         )
     }
 }
 ```
 
-Therefore, by defining only the State, it is possible to develop the UI even before implementing the Store.
+Therefore, by defining only the *State*, it is possible to develop the UI even before implementing the *Store*.
+</details>
 
 ## Middleware
+
+<details>
+<summary>contens</summary>
 
 You can create extensions that work with the Store.
 To do this, create a class that implements the `Middleware` interface and override the necessary methods.
 
-```kotlin
+```kt
 class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
     override suspend fun afterStateChange(state: S, prevState: S) {
         // do something..
@@ -167,7 +558,7 @@ class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
 
 Apply Middleware to Store as follows:
 
-```kotlin
+```kt
 class MainStore(
     // ...
 ) : Store.Base<MainState, MainAction, MainEvent>(
@@ -199,21 +590,21 @@ The source code is the `:tart-logging` and `:tart-message` modules in this repos
 
 Middleware that outputs logs for debugging and analysis.
 
-```kotlin
+```kt
 implementation("io.yumemi.tart:tart-logging:<latest-release>")
 ```
 
-```kotlin
+```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     LoggingMiddleware(),
 )
 ```
 
-The implementation of the `LoggingMiddleware` is [here](/blob/main/tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt), change the arguments or override
+The implementation of the `LoggingMiddleware` is [here](tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt), change the arguments or override
 the class as necessary.
 If you want to change the logger, prepare a class that implements the `Logger` interface.
 
-```kotlin
+```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     object : LoggingMiddleware<MainState, MainAction, MainEvent>(
         logger = YourLogger()
@@ -229,13 +620,13 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 
 Middleware for sending messages between Stores.
 
-```kotlin
+```kt
 implementation("io.yumemi.tart:tart-message:<latest-release>")
 ```
 
 Prepare a class with a `Message` interface.
 
-```kotlin
+```kt
 interface MainMessage : Message {
     data object LogoutCompleted : MainMessage
     data class CommentLiked(val commentId: Int) : MainMessage
@@ -246,7 +637,7 @@ interface MainMessage : Message {
 
 Apply `MessageSendMiddleware` to the Store that sends messages.
 
-```kotlin
+```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     object : MessageSendMiddleware<MainState, MainAction, MainEvent>() {
         override suspend fun onEvent(event: MainEvent, send: SendFun, store: Store<MainState, MainAction, MainEvent>) {
@@ -261,7 +652,7 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 
 Apply `MessageReceiveMiddleware` to the Store that receives messages.
 
-```kotlin
+```kt
 override val middlewares: List<Middleware<SubState, SubAction, SubEvent>> = listOf(
     object : MessageReceiveMiddleware<SubState, SubAction, SubEvent>() {
         override suspend fun receive(message: Message, store: Store<SubState, SubAction, SubEvent>) {
@@ -273,101 +664,4 @@ override val middlewares: List<Middleware<SubState, SubAction, SubEvent>> = list
     },
 )
 ```
-
-## Prevent large `onDispatch()` method bodies
-
-Since the processing for Store is concentrated in the `onDispatch()` method, its body tends to be large.
-Therefore, delegate the processing to another function as necessary.
-
-```kotlin
-override suspend fun onDispatch(state: MainState, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-    return when (state) {
-        is MainState.StateA -> reduceStateA(state, action, emit)
-        is MainState.StateB -> reduceStateB(state, action, emit)
-        // ...
-    }
-}
-
-private fun reduceStateA(state: MainState.StateA, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-    // do something..
-}
-
-private fun reduceStateB(state: MainState.StateB, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-    // do something..
-}
-```
-
-The above is an example of delegation for each state, but common processing can also be delegated as usual.
-Of course, delegated processes can also access Store instance fields such as Repository and UseCase.
-
-Alternatively, you can delegate to a class like this:
-
-```kotlin
-class StateA_Reducer(
-    private val userRepository: UserRepository, // inject if necessary
-) {
-    suspend fun reduce(state: MainState.StateA, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-        return when (action) {
-            is MainAction.ActionA -> reduceActionA(state, action, emit)
-            is MainAction.ActionB -> reduceActionB(state, action, emit)
-            // ...
-        }
-    }
-
-    private suspend fun reduceActionA(state: MainState.StateA, action: MainAction.ActionA, emit: EmitFun<MainEvent>): MainState {
-        // do something..
-    }
-
-    private suspend fun reduceActionB(state: MainState.StateA, action: MainAction.ActionB, emit: EmitFun<MainEvent>): MainState {
-        // do something..
-    }
-
-    // ...
-}
-```
-
-```kotlin
-override suspend fun onDispatch(state: MainState, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-    return when (state) {
-        is MainState.StateA -> stateA_Reducer.reduce(state, action, emit)
-        is MainState.StateB -> stateB_Reducer.reduce(state, action, emit)
-        // ...
-    }
-}
-```
-
-Or, you can delegate to Object.
-
-```kotlin
-override suspend fun onDispatch(state: MainState, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-    return when (state) {
-        is MainState.StateA -> StateA_Reducer.reduce(state, action, emit)
-        is MainState.StateB -> StateB_Reducer.reduce(state, action, emit)
-        // ...
-    }
-}
-
-object StateA_Reducer {
-    fun reduce(state: MainState.StateA, action: MainAction, emit: EmitFun<MainEvent>): MainState {
-        return when (action) {
-            is MainAction.ActionA -> reduceActionA(state, action, emit)
-            is MainAction.ActionB -> reduceActionB(state, action, emit)
-            // ...
-        }
-    }
-
-    private fun reduceActionA(state: MainState.StateA, action: MainAction.ActionA, emit: EmitFun<MainEvent>): MainState {
-        // do something..
-    }
-
-    private fun reduceActionB(state: MainState.StateA, action: MainAction.ActionB, emit: EmitFun<MainEvent>): MainState {
-        // do something..
-    }
-}
-
-// ...
-```
-
-After all, the `onDispatch()` method is a function that simply returns new State from current State and Action, so you can freely define the logic inside.
-Either way, the State is immutable and the processing is one-way, so the code is declarative and simple.
-
+</details>
