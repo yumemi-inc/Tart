@@ -1,6 +1,6 @@
 # Tart
 
-<div align="center">
+<div align="left">
   <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/icon.png" width=15% />
 </div>
 
@@ -10,6 +10,21 @@ Tart is a Flux framework for Kotlin Multiplatform.
 - Since the state during processing is unchanged, there is no need to be aware of side effects.
 - Code becomes declarative.
 - Works on multiple platforms (Currently on Android and iOS).
+
+The architecture of this framework is as follows:
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/overview.png" width=50% />
+</div>
+</br>
+
+Processing on the *Store* is mainly expressed by the following formula:
+
+```kt
+(State, Action) -> State
+```
+
+In this framework, based on the above formula, we only need to be concerned with the relationship between *State* and *Action*.
 
 I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.
 
@@ -25,10 +40,6 @@ implementation("io.yumemi.tart:tart-core:<latest-release>")
 
 Take a simple counter as an example.
 First, prepare classes for *State*, *Action*, and *Event*.
-
-- *State*: state of the UI
-- *Action*: action on the UI by the application user
-- *Event*: event that is notified to the UI
 
 ```kt
 data class CounterState(val count: Int) : State
