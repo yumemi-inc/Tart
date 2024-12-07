@@ -7,7 +7,7 @@ jobs:
     uses: ./.github/workflows/gradle.yml
   publish:
     name: Release build and publish
-    needs: test
+    needs: build
     runs-on: macOS-latest
     steps:
       - name: Check out code
