@@ -1,5 +1,9 @@
 # Tart
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/icon.png" width=15% />
+</div>
+
 Tart is a Flux framework for Kotlin Multiplatform.
 
 - Data flow is one-way, making it easy to understand.
