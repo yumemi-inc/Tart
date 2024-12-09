@@ -18,13 +18,13 @@ The architecture of this framework is as follows:
 </div>
 </br>
 
-And the processing on the *Store* is mainly expressed by the following formula:
+And the processing on the *Store* is mainly expressed by the following function:
 
 ```kt
 (State, Action) -> State
 ```
 
-In this framework, based on the above formula, we only need to be concerned with the relationship between *State* and *Action*.
+In this framework, based on the above function, we only need to be concerned with the relationship between *State* and *Action*.
 
 I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.
 
@@ -342,11 +342,11 @@ override suspend fun onError(state: CounterState, error: Throwable): CounterStat
 
 Errors can be caught not only in the `onEnter()` but also in the `onDispatch()` and `onExit()`.
 
-### Constructor arguments when creating a Store
+### Constructor arguments when creating a *Store*
 
 #### initialState [required]
 
-Specify the first *state*.
+Specify the first *State*.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -356,7 +356,8 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 
 #### coroutineContext [option]
 
-You can pass any `CoroutieneContext`, but if it is an Android ViewModel, it will be `viewModelScope.coroutineContext`.
+You can pass any `CoroutieneContext`.
+If it is an Android ViewModel, it will be `viewModelScope.coroutineContext`.
 
 ```kt
 class CounterStore(
@@ -376,37 +377,38 @@ class CounterViewModel : ViewModel() {
 In this case, the Store's Coroutines will be disposed of according to the ViewModel's lifecycle.
 If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on Android.
 
-In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, create an instance of Store in ViewModel or Activity to pass them, and inject Repository, UseCase, etc. to ViewModel or Activity.
+In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass them, and if you need Repository, UseCase, etc., inject them into the ViewModel or Activity.
+
 
 ```kt
 class CounterViewModel(
     counterRepository: CounterRepository, // inject to ViewModel
 ) : ViewModel() {
     val store = CounterStore(
-        counterRepository = counterRepository,
+        counterRepository = counterRepository, // pass to Store
         coroutineContext = viewModelScope.coroutineContext,
     )
 }
 ```
 
-If not, you can create an instance of Store with the DI library.
+If not, you can create an instance of *Store* with the DI library.
 
 #### latestState [option]
 
-Latest *State* is notified by callback.
-When saving and restoring the *State*, save the *State* notified by this callback and pass it to `initialState` when restoring.
+The latest *State* will be notified with this callback.
+If you want to save the *State* (e.g. using ViewModel's SavedStateHandle), save the *State* notified by this callback and specify the restored *State* in `initialState`.
 
 #### onError [option]
 
-Uncaught errors can be received with a callback.
+Uncaught errors can be received with this callback.
 
 ### For iOS
 
-Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use `.collectState()` and `.collectEvent()`. If the State and Event change, you will be notified with a callback.
+Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use `.collectState()` and `.collectEvent()`. If the State and Event change, you will be notified with these callbacks.
 
 ### Disposal of Coroutines
 
-If you are not using an automatically disposed scope like Android's ViewModelScope or LificycleScope, call the `.dispose()` method explicitly when Store is no longer needed.
+If you are not using an automatically disposed scope like Android's ViewModelScope or LificycleScope, call Store's `.dispose()` explicitly when *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
 ## Compose
