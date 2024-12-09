@@ -9,7 +9,7 @@ Tart is a Flux framework for Kotlin Multiplatform.
 - Data flow is one-way, making it easy to understand.
 - Since the state during processing is unchanged, there is no need to be aware of side effects.
 - Code becomes declarative.
-- Works on multiple platforms (Currently on Android and iOS).
+- Works on multiple platforms (currently on Android and iOS).
 
 The architecture of this framework is as follows:
 
@@ -18,7 +18,7 @@ The architecture of this framework is as follows:
 </div>
 </br>
 
-Processing on the *Store* is mainly expressed by the following formula:
+And the processing on the *Store* is mainly expressed by the following formula:
 
 ```kt
 (State, Action) -> State
@@ -39,6 +39,7 @@ implementation("io.yumemi.tart:tart-core:<latest-release>")
 ### Basic
 
 Take a simple counter as an example.
+
 First, prepare classes for *State*, *Action*, and *Event*.
 
 ```kt
@@ -53,8 +54,7 @@ sealed interface CounterAction : Action {
 sealed interface CounterEvent : Event {} // currently empty
 ```
 
-Create a *Store* class from `Store.Base` by specifying the initial state.
-Keep the *Store* class instance in the ViewModel etc.
+Create a *Store* class from `Store.Base` with an initial *State*.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -62,7 +62,8 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 )
 ```
 
-Overrides the `onDispatch()` method and define how the *State* is changed by *Action*.
+Overrides the `onDispatch()` and define how the *State* is changed by *Action*.
+This is a `(State, Action) -> State` function.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -88,12 +89,15 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 }
 ```
 
-Issue an *Action* from the UI using the Store's `dispatch()` method.
+The *Store* preparation is now complete.
+Instantiate the `CounterStore` class and keep it in the ViewModel etc.
+
+Issue an *Action* from the UI using the Store's `dispatch()`.
 
 ```kt
 // example in Compose
 Button(
-    onClick = { store.dispatch(CounterAction.Increment) },
+    onClick = { counterStore.dispatch(CounterAction.Increment) },
 ) {
     Text(text = "increment")
 }
@@ -112,7 +116,7 @@ sealed interface CounterEvent : Event {
 }
 ```
 
-In the `dispatch()` method body, issue an *Event* using the `emit()` method.
+In the `dispatch()` method body, issue an *Event* using the `emit()`.
 
 ```kt
 is CounterAction.Decrement -> {
@@ -129,7 +133,7 @@ Subscribe to the Store's `.event` (Flow) on the UI, and process it.
 
 ### Access to Repository, UseCase, etc.
 
-Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method.
+Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method body.
 
 ```kt
 class CounterStore(
@@ -155,7 +159,7 @@ class CounterStore(
 
 ### Multiple states and transitions
 
-In the previous examples, the state was single.
+In the previous examples, the *State* was single.
 However, in actual application development, multiple states exist, such as the UI during data loading.
 In that case, prepare multiple *States*.
 
@@ -176,7 +180,7 @@ class CounterStore(
         CounterState.Loading -> when (action) {
             CounterAction.Load -> {
                 val count = counterRepository.get()
-                CounterState.Main(count = count) // transition to next state
+                CounterState.Main(count = count) // transition to Main state
             }
 
             else -> state
@@ -188,7 +192,7 @@ class CounterStore(
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
-Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` method.
+Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` (similarly, you can override the `onExit()` if necessary).
 
 ```kt
 override suspend fun onEnter(state: CounterState): CounterState = when (state) {
@@ -210,14 +214,13 @@ The state diagram is as follows:
 
 ![image](doc/diagram.png)
 
-Similarly, you can override the `onExit()` method.
 This framework works well with state diagrams.
 It would be a good idea to document it and share it with your team if necessary.
 
 <details>
 <summary>Tips: define extension functions for each State</summary>
 
-Normally, code for all States is written in the body of the `onDispatch()` method.
+Normally, code for all *States* is written in the body of the `onDispatch()` method.
 
 ```kt
 override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
@@ -242,8 +245,8 @@ override suspend fun onDispatch(state: MainState, action: MainAction): MainState
     // ...
 ```
 
-This is fine if the code is simple, but if the code becomes long, define an extension function for each State.
-Code for each State becomes easier to understand.
+This is fine if the code is simple, but if the code becomes long, define an extension function for each *State*.
+Code for each *State* becomes easier to understand.
 
 ```kt
 override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
@@ -285,18 +288,17 @@ private suspend fun MainState.StateA.process(action: MainAction): MainState = wh
     else -> this
 }
 
-// this does not include when branches
 private suspend fun MainState.StateA.process(action: MainAction.ActionA): MainState {
-    // do something..
+    // not include when branches..
 }
 ```
 
-In any case, the `onDispatch()` method is a simple method that simply returns a new State from the current State and Action, so you can design the code as you like.
+In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
 </details>
 
 ### Error handling
 
-If you prepare a *State* for the error UI and handle the error, it will look like this:
+If you prepare a *Stae* for error display and handle the error in the `onDidpatch()`, it will be as follows:
 
 ```kt
 sealed interface CounterState : State {
@@ -319,11 +321,12 @@ override suspend fun onEnter(state: CounterState): CounterState = when (state) {
     // ...
 ```
 
-This is fine, but you can also handle errors by overriding the `onError()` method.
+This is fine, but you can also handle errors by overriding the `onError()`.
 
 ```kt
 override suspend fun onEnter(state: CounterState): CounterState = when (state) {
     CounterState.Loading -> {
+        // no error handling code
         val count = counterRepository.get()
         CounterState.Main(count = count)
     }
@@ -332,12 +335,12 @@ override suspend fun onEnter(state: CounterState): CounterState = when (state) {
 }
 
 override suspend fun onError(state: CounterState, error: Throwable): CounterState {
+    // you can also branch using state and error inputs if necessary
     return CounterState.Error(error = error)
 }
 ```
 
-Errors can be caught not only in `onEnter()` method but also in `onDispatch()` and `onExit()` methods.
-The above example uniformly transitions to the `CounterState.Error` state, but of course it is also possible to branch the process depending on the `state` or `error` input.
+Errors can be caught not only in the `onEnter()` but also in the `onDispatch()` and `onExit()`.
 
 ### Constructor arguments when creating a Store
 
