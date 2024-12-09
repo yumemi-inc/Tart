@@ -212,7 +212,10 @@ override suspend fun onDispatch(state: CounterState, action: CounterAction): Cou
 
 The state diagram is as follows:
 
-![image](doc/diagram.png)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/diagram.png" width=30% />
+</div>
+</br>
 
 This framework works well with state diagrams.
 It would be a good idea to document it and share it with your team if necessary.
@@ -416,14 +419,14 @@ Then, processing of all Coroutines will stop.
 <details>
 <summary>contents</summary>
 
-You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` on the UI side, but we provide a mechanism for Compose.
+You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` directly, but we provide a mechanism for Compose.
 
 ```kt
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
-Create an instance of the `ViewStore` from a Store instance using the `ViewStore#create()` method.
-For example, if you have a Store in your ViewModel, it would look like this:
+Create an instance of the `ViewStore` from a *Store* instance using the `create()`.
+For example, if you have a *Store* in your ViewModel, it would look like this:
 
 ```kt
 class MainActivity : ComponentActivity() {
@@ -434,18 +437,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // create ViewStore instance at top level of Comopse
+            // create an instance of ViewStore at the top level of Compose
             val viewStore = ViewStore.create(mainViewModel.store)
 
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    // pass as an argument to Composable component
+                    // pass the ViewStore instance to the lower component
                     YourComposableComponent(
                         viewStore = viewStore,
                     )
-// ... 
+    // ... 
 ```
 
 ### Rendering using State
@@ -485,11 +488,11 @@ viewStore.render<CounterState.Main> {
 }
 ```
 
-In this case, `this` inside the `render()` block is a new *ViewStore* instance according to *State*.
+In this case, `this` inside the `render()` block is a new ViewStore instance according to *State*.
 If you use another component in the `render()` block, pass its instance.
 
 ```kt
-store.render<CounterState.Main> {
+viewStore.render<CounterState.Main> {
     YourComposableComponent(
         viewStore = this, // ViewStore instance for CounterState.Main
     )
@@ -499,28 +502,32 @@ store.render<CounterState.Main> {
 
 @Composable
 fun YourComposableComponent(
+    // Main state is confirmed
     viewStore: ViewStore<CounterState.Main, CounterAction, CounterEvent>,
 ) {
-    // Main state is confirmed
-    Text(text = viewStore.state.count.toString())
+    Text(
+        text = viewStore.state.count.toString()
+    )
 }
 ```
 
 ### Dispatch Action
 
-Use ViewStore's `.dispatch()` method with target *Action*.
+Use ViewStore's `.dispatch()` with target *Action*.
 
 ```kt
 Button(
     onClick = { viewStore.dispatch(CounterAction.Increment) },
 ) {
-    Text(text = "increment")
+    Text(
+        text = "increment"
+    )
 }
 ```
 
 ### Event handling
 
-Use ViewStore's `.handle()` method with target *Event*.
+Use ViewStore's `.handle()` with target *Event*.
 
 ```kt
 viewStore.handle<CounterEvent.ShowToast> { event ->
@@ -528,7 +535,7 @@ viewStore.handle<CounterEvent.ShowToast> { event ->
 }
 ```
 
-You can also subscribe to parent *Event* types.
+In the above example, you can also subscribe to the parent *Event* type.
 
 ```kt
 viewStore.handle<CounterEvent> { event ->
@@ -541,7 +548,8 @@ viewStore.handle<CounterEvent> { event ->
 
 ### Mock for preview and testing
 
-Create a mock instance using `ViewStore.mock()`.
+Create an instance of ViewStore using `mock()` with target *State*.
+You can statically create a ViewStore instance without a *Store* instance.
 
 ```kt
 @Preview
@@ -557,7 +565,7 @@ fun LoadingPreview() {
 }
 ```
 
-Therefore, by defining only the *State*, it is possible to develop the UI even before implementing the *Store*.
+Therefore, by defining only the *State*, it is possible to develop the UI.
 </details>
 
 ## Middleware
@@ -565,7 +573,7 @@ Therefore, by defining only the *State*, it is possible to develop the UI even b
 <details>
 <summary>contens</summary>
 
-You can create extensions that work with the Store.
+You can create extensions that work with the *Store*.
 To do this, create a class that implements the `Middleware` interface and override the necessary methods.
 
 ```kt
@@ -576,7 +584,7 @@ class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
 }
 ```
 
-Apply Middleware to Store as follows:
+Apply the created Middleware as follows:
 
 ```kt
 class MainStore(
@@ -587,7 +595,7 @@ class MainStore(
     override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
         // add Middleware instance to List
         YourMiddleware(),
-        // or, implement here
+        // or, implement Middleware directly here
         object : Middleware<MainState, MainAction, MainEvent> {
             override suspend fun afterStateChange(state: MainState, prevState: MainState) {
                 // do something..
@@ -595,13 +603,15 @@ class MainStore(
         },
     )
 
-// ...
+    // ...
 ```
 
-Since each method of Middleware is a suspending function, it operates in synchronization with Store, so you can create an extension that is completely synchronized with Store.
-However, since it will interrupt the Store process, you should prepare a new CoroutineScope for long processes.
+Alternatively, you can inject a Middleware instance created with a DI library.
 
-Also note that State is read-only in Middleware.
+Each Middleware method is a suspending function, so it can be run synchronously (not asynchronously) with the *Store*.
+However, since it will interrupt the *Store* process, you should prepare a new CoroutineScope for long processes.
+
+Also, note that *State* is read-only in Middleware.
 
 In the next section, we will introduce pre-prepared Middleware.
 The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your Middleware implementation.
@@ -638,31 +648,30 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 
 ### Message
 
-Middleware for sending messages between Stores.
+Middleware for sending messages between *Stores*.
 
 ```kt
 implementation("io.yumemi.tart:tart-message:<latest-release>")
 ```
 
-Prepare a class with a `Message` interface.
+First, prepare classes for messages.
 
 ```kt
-interface MainMessage : Message {
+sealed interface MainMessage : Message {
     data object LogoutCompleted : MainMessage
     data class CommentLiked(val commentId: Int) : MainMessage
     // ...
 }
-
 ```
 
-Apply `MessageSendMiddleware` to the Store that sends messages.
+Apply `MessageSendMiddleware` to the *Store* that sends messages.
 
 ```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     object : MessageSendMiddleware<MainState, MainAction, MainEvent>() {
         override suspend fun onEvent(event: MainEvent, send: SendFun, store: Store<MainState, MainAction, MainEvent>) {
             when (event) {
-                is MainEvent.NofityLogout -> send(MainMessage.LogoutCompleted)
+                is MainEvent.NofityLogoutCompleted -> send(MainMessage.LogoutCompleted)
                 // ...
             }
         }
@@ -670,14 +679,14 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 )
 ```
 
-Apply `MessageReceiveMiddleware` to the Store that receives messages.
+Apply `MessageReceiveMiddleware` to the *Store* that receives messages.
 
 ```kt
 override val middlewares: List<Middleware<SubState, SubAction, SubEvent>> = listOf(
     object : MessageReceiveMiddleware<SubState, SubAction, SubEvent>() {
         override suspend fun receive(message: Message, store: Store<SubState, SubAction, SubEvent>) {
             when (message) {
-                is MainEvent.LogoutCompleted -> store.dispatch(SubAction.doLogout)
+                is MainMessage.LogoutCompleted -> store.dispatch(SubAction.doLogout)
                 // ...
             }
         }
