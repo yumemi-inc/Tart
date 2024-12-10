@@ -41,7 +41,7 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
 
     @Suppress("MemberVisibilityCanBePrivate")
     protected fun log(severity: Logger.Severity = this.severity, tag: String = this.tag, throwable: Throwable? = null, message: () -> String) {
-        coroutineScope.launch { // launch coroutine to avoid Store being blocked
+        coroutineScope.launch { // launch Coroutines to avoid blocking Store processing in case of heavy logging
             logger.log(severity = severity, tag = tag, throwable = throwable, message = message())
         }
     }
