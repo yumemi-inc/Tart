@@ -213,7 +213,7 @@ override suspend fun onDispatch(state: CounterState, action: CounterAction): Cou
 The state diagram is as follows:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/diagram.png" width=30% />
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/diagram.png" width=25% />
 </div>
 </br>
 
@@ -637,10 +637,11 @@ If you want to change the logger, prepare a class that implements the `Logger` i
 ```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     object : LoggingMiddleware<MainState, MainAction, MainEvent>(
-        logger = YourLogger()
+        logger = YourLogger() // change logger
     ) {
+        // override other methods
         override suspend fun beforeStateEnter(state: MainState) {
-            // do something..
+            // ...
         }
     },
 )
@@ -658,20 +659,20 @@ First, prepare classes for messages.
 
 ```kt
 sealed interface MainMessage : Message {
-    data object LogoutCompleted : MainMessage
+    data object LoggedOut : MainMessage
     data class CommentLiked(val commentId: Int) : MainMessage
     // ...
 }
 ```
 
-Apply `MessageSendMiddleware` to the *Store* that sends messages.
+Apply `MessageMiddleware` to the *Store* that receives messages.
 
 ```kt
-override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
-    object : MessageSendMiddleware<MainState, MainAction, MainEvent>() {
-        override suspend fun onEvent(event: MainEvent, send: SendFun, store: Store<MainState, MainAction, MainEvent>) {
-            when (event) {
-                is MainEvent.NofityLogoutCompleted -> send(MainMessage.LogoutCompleted)
+override val middlewares: List<Middleware<MyPageState, MyPageAction, MyPageEvent>> = listOf(
+    object : MessageMiddleware<MyPageState, MyPageAction, MyPageEvent>() {
+        override suspend fun receive(message: Message, dispatch: (action: MyPageAction) -> Unit) {
+            when (message) {
+                is MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
                 // ...
             }
         }
@@ -679,18 +680,15 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 )
 ```
 
-Apply `MessageReceiveMiddleware` to the *Store* that receives messages.
+Call `MessageMiddleware.send()` at any point in the *Store* that sends messages.
 
 ```kt
-override val middlewares: List<Middleware<SubState, SubAction, SubEvent>> = listOf(
-    object : MessageReceiveMiddleware<SubState, SubAction, SubEvent>() {
-        override suspend fun receive(message: Message, store: Store<SubState, SubAction, SubEvent>) {
-            when (message) {
-                is MainMessage.LogoutCompleted -> store.dispatch(SubAction.doLogout)
-                // ...
-            }
-        }
-    },
-)
+override suspend fun onExit(state: MainState) = when (state) {
+    is MainState.LoggedIn -> {
+        MessageMiddleware.send(MainMessage.LoggedOut)
+    }
+
+    else -> Unit
+}
 ```
 </details>
