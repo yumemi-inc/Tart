@@ -2,6 +2,7 @@ package io.yumemi.tart.compose
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import io.yumemi.tart.core.Action
@@ -13,11 +14,22 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 
 @Suppress("unused")
+@Stable
 class ViewStore<S : State, A : Action, E : Event> private constructor(
     val state: S,
     val dispatch: (action: A) -> Unit,
     val eventFlow: Flow<E>,
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ViewStore<*, *, *>) return false
+        return this.state == other.state
+    }
+
+    override fun hashCode(): Int {
+        return state.hashCode()
+    }
+
     @Composable
     inline fun <reified S2 : S> render(block: ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
