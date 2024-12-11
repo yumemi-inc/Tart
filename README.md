@@ -425,7 +425,7 @@ You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` dir
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
-Create an instance of the `ViewStore` from a *Store* instance using the `create()`.
+Create an instance of the `ViewStore` from a *Store* instance using the `rememberViewStore()`.
 For example, if you have a *Store* in your ViewModel, it would look like this:
 
 ```kt
@@ -438,7 +438,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // create an instance of ViewStore at the top level of Compose
-            val viewStore = ViewStore.create(mainViewModel.store)
+            val viewStore = rememberViewStore(mainViewModel.store)
 
             MyApplicationTheme {
                 Surface(
