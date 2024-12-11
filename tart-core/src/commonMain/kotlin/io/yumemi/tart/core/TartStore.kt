@@ -18,7 +18,7 @@ import kotlin.coroutines.CoroutineContext
 open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private val initialState: S,
     private val latestState: suspend (state: S) -> Unit,
-    onError: (error: Throwable) -> Unit,
+    private val onError: (error: Throwable) -> Unit,
     coroutineContext: CoroutineContext,
 ) : Store<S, A, E> {
     private val _state: MutableStateFlow<S> = MutableStateFlow(initialState)
@@ -189,7 +189,11 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private suspend fun processStateChange(state: S, nextState: S) {
         processMiddleware { beforeStateChange(state, nextState) }
         _state.update { nextState }
-        latestState(nextState)
+        try {
+            latestState(nextState)
+        } catch (t: Throwable) {
+            onError(t)
+        }
         processMiddleware { afterStateChange(nextState, state) }
     }
 
