@@ -448,7 +448,7 @@ class MainActivity : ComponentActivity() {
                     YourComposableComponent(
                         viewStore = viewStore,
                     )
-    // ... 
+            // ... 
 ```
 
 ### Rendering using State
@@ -661,7 +661,6 @@ First, prepare classes for messages.
 sealed interface MainMessage : Message {
     data object LoggedOut : MainMessage
     data class CommentLiked(val commentId: Int) : MainMessage
-    // ...
 }
 ```
 
