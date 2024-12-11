@@ -34,7 +34,7 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
     inline fun <reified S2 : S> render(block: ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
             block(
-                mock(
+                create(
                     state = state,
                     dispatch = dispatch,
                     eventFlow = eventFlow,
@@ -53,22 +53,31 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
     }
 
     companion object {
-        @Composable
-        fun <S : State, A : Action, E : Event> create(store: Store<S, A, E>): ViewStore<S, A, E> {
-            val state by store.state.collectAsState()
-            return ViewStore(
-                state = state,
-                dispatch = store::dispatch,
-                eventFlow = store.event,
-            )
-        }
-
-        fun <S : State, A : Action, E : Event> mock(state: S, dispatch: (action: A) -> Unit = {}, eventFlow: Flow<E> = emptyFlow()): ViewStore<S, A, E> {
+        fun <S : State, A : Action, E : Event> create(state: S, dispatch: (action: A) -> Unit, eventFlow: Flow<E>): ViewStore<S, A, E> {
             return ViewStore(
                 state = state,
                 dispatch = dispatch,
                 eventFlow = eventFlow,
             )
         }
+
+        fun <S : State, A : Action, E : Event> mock(state: S): ViewStore<S, A, E> {
+            return ViewStore(
+                state = state,
+                dispatch = {},
+                eventFlow = emptyFlow(),
+            )
+        }
     }
+}
+
+@Suppress("unused")
+@Composable
+fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>): ViewStore<S, A, E> {
+    val state by store.state.collectAsState()
+    return ViewStore.create(
+        state = state,
+        dispatch = store::dispatch,
+        eventFlow = store.event,
+    )
 }
