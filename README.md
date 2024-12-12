@@ -1,17 +1,30 @@
 # Tart
 
-<div align="center">
+<div align="left">
   <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/icon.png" width=15% />
 </div>
 
-Tart is a Flux framework for Kotlin Multiplatform.
+Tart is a state management framework for Kotlin Multiplatform.
 
 - Data flow is one-way, making it easy to understand.
 - Since the state during processing is unchanged, there is no need to be aware of side effects.
 - Code becomes declarative.
-- Works on multiple platforms (Currently on Android and iOS).
+- Works on multiple platforms (currently on Android and iOS).
 
-I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.
+The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/overview.png" width=50% />
+</div>
+</br>
+
+The processing on the *Store* is expressed by the following function:
+
+```kt
+(State, Action) -> State
+```
+
+In this framework, based on the above function, we only need to be concerned with the relationship between *State* and *Action*.
 
 ## Installation
 
@@ -23,12 +36,9 @@ implementation("io.yumemi.tart:tart-core:<latest-release>")
 
 ### Basic
 
-Take a simple counter as an example.
-First, prepare classes for *State*, *Action*, and *Event*.
+Take a simple counter application as an example.
 
-- *State*: state of the UI
-- *Action*: action on the UI by the application user
-- *Event*: event that is notified to the UI
+First, prepare classes for *State*, *Action*, and *Event*.
 
 ```kt
 data class CounterState(val count: Int) : State
@@ -42,8 +52,7 @@ sealed interface CounterAction : Action {
 sealed interface CounterEvent : Event {} // currently empty
 ```
 
-Create a *Store* class from `Store.Base` by specifying the initial state.
-Keep the *Store* class instance in the ViewModel etc.
+Create a *Store* class from `Store.Base` with an initial *State*.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -51,7 +60,8 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 )
 ```
 
-Overrides the `onDispatch()` method and define how the *State* is changed by *Action*.
+Overrides the `onDispatch()` and define how the *State* is changed by *Action*.
+This is a `(State, Action) -> State` function.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -77,12 +87,15 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 }
 ```
 
-Issue an *Action* from the UI using the Store's `dispatch()` method.
+The *Store* preparation is now complete.
+Instantiate the `CounterStore` class and keep it in the ViewModel etc.
+
+Issue an *Action* from the UI using the Store's `dispatch()`.
 
 ```kt
 // example in Compose
 Button(
-    onClick = { store.dispatch(CounterAction.Increment) },
+    onClick = { counterStore.dispatch(CounterAction.Increment) },
 ) {
     Text(text = "increment")
 }
@@ -101,7 +114,7 @@ sealed interface CounterEvent : Event {
 }
 ```
 
-In the `dispatch()` method body, issue an *Event* using the `emit()` method.
+In the `dispatch()` method body, issue an *Event* using the `emit()`.
 
 ```kt
 is CounterAction.Decrement -> {
@@ -118,7 +131,7 @@ Subscribe to the Store's `.event` (Flow) on the UI, and process it.
 
 ### Access to Repository, UseCase, etc.
 
-Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method.
+Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method body.
 
 ```kt
 class CounterStore(
@@ -144,9 +157,8 @@ class CounterStore(
 
 ### Multiple states and transitions
 
-In the previous examples, the state was single.
-However, in actual application development, multiple states exist, such as the UI during data loading.
-In that case, prepare multiple *States*.
+In the previous examples, the *State* was single.
+However, if there are multiple *States*, for example a UI during data loading, prepare multiple *States*.
 
 ```kt
 sealed interface CounterState : State {
@@ -165,7 +177,7 @@ class CounterStore(
         CounterState.Loading -> when (action) {
             CounterAction.Load -> {
                 val count = counterRepository.get()
-                CounterState.Main(count = count) // transition to next state
+                CounterState.Main(count = count) // transition to Main state
             }
 
             else -> state
@@ -177,13 +189,13 @@ class CounterStore(
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
-Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` method.
+Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` (similarly, you can override the `onExit()` if necessary).
 
 ```kt
 override suspend fun onEnter(state: CounterState): CounterState = when (state) {
     CounterState.Loading -> {
         val count = counterRepository.get()
-        CounterState.Main(count = count)
+        CounterState.Main(count = count) // transition to Main state
     }
 
     else -> state
@@ -197,16 +209,18 @@ override suspend fun onDispatch(state: CounterState, action: CounterAction): Cou
 
 The state diagram is as follows:
 
-![image](doc/diagram.png)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/diagram.png" width=25% />
+</div>
+</br>
 
-Similarly, you can override the `onExit()` method.
 This framework works well with state diagrams.
-It would be a good idea to document it and share it with your team if necessary.
+It would be a good idea to document it and share it with your development team.
 
 <details>
 <summary>Tips: define extension functions for each State</summary>
 
-Normally, code for all States is written in the body of the `onDispatch()` method.
+Normally, code for all *States* is written in the body of the `onDispatch()` method.
 
 ```kt
 override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
@@ -231,8 +245,8 @@ override suspend fun onDispatch(state: MainState, action: MainAction): MainState
     // ...
 ```
 
-This is fine if the code is simple, but if the code becomes long, define an extension function for each State.
-Code for each State becomes easier to understand.
+This is fine if the code is simple, but if the code becomes long, define an extension function for each *State*.
+Code for each *State* becomes easier to understand.
 
 ```kt
 override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
@@ -274,18 +288,18 @@ private suspend fun MainState.StateA.process(action: MainAction): MainState = wh
     else -> this
 }
 
-// this does not include when branches
+// function for MainAction.ActionA
 private suspend fun MainState.StateA.process(action: MainAction.ActionA): MainState {
-    // do something..
+    // not include when branches..
 }
 ```
 
-In any case, the `onDispatch()` method is a simple method that simply returns a new State from the current State and Action, so you can design the code as you like.
+In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
 </details>
 
 ### Error handling
 
-If you prepare a *State* for the error UI and handle the error, it will look like this:
+If you prepare a *State* for error display and handle the error in the `onEnterDidpatch()`, it will be as follows:
 
 ```kt
 sealed interface CounterState : State {
@@ -305,14 +319,15 @@ override suspend fun onEnter(state: CounterState): CounterState = when (state) {
         }
     }
 
-    // ...
+    else -> state
 ```
 
-This is fine, but you can also handle errors by overriding the `onError()` method.
+This is fine, but you can also handle errors by overriding the `onError()`.
 
 ```kt
 override suspend fun onEnter(state: CounterState): CounterState = when (state) {
     CounterState.Loading -> {
+        // no error handling code
         val count = counterRepository.get()
         CounterState.Main(count = count)
     }
@@ -321,18 +336,18 @@ override suspend fun onEnter(state: CounterState): CounterState = when (state) {
 }
 
 override suspend fun onError(state: CounterState, error: Throwable): CounterState {
+    // you can also branch using state and error inputs if necessary
     return CounterState.Error(error = error)
 }
 ```
 
-Errors can be caught not only in `onEnter()` method but also in `onDispatch()` and `onExit()` methods.
-The above example uniformly transitions to the `CounterState.Error` state, but of course it is also possible to branch the process depending on the `state` or `error` input.
+Errors can be caught not only in the `onEnter()` but also in the `onDispatch()` and `onExit()`.
 
-### Constructor arguments when creating a Store
+### Constructor arguments when creating a *Store*
 
 #### initialState [required]
 
-Specify the first *state*.
+Specify the first *State*.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
@@ -342,7 +357,10 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 
 #### coroutineContext [option]
 
-You can pass any `CoroutieneContext`, but if it is an Android ViewModel, it will be `viewModelScope.coroutineContext`.
+You can pass any `CoroutieneContext`.
+If omitted, the default context will be used.
+
+If you keep the *Store* in Android's ViewModel, it will be `viewModelScope.coroutineContext`.
 
 ```kt
 class CounterStore(
@@ -362,37 +380,38 @@ class CounterViewModel : ViewModel() {
 In this case, the Store's Coroutines will be disposed of according to the ViewModel's lifecycle.
 If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on Android.
 
-In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, create an instance of Store in ViewModel or Activity to pass them, and inject Repository, UseCase, etc. to ViewModel or Activity.
+In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass `CoroutieneContext`, and if you need Repository, UseCase, etc., inject them into the ViewModel or Activity.
 
 ```kt
 class CounterViewModel(
     counterRepository: CounterRepository, // inject to ViewModel
 ) : ViewModel() {
     val store = CounterStore(
-        counterRepository = counterRepository,
+        counterRepository = counterRepository, // pass to Store
         coroutineContext = viewModelScope.coroutineContext,
     )
 }
 ```
 
-If not, you can create an instance of Store with the DI library.
+If you omit specifying the `CoroutineScope`, you can create an instance of *Store* with DI libraries.
 
 #### latestState [option]
 
-Latest *State* is notified by callback.
-When saving and restoring the *State*, save the *State* notified by this callback and pass it to `initialState` when restoring.
+The latest *State* will be notified with this callback.
+If you want to save the *State* (e.g. using ViewModel's SavedStateHandle), save the *State* notified by this callback and specify the restored *State* in `initialState`.
 
 #### onError [option]
 
-Uncaught errors can be received with a callback.
+Uncaught errors can be received with this callback.
 
 ### For iOS
 
-Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use `.collectState()` and `.collectEvent()`. If the State and Event change, you will be notified with a callback.
+Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use the `.collectState()` and `.collectEvent()`.
+If the *State* or *Event* changes, you will be notified through these callbacks.
 
 ### Disposal of Coroutines
 
-If you are not using an automatically disposed scope like Android's ViewModelScope or LificycleScope, call the `.dispose()` method explicitly when Store is no longer needed.
+If you are not using an automatically disposed scope like Android's `ViewModelScope` or `LificycleScope`, call Store's `.dispose()` explicitly when *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
 ## Compose
@@ -400,14 +419,14 @@ Then, processing of all Coroutines will stop.
 <details>
 <summary>contents</summary>
 
-You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` on the UI side, but we provide a mechanism for Compose.
+You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` directly, but we provide a mechanism for Compose.
 
 ```kt
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
-Create an instance of the `ViewStore` from a Store instance using the `ViewStore#create()` method.
-For example, if you have a Store in your ViewModel, it would look like this:
+Create an instance of the `ViewStore` from a *Store* instance using the `rememberViewStore()`.
+For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
 class MainActivity : ComponentActivity() {
@@ -418,18 +437,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // create ViewStore instance at top level of Comopse
-            val viewStore = ViewStore.create(mainViewModel.store)
+            // create an instance of ViewStore at the top level of Compose
+            val viewStore = rememberViewStore(mainViewModel.store)
 
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    // pass as an argument to Composable component
+                    // pass the ViewStore instance to lower components
                     YourComposableComponent(
                         viewStore = viewStore,
                     )
-// ... 
+            // ... 
 ```
 
 ### Rendering using State
@@ -469,11 +488,10 @@ viewStore.render<CounterState.Main> {
 }
 ```
 
-In this case, `this` inside the `render()` block is a new *ViewStore* instance according to *State*.
-If you use another component in the `render()` block, pass its instance.
+If you use lower components in the `render()` block, pass its instance.
 
 ```kt
-store.render<CounterState.Main> {
+viewStore.render<CounterState.Main> {
     YourComposableComponent(
         viewStore = this, // ViewStore instance for CounterState.Main
     )
@@ -483,28 +501,32 @@ store.render<CounterState.Main> {
 
 @Composable
 fun YourComposableComponent(
+    // Main state is confirmed
     viewStore: ViewStore<CounterState.Main, CounterAction, CounterEvent>,
 ) {
-    // Main state is confirmed
-    Text(text = viewStore.state.count.toString())
+    Text(
+        text = viewStore.state.count.toString()
+    )
 }
 ```
 
 ### Dispatch Action
 
-Use ViewStore's `.dispatch()` method with target *Action*.
+Use ViewStore's `.dispatch()` with target *Action*.
 
 ```kt
 Button(
     onClick = { viewStore.dispatch(CounterAction.Increment) },
 ) {
-    Text(text = "increment")
+    Text(
+        text = "increment"
+    )
 }
 ```
 
 ### Event handling
 
-Use ViewStore's `.handle()` method with target *Event*.
+Use ViewStore's `.handle()` with target *Event*.
 
 ```kt
 viewStore.handle<CounterEvent.ShowToast> { event ->
@@ -512,7 +534,7 @@ viewStore.handle<CounterEvent.ShowToast> { event ->
 }
 ```
 
-You can also subscribe to parent *Event* types.
+In the above example, you can also subscribe to the parent *Event* type.
 
 ```kt
 viewStore.handle<CounterEvent> { event ->
@@ -525,7 +547,8 @@ viewStore.handle<CounterEvent> { event ->
 
 ### Mock for preview and testing
 
-Create a mock instance using `ViewStore.mock()`.
+Create an instance of ViewStore using the `mock()` with target *State*.
+You can statically create a ViewStore instance without a *Store* instance.
 
 ```kt
 @Preview
@@ -541,7 +564,7 @@ fun LoadingPreview() {
 }
 ```
 
-Therefore, by defining only the *State*, it is possible to develop the UI even before implementing the *Store*.
+Therefore, if you prepare only the *State*, it is possible to develop the UI.
 </details>
 
 ## Middleware
@@ -549,7 +572,7 @@ Therefore, by defining only the *State*, it is possible to develop the UI even b
 <details>
 <summary>contens</summary>
 
-You can create extensions that work with the Store.
+You can create extensions that work with the *Store*.
 To do this, create a class that implements the `Middleware` interface and override the necessary methods.
 
 ```kt
@@ -560,7 +583,7 @@ class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
 }
 ```
 
-Apply Middleware to Store as follows:
+Apply the created Middleware as follows:
 
 ```kt
 class MainStore(
@@ -571,7 +594,7 @@ class MainStore(
     override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
         // add Middleware instance to List
         YourMiddleware(),
-        // or, implement here
+        // or, implement Middleware directly here
         object : Middleware<MainState, MainAction, MainEvent> {
             override suspend fun afterStateChange(state: MainState, prevState: MainState) {
                 // do something..
@@ -579,13 +602,15 @@ class MainStore(
         },
     )
 
-// ...
+    // ...
 ```
 
-Since each method of Middleware is a suspending function, it operates in synchronization with Store, so you can create an extension that is completely synchronized with Store.
-However, since it will interrupt the Store process, you should prepare a new CoroutineScope for long processes.
+You can also list a Middleware instance created with DI Libraries.
 
-Also note that State is read-only in Middleware.
+Each Middleware method is a suspending function, so it can be run synchronously (not asynchronously) with the *Store*.
+However, since it will interrupt the *Store* process, you should prepare a new CoroutineScope for long processes.
+
+Note that *State* is read-only in Middleware.
 
 In the next section, we will introduce pre-prepared Middleware.
 The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your Middleware implementation.
@@ -605,16 +630,17 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 ```
 
 The implementation of the `LoggingMiddleware` is [here](tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt), change the arguments or override
-the class as necessary.
+methods as necessary.
 If you want to change the logger, prepare a class that implements the `Logger` interface.
 
 ```kt
 override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
     object : LoggingMiddleware<MainState, MainAction, MainEvent>(
-        logger = YourLogger()
+        logger = YourLogger() // change logger
     ) {
+        // override other methods
         override suspend fun beforeStateEnter(state: MainState) {
-            // do something..
+            // ...
         }
     },
 )
@@ -622,50 +648,48 @@ override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = l
 
 ### Message
 
-Middleware for sending messages between Stores.
+Middleware for sending messages between *Stores*.
 
 ```kt
 implementation("io.yumemi.tart:tart-message:<latest-release>")
 ```
 
-Prepare a class with a `Message` interface.
+First, prepare classes for messages.
 
 ```kt
-interface MainMessage : Message {
-    data object LogoutCompleted : MainMessage
+sealed interface MainMessage : Message {
+    data object LoggedOut : MainMessage
     data class CommentLiked(val commentId: Int) : MainMessage
-    // ...
 }
-
 ```
 
-Apply `MessageSendMiddleware` to the Store that sends messages.
+Apply the `MessageMiddleware` to the *Store* that receives messages.
 
 ```kt
-override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
-    object : MessageSendMiddleware<MainState, MainAction, MainEvent>() {
-        override suspend fun onEvent(event: MainEvent, send: SendFun, store: Store<MainState, MainAction, MainEvent>) {
-            when (event) {
-                is MainEvent.NofityLogout -> send(MainMessage.LogoutCompleted)
-                // ...
-            }
-        }
-    },
-)
-```
-
-Apply `MessageReceiveMiddleware` to the Store that receives messages.
-
-```kt
-override val middlewares: List<Middleware<SubState, SubAction, SubEvent>> = listOf(
-    object : MessageReceiveMiddleware<SubState, SubAction, SubEvent>() {
-        override suspend fun receive(message: Message, store: Store<SubState, SubAction, SubEvent>) {
+override val middlewares: List<Middleware<MyPageState, MyPageAction, MyPageEvent>> = listOf(
+    object : MessageMiddleware<MyPageState, MyPageAction, MyPageEvent>() {
+        override suspend fun receive(message: Message, dispatch: (action: MyPageAction) -> Unit) {
             when (message) {
-                is MainEvent.LogoutCompleted -> store.dispatch(SubAction.doLogout)
+                is MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
                 // ...
             }
         }
     },
 )
+```
+
+Call the `MessageMiddleware.send()` at any point in the *Store* that sends messages.
+
+```kt
+override suspend fun onExit(state: MainState) = when (state) {
+    is MainState.LoggedIn -> {
+        MessageMiddleware.send(MainMessage.LoggedOut)
+    }
+
+    // ...
 ```
 </details>
+
+## Acknowledgments
+
+I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.
