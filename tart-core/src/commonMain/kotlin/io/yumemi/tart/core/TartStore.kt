@@ -85,7 +85,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                     processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
                     onStateEntered(initialState)
                 } catch (t: Throwable) {
-                    if (t is MiddlewareError) {
+                    if (t is InternalError) {
                         throw t.original
                     }
                     throw t
@@ -110,7 +110,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
-            if (t is MiddlewareError) {
+            if (t is InternalError) {
                 throw t.original
             }
             onErrorOccurred(currentState, t)
@@ -133,7 +133,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 onStateEntered(nextState, inErrorHandling = inErrorHandling)
             }
         } catch (t: Throwable) {
-            if (t is MiddlewareError) {
+            if (t is InternalError) {
                 throw t.original
             }
             if (inErrorHandling) {
@@ -159,7 +159,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 onStateEntered(nextState, inErrorHandling = true)
             }
         } catch (t: Throwable) {
-            if (t is MiddlewareError) {
+            if (t is InternalError) {
                 throw t.original
             }
             throw t
@@ -192,7 +192,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         try {
             latestState(nextState)
         } catch (t: Throwable) {
-            onError(t)
+            throw InternalError(t)
         }
         processMiddleware { afterStateChange(nextState, state) }
     }
@@ -218,9 +218,9 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
                 }
             }
         } catch (t: Throwable) {
-            throw MiddlewareError(t)
+            throw InternalError(t)
         }
     }
 
-    private class MiddlewareError(val original: Throwable) : Throwable(original)
+    private class InternalError(val original: Throwable) : Throwable(original)
 }
