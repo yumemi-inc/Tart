@@ -678,12 +678,12 @@ override val middlewares: List<Middleware<MyPageState, MyPageAction, MyPageEvent
 )
 ```
 
-Call the `MessageMiddleware.send()` at any point in the *Store* that sends messages.
+Call the `send()` at any point in the *Store* that sends messages.
 
 ```kt
 override suspend fun onExit(state: MainState) = when (state) {
     is MainState.LoggedIn -> {
-        MessageMiddleware.send(MainMessage.LoggedOut)
+        send(MainMessage.LoggedOut)
     }
 
     // ...
