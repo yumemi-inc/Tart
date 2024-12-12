@@ -1,7 +1,7 @@
 # Tart
 
 <div align="left">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/icon.png" width=15% />
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/logo.png" width=15% />
 </div>
 
 Tart is a state management framework for Kotlin Multiplatform.
@@ -14,7 +14,7 @@ Tart is a state management framework for Kotlin Multiplatform.
 The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/overview.png" width=50% />
+  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/architecture.png" width=50% />
 </div>
 </br>
 
