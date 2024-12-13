@@ -360,6 +360,9 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 You can pass any `CoroutieneContext`.
 If omitted, the default context will be used.
 
+<details>
+<summary>more</summary>
+
 If you keep the *Store* in Android's ViewModel, it will be `viewModelScope.coroutineContext`.
 
 ```kt
@@ -377,10 +380,11 @@ class CounterViewModel : ViewModel() {
 }
 ```
 
-In this case, the Store's Coroutines will be disposed of according to the ViewModel's lifecycle.
 If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on Android.
+In these cases, the Store's Coroutines will be disposed of according to the those lifecycle.
 
-In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass `CoroutieneContext`, and if you need Repository, UseCase, etc., inject them into the ViewModel or Activity.
+In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass `CoroutieneContext`.
+And, if you need Repository, UseCase, etc., it is necessary to inject them into ViewModel and Activity.
 
 ```kt
 class CounterViewModel(
@@ -393,7 +397,32 @@ class CounterViewModel(
 }
 ```
 
-If you omit specifying the `CoroutineScope`, you can create an instance of *Store* with DI libraries.
+In such cases, it is better to prepare a factory class as follows:
+
+```kt
+// provide with DI libraries
+class CounterStoreFactory(
+    private val counterRepository: CounterRepository,
+) {
+    fun create(coroutineContext: CoroutineContext): CounterStore {
+        return CounterStore(
+            counterRepository = counterRepository,
+            coroutineContext = coroutineContext,
+        )
+    }
+}
+
+// ...
+
+class CounterViewModel(
+    counterStoreFactory: CounterStoreFactory, // inject to ViewModel
+) : ViewModel() {
+    val store = counterStoreFactory.create(viewModelScope.coroutineContext)
+}
+```
+
+Even if you omit the `CoroutineScope` specification, it is a good practice to prepare a factory class for creating a *Store*.
+</details>
 
 #### latestState [option]
 
