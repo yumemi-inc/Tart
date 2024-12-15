@@ -488,6 +488,40 @@ class MainActivity : ComponentActivity() {
             // ... 
 ```
 
+<details>
+<summary>when not using ViewModel</summary>
+
+You can restore the *State* when changing the Activity configuration as follows:
+
+```kt
+class MainActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            var state: CounterState by rememberSaveable {
+                mutableStateOf(CounterState.Loading)
+            }
+
+            val scope = rememberCoroutineScope()
+
+            val store = remember {
+                CounterStore(
+                    initialState = state,
+                    coroutineContext = scope.coroutineContext,
+                ).apply { collectState { state = it } }
+            }
+
+            val viewStore = rememberViewStore(store, observe = false)
+
+            MyApplicationTheme {
+                // ...
+```
+
+In order to use the `rememberSaveable` , *States* needs to be annotated with `@Parcelize`.
+</details>
+
 ### Rendering using State
 
 If the *State* is single, just use ViewStore's `.state`.

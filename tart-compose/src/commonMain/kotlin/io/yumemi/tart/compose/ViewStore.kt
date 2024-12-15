@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
@@ -74,8 +73,8 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
 
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>): ViewStore<S, A, E> {
-    val state by store.state.collectAsState()
+fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, observe: Boolean = true): ViewStore<S, A, E> {
+    val state = if (observe) store.state.collectAsState().value else store.currentState
     return remember(state) {
         ViewStore.create(
             state = state,
