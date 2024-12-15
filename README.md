@@ -355,6 +355,9 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 )
 ```
 
+Also, specify it when restoring the *State* saved to ViewModel's SavedStateHandle etc.
+On the other hand, to save the *State*, it is convenient to obtain the latest *State* using the [collectState()](#for-ios).
+
 #### coroutineContext [option]
 
 You can pass any `CoroutieneContext`.
@@ -423,11 +426,6 @@ class CounterViewModel(
 
 Even if you omit the `CoroutineScope` specification, it is a good practice to prepare a factory class for creating a *Store*.
 </details>
-
-#### latestState [option]
-
-The latest *State* will be notified with this callback.
-If you want to save the *State* (e.g. using ViewModel's SavedStateHandle), save the *State* notified by this callback and specify the restored *State* in `initialState`.
 
 #### onError [option]
 
