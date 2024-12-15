@@ -26,14 +26,12 @@ interface Store<S : State, A : Action, E : Event> {
     @Suppress("unused")
     abstract class Base<S : State, A : Action, E : Event>(
         initialState: S,
-        latestState: suspend (state: S) -> Unit = {},
-        onError: (error: Throwable) -> Unit = { throw it },
         coroutineContext: CoroutineContext = Dispatchers.Default,
+        onError: (error: Throwable) -> Unit = { throw it },
     ) : TartStore<S, A, E>(
         initialState = initialState,
-        latestState = latestState,
-        onError = onError,
         coroutineContext = coroutineContext,
+        onError = onError,
     )
 
     companion object {

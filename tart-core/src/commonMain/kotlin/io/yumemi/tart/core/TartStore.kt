@@ -17,9 +17,8 @@ import kotlin.coroutines.CoroutineContext
 
 open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private val initialState: S,
-    private val latestState: suspend (state: S) -> Unit,
-    private val onError: (error: Throwable) -> Unit,
     coroutineContext: CoroutineContext,
+    private val onError: (error: Throwable) -> Unit,
 ) : Store<S, A, E> {
     private val _state: MutableStateFlow<S> = MutableStateFlow(initialState)
     final override val state: StateFlow<S> by lazy {
@@ -189,11 +188,6 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private suspend fun processStateChange(state: S, nextState: S) {
         processMiddleware { beforeStateChange(state, nextState) }
         _state.update { nextState }
-        try {
-            latestState(nextState)
-        } catch (t: Throwable) {
-            throw InternalError(t)
-        }
         processMiddleware { afterStateChange(nextState, state) }
     }
 
