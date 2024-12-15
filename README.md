@@ -430,6 +430,16 @@ Even if you omit the `CoroutineScope` specification, it is a good practice to pr
 #### onError [option]
 
 Uncaught errors can be received with this callback.
+For logging, do as follows:
+
+```kt
+class CounterStore(
+    logger: YourLogger,
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+    onError = { logger.log(it) },
+)
+```
 
 ### For iOS
 
