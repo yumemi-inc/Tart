@@ -33,7 +33,12 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
 
-    private val coroutineScope = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception -> onError(exception) })
+    private val coroutineScope = CoroutineScope(
+        coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
+            val t = if (exception is InternalError) exception.original else exception
+            onError(t)
+        },
+    )
 
     private val mutex = Mutex()
 
@@ -80,15 +85,8 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private fun init() {
         coroutineScope.launch {
             mutex.withLock {
-                try {
-                    processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
-                    onStateEntered(initialState)
-                } catch (t: Throwable) {
-                    if (t is InternalError) {
-                        throw t.original
-                    }
-                    throw t
-                }
+                processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
+                onStateEntered(initialState)
             }
         }
     }
@@ -110,7 +108,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
             }
         } catch (t: Throwable) {
             if (t is InternalError) {
-                throw t.original
+                throw t
             }
             onErrorOccurred(currentState, t)
         }
@@ -133,10 +131,10 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
             }
         } catch (t: Throwable) {
             if (t is InternalError) {
-                throw t.original
+                throw t
             }
             if (inErrorHandling) {
-                throw t
+                throw InternalError(t)
             }
             onErrorOccurred(currentState, t)
         }
@@ -159,9 +157,9 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
             }
         } catch (t: Throwable) {
             if (t is InternalError) {
-                throw t.original
+                throw t
             }
-            throw t
+            throw InternalError(t)
         }
     }
 
