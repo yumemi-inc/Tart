@@ -21,6 +21,7 @@ dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.android.tools.common)
     compileOnly(libs.kotlin.gradlePlugin)
+    compileOnly(libs.vanniktech.maven.publish.gradlePlugin)
 }
 
 tasks {
@@ -32,5 +33,9 @@ tasks {
 
 gradlePlugin {
     plugins {
+        register("publish") {
+            id = "io.yumemi.tart.publish"
+            implementationClass = "PublishConventionPlugin"
+        }
     }
 }
