@@ -1,11 +1,10 @@
-import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.vanniktech.mavenPublish)
+    alias(libs.plugins.tart.publish)
 }
 
 group = "io.yumemi.tart"
@@ -46,38 +45,6 @@ android {
     }
 }
 
-mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-
-    if (System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername") != null) {
-        signAllPublications()
-    }
-
-    coordinates(group.toString(), "tart-core", version.toString())
-
-    pom {
-        name = "Tart"
-        description = "A Kotlin Multiplatform Flux framework."
-        inceptionYear = "2024"
-        url = "https://github.com/yumemi-inc/Tart/"
-        licenses {
-            license {
-                name = "MIT"
-                url = "https://opensource.org/licenses/MIT"
-                distribution = "https://opensource.org/licenses/MIT"
-            }
-        }
-        developers {
-            developer {
-                id = "yumemi-inc"
-                name = "YUMEMI Inc."
-                url = "https://github.com/yumemi-inc/"
-            }
-        }
-        scm {
-            url = "https://github.com/yumemi-inc/Tart/"
-            connection = "scm:git:git://github.com/yumemi-inc/Tart.git"
-            developerConnection = "scm:git:git://github.com/yumemi-inc/Tart.git"
-        }
-    }
+publishConvention {
+    artifactId = "tart-core"
 }
