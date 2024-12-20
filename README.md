@@ -290,7 +290,30 @@ private suspend fun MainState.StateA.process(action: MainAction): MainState = wh
 
 // function for MainAction.ActionA
 private suspend fun MainState.StateA.process(action: MainAction.ActionA): MainState {
-    // not include when branches..
+    // not include when branches
+    // ...
+}
+```
+
+Or, instead of defining an extension function for *State*, define an extension function for *Action*.
+This may be simpler.
+
+```kt
+override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
+    is MainState.StateA -> when (action) {
+        is MainAction.ActionA -> {
+            val data = action.loadData()
+
+            // describes state update process
+            // ...
+        }
+
+        // ...
+}
+
+// describe what to do for this Action
+private suspend fun ActionA.loadData(): List<SomeData> {
+    return someRepository.get()
 }
 ```
 
