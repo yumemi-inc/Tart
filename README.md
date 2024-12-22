@@ -155,6 +155,26 @@ class CounterStore(
         // ...
 ```
 
+Processing other than changing the *State* may be defined using extension functions for *State* or *Action*.
+
+```kt
+override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
+    CounterAction.Load -> {
+        val count = action.loadCount() // call extension function
+        state.copy(count = count)
+    }
+
+    // ...
+}
+
+// describe what to do for this Action
+private suspend fun CounterAction.Load.loadCount(): Int {
+    return counterRepository.get()
+}
+```
+
+In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
+
 ### Multiple states and transitions
 
 In the previous examples, the *State* was single.
@@ -216,109 +236,6 @@ The state diagram is as follows:
 
 This framework works well with state diagrams.
 It would be a good idea to document it and share it with your development team.
-
-<details>
-<summary>Tips: define extension functions for each State</summary>
-
-Normally, code for all *States* is written in the body of the `onDispatch()` method.
-
-```kt
-override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
-    is MainState.StateA -> when (action) {
-        is MainAction.ActionA -> {
-            // do something..
-        }
-
-        is MainAction.ActionB -> {
-            // do something..
-        }
-
-        // ...
-
-        else -> state
-    }
-
-    is MainState.StateB -> when (action) {
-        // ...
-    }
-
-    // ...
-```
-
-This is fine if the code is simple, but if the code becomes long, define an extension function for each *State*.
-Code for each *State* becomes easier to understand.
-
-```kt
-override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
-    is MainState.StateA -> state.process(action)
-    is MainState.StateB -> state.process(action)
-    // ...
-}
-
-private suspend fun MainState.StateA.process(action: MainAction): MainState = when (action) {
-    is MainAction.ActionA -> {
-        // do something..
-    }
-
-    is MainAction.ActionB -> {
-        // do something..
-    }
-
-    // ...
-
-    else -> this
-}
-
-// ...
-```
-
-In addition, you can also define extension functions for `MainAction.ActionA`.
-
-```kt
-override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
-    is MainState.StateA -> state.process(action)
-    is MainState.StateB -> state.process(action)
-    // ...
-}
-
-private suspend fun MainState.StateA.process(action: MainAction): MainState = when (action) {
-    is MainAction.ActionA -> process(action)
-    is MainAction.ActionB -> process(action)
-    // ...
-    else -> this
-}
-
-// function for MainAction.ActionA
-private suspend fun MainState.StateA.process(action: MainAction.ActionA): MainState {
-    // not include when branches
-    // ...
-}
-```
-
-Or, instead of defining an extension function for *State*, define an extension function for *Action*.
-This may be simpler.
-
-```kt
-override suspend fun onDispatch(state: MainState, action: MainAction): MainState = when (state) {
-    is MainState.StateA -> when (action) {
-        is MainAction.ActionA -> {
-            val data = action.loadData()
-
-            // describes state update process
-            // ...
-        }
-
-        // ...
-}
-
-// describe what to do for this Action
-private suspend fun ActionA.loadData(): List<SomeData> {
-    return someRepository.get()
-}
-```
-
-In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
-</details>
 
 ### Error handling
 
