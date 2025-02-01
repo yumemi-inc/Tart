@@ -1,7 +1,7 @@
 # Tart
 
 <div align="left">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/logo.png" width=15% />
+  <img src="doc/logo.png" width=12% />
 </div>
 
 Tart is a state management framework for Kotlin Multiplatform.
@@ -14,7 +14,7 @@ Tart is a state management framework for Kotlin Multiplatform.
 The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/architecture.png" width=50% />
+  <img src="doc/architecture.png" width=60% />
 </div>
 </br>
 
@@ -155,25 +155,26 @@ class CounterStore(
         // ...
 ```
 
-Processing other than changing the *State* may be defined using extension functions for *State* or *Action*.
-
-```kt
-override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
-    CounterAction.Load -> {
-        val count = action.loadCount() // call extension function
-        state.copy(count = count)
-    }
-
-    // ...
-}
-
-// describe what to do for this Action
-private suspend fun CounterAction.Load.loadCount(): Int {
-    return counterRepository.get()
-}
-```
-
-In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
+> [!TIP]
+> Processing other than changing the *State* may be defined using extension functions for *State* or *Action*.
+>
+> ```kt
+> override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
+>     CounterAction.Load -> {
+>         val count = action.loadCount() // call extension function
+>         state.copy(count = count)
+>     }
+> 
+>     // ...
+> }
+> 
+> // describe what to do for this Action
+> private suspend fun CounterAction.Load.loadCount(): Int {
+>     return counterRepository.get()
+> }
+> ```
+>
+> In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
 
 ### Multiple states and transitions
 
@@ -327,7 +328,7 @@ If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on
 In these cases, the Store's Coroutines will be disposed of according to the those lifecycle.
 
 In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass `CoroutieneContext`.
-And, if you need Repository, UseCase, etc., it is necessary to inject them into ViewModel and Activity.
+And, if you need Repository, UseCase, etc., it is necessary to inject them into ViewModel or Activity.
 
 ```kt
 class CounterViewModel(
@@ -364,7 +365,7 @@ class CounterViewModel(
 }
 ```
 
-Even if you omit the `CoroutineScope` specification, it is a good practice to prepare a factory class for creating a *Store*.
+Even if you omit the `CoroutieneContext` specification, it is a good practice to prepare a factory class for creating a *Store*.
 </details>
 
 #### onError [option]
@@ -406,16 +407,16 @@ Create an instance of the `ViewStore` from a *Store* instance using the `remembe
 For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
-class MainActivity : ComponentActivity() {
+class CounterActivity : ComponentActivity() {
 
-    private val mainViewModel: MainViewModel by viewModels()
+    private val counterViewModel: CounterViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             // create an instance of ViewStore at the top level of Compose
-            val viewStore = rememberViewStore(mainViewModel.store)
+            val viewStore = rememberViewStore(counterViewModel.store)
 
             MyApplicationTheme {
                 Surface(
@@ -428,39 +429,26 @@ class MainActivity : ComponentActivity() {
             // ... 
 ```
 
-<details>
-<summary>when not using ViewModel</summary>
-
-You can restore the *State* when changing the Activity configuration as follows:
+Even if you create an instance of the `ViewStore` as shown below, you can restore *State* when the Activity configuration changes without using ViewModel.
+However, note that *States* must implement `Parcelable` or `Serializable` because they are used internally for [rememberSaveable](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/package-summary.html).
 
 ```kt
-class MainActivity : ComponentActivity() {
+class CounterActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            var state: CounterState by rememberSaveable {
-                mutableStateOf(CounterState.Loading)
-            }
-
-            val scope = rememberCoroutineScope()
-
-            val store = remember {
+            // create an instance of ViewStore with support for State restore
+            val viewStore = rememberViewStore { savedState: CounterState? ->
                 CounterStore(
-                    initialState = state,
-                    coroutineContext = scope.coroutineContext,
-                ).apply { collectState { state = it } }
+                    initialState = savedState ?: CounterState.Loading,
+                    coroutineContext = coroutineContext,
+                )
             }
 
-            val viewStore = rememberViewStore(store, observe = false)
-
-            MyApplicationTheme {
-                // ...
+            // ... 
 ```
-
-In order to use the `rememberSaveable` , *States* needs to be annotated with `@Parcelize`.
-</details>
 
 ### Rendering using State
 
@@ -599,15 +587,15 @@ Apply the created Middleware as follows:
 ```kt
 class MainStore(
     // ...
-) : Store.Base<MainState, MainAction, MainEvent>(
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
     // ...
 ) {
-    override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
+    override val middlewares: List<Middleware<CounterState, CounterAction, CounterEvent>> = listOf(
         // add Middleware instance to List
         YourMiddleware(),
         // or, implement Middleware directly here
-        object : Middleware<MainState, MainAction, MainEvent> {
-            override suspend fun afterStateChange(state: MainState, prevState: MainState) {
+        object : Middleware<CounterState, CounterAction, CounterEvent> {
+            override suspend fun afterStateChange(state: CounterState, prevState: CounterState) {
                 // do something..
             }
         },
@@ -635,7 +623,7 @@ implementation("io.yumemi.tart:tart-logging:<latest-release>")
 ```
 
 ```kt
-override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
+override val middlewares: List<Middleware<CounterState, CounterAction, CounterEvent>> = listOf(
     LoggingMiddleware(),
 )
 ```
@@ -645,12 +633,12 @@ methods as necessary.
 If you want to change the logger, prepare a class that implements the `Logger` interface.
 
 ```kt
-override val middlewares: List<Middleware<MainState, MainAction, MainEvent>> = listOf(
-    object : LoggingMiddleware<MainState, MainAction, MainEvent>(
+override val middlewares: List<Middleware<CounterState, CounterAction, CounterEvent>> = listOf(
+    object : LoggingMiddleware<CounterState, CounterAction, CounterEvent>(
         logger = YourLogger() // change logger
     ) {
         // override other methods
-        override suspend fun beforeStateEnter(state: MainState) {
+        override suspend fun beforeStateEnter(state: CounterState) {
             // ...
         }
     },
@@ -693,7 +681,7 @@ Call the `send()` at any point in the *Store* that sends messages.
 
 ```kt
 override suspend fun onExit(state: MainState) = when (state) {
-    is MainState.LoggedIn -> {
+    is MainState.LoggedIn -> { // leave the logged-in state
         send(MainMessage.LoggedOut)
     }
 
