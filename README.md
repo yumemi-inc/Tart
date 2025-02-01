@@ -569,7 +569,7 @@ Therefore, if you prepare only the *State*, it is possible to develop the UI.
 ## Middleware
 
 <details>
-<summary>contens</summary>
+<summary>contents</summary>
 
 You can create extensions that work with the *Store*.
 To do this, create a class that implements the `Middleware` interface and override the necessary methods.
