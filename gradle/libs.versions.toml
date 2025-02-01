@@ -13,6 +13,7 @@ vanniktech-maven-publish = "0.29.0"
 [libraries]
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose" }
+compose-runtime-saveable = { group = "androidx.compose.runtime", name = "runtime-saveable", version.ref = "compose" }
 logger-kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 

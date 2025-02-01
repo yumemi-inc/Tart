@@ -4,11 +4,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
@@ -73,8 +79,41 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
 
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, observe: Boolean = true): ViewStore<S, A, E> {
-    val state = if (observe) store.state.collectAsState().value else store.currentState
+fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>): ViewStore<S, A, E> {
+    val state by store.state.collectAsState()
+    return remember(state) {
+        ViewStore.create(
+            state = state,
+            dispatch = store::dispatch,
+            eventFlow = store.event,
+        )
+    }
+}
+
+@Suppress("unused")
+@Composable
+fun <S : State, A : Action, E : Event> rememberViewStore(factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
+    var savedState: S? by rememberSaveable {
+        mutableStateOf(null)
+    }
+
+    val scope = rememberCoroutineScope()
+
+    val store = remember {
+        factory(scope, savedState)
+    }
+
+    // get the State when the Store instance is created, before the State is changed in TartStore's init()
+    val state = savedState ?: store.currentState
+
+    LaunchedEffect(Unit) {
+        store.collectState { // TartStore's init() is called her
+            if (state != it) { // avoid unnecessary recompose when saveState is null
+                savedState = it
+            }
+        }
+    }
+
     return remember(state) {
         ViewStore.create(
             state = state,
