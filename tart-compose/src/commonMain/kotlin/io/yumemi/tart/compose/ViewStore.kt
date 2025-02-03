@@ -16,6 +16,7 @@ import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 
@@ -100,17 +101,17 @@ fun <S : State, A : Action, E : Event> rememberViewStore(factory: CoroutineScope
     val scope = rememberCoroutineScope()
 
     val store = remember {
+        // if savedState is null, the initial State specified by the developer
         factory(scope, savedState)
     }
 
-    // get the State when the Store instance is created, before the State is changed in TartStore's init()
+    // store.currentState .. get the State when the Store instance is created, before the State is changed in TartStore's init() process
     val state = savedState ?: store.currentState
 
     LaunchedEffect(Unit) {
-        store.collectState { // TartStore's init() is called her
-            if (state != it) { // avoid unnecessary recompose when saveState is null
-                savedState = it
-            }
+        // TartStore's init() is called her (see state for the first time)
+        store.state.drop(1).collect { // drop(1) .. avoid unnecessary recompose when savedState is null
+            savedState = it
         }
     }
 
