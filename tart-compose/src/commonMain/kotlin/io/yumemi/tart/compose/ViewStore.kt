@@ -8,6 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import io.yumemi.tart.core.Action
@@ -93,8 +95,8 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>):
 
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
-    var savedState: S? by rememberSaveable {
+fun <S : State, A : Action, E : Event> rememberViewStore(saver: Saver<S?, out Any> = autoSaver(), factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
+    var savedState: S? by rememberSaveable(stateSaver = saver) {
         mutableStateOf(null)
     }
 
