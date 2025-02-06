@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.tart.publish)
 }
@@ -19,18 +20,17 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_1_8)
         }
     }
-    // FIXME: comment out iOS because build error
-    // iosX64()
-    // iosArm64()
-    // iosSimulatorArm64()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
                 // put your multiplatform dependencies here
                 implementation(project(":tart-core"))
-                implementation(libs.compose.runtime)
-                implementation(libs.compose.runtime.saveable)
+                implementation(compose.runtime)
+                implementation(compose.runtimeSaveable)
             }
         }
         val commonTest by getting {
