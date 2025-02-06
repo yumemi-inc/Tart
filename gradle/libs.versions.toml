@@ -1,19 +1,17 @@
 [versions]
+tart = "1.2.0"
 agp = "8.6.1"
 kotlin = "2.0.20"
 coroutines = "1.9.0"
-compose = "1.7.5"
 kermit = "1.2.2"
 android-minSdk = "21"
 android-compileSdk = "34"
-tart = "1.1.0"
 androidTools = "31.7.3"
+compose-multiplatform = "1.7.3"
 vanniktech-maven-publish = "0.29.0"
 
 [libraries]
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose" }
-compose-runtime-saveable = { group = "androidx.compose.runtime", name = "runtime-saveable", version.ref = "compose" }
 logger-kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
@@ -25,7 +23,7 @@ vanniktech-maven-publish-gradlePlugin = { module = "com.vanniktech:gradle-maven-
 [plugins]
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
-
 tart-publish = { id = "io.yumemi.tart.publish", version = "unspecified" }
