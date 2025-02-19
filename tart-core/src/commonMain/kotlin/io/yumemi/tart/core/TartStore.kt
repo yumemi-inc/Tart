@@ -2,6 +2,7 @@ package io.yumemi.tart.core
 
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
@@ -52,13 +53,13 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     final override fun collectState(state: (state: S) -> Unit) {
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.Unconfined) {
             this@TartStore.state.collect { state(it) }
         }
     }
 
     final override fun collectEvent(event: (event: E) -> Unit) {
-        coroutineScope.launch {
+        coroutineScope.launch((Dispatchers.Unconfined)) {
             this@TartStore.event.collect { event(it) }
         }
     }

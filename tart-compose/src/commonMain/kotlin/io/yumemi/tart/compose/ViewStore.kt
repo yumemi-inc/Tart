@@ -1,6 +1,7 @@
 package io.yumemi.tart.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -16,11 +17,11 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.launch
 
 @Suppress("unused")
 @Stable
@@ -95,25 +96,36 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>):
 
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(saver: Saver<S?, out Any> = autoSaver(), factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
+fun <S : State, A : Action, E : Event> rememberViewStore(
+    saver: Saver<S?, out Any> = autoSaver(),
+    autoDispose: Boolean = true,
+    factory: (savedState: S?) -> Store<S, A, E>,
+): ViewStore<S, A, E> {
     var savedState: S? by rememberSaveable(stateSaver = saver) {
         mutableStateOf(null)
     }
 
-    val scope = rememberCoroutineScope()
-
     val store = remember {
         // if savedState is null, the initial State specified by the developer
-        factory(scope, savedState)
+        factory(savedState)
     }
 
     // store.currentState .. get the State when the Store instance is created, before the State is changed in TartStore's init() process
     val state = savedState ?: store.currentState
 
-    LaunchedEffect(Unit) {
-        // TartStore's init() is called her (see state for the first time)
-        store.state.drop(1).collect { // drop(1) .. avoid unnecessary recompose when savedState is null
-            savedState = it
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(Unit) {
+        scope.launch {
+            // TartStore's init() is called her (see state for the first time)
+            store.state.drop(1).collect { // drop(1) .. avoid unnecessary recompose when savedState is null
+                savedState = it
+            }
+        }
+        onDispose {
+            if (autoDispose) {
+                store.dispose()
+            }
         }
     }
 
