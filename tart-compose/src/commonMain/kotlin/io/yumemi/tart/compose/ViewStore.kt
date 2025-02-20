@@ -83,13 +83,24 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
 
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>): ViewStore<S, A, E> {
-    val state by store.state.collectAsState()
+fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, autoDispose: Boolean = false): ViewStore<S, A, E> {
+    val rememberStore = remember { store } // allow different Store instances to be passed
+
+    val state by rememberStore.state.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (autoDispose) {
+                rememberStore.dispose()
+            }
+        }
+    }
+
     return remember(state) {
         ViewStore.create(
             state = state,
-            dispatch = store::dispatch,
-            eventFlow = store.event,
+            dispatch = rememberStore::dispatch,
+            eventFlow = rememberStore.event,
         )
     }
 }
