@@ -8,7 +8,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.launch
 
 @Suppress("unused")
 @Stable
@@ -108,11 +106,9 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
 @Suppress("unused")
 @Composable
 fun <S : State, A : Action, E : Event> rememberViewStore(
-    saver: Saver<S?, out Any> = autoSaver(),
-    autoDispose: Boolean = true,
-    factory: (savedState: S?) -> Store<S, A, E>,
+    composeSaver: Saver<S?, out Any> = autoSaver(), autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
 ): ViewStore<S, A, E> {
-    var savedState: S? by rememberSaveable(stateSaver = saver) {
+    var savedState: S? by rememberSaveable(stateSaver = composeSaver) {
         mutableStateOf(null)
     }
 
@@ -124,15 +120,52 @@ fun <S : State, A : Action, E : Event> rememberViewStore(
     // store.currentState .. get the State when the Store instance is created, before the State is changed in TartStore's init() process
     val state = savedState ?: store.currentState
 
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        // TartStore's init() is called her (see state for the first time)
+        store.state.drop(1).collect { // drop(1) .. avoid unnecessary recompose when savedState is null
+            savedState = it
+        }
+    }
 
     DisposableEffect(Unit) {
-        scope.launch {
-            // TartStore's init() is called her (see state for the first time)
-            store.state.drop(1).collect { // drop(1) .. avoid unnecessary recompose when savedState is null
-                savedState = it
+        onDispose {
+            if (autoDispose) {
+                store.dispose()
             }
         }
+    }
+
+    return remember(state) {
+        ViewStore.create(
+            state = state,
+            dispatch = store::dispatch,
+            eventFlow = store.event,
+        )
+    }
+}
+
+interface StateSaver<S : State> {
+    fun save(state: S)
+    fun restore(): S?
+}
+
+@Suppress("unused")
+@Composable
+fun <S : State, A : Action, E : Event> rememberViewStore(
+    stateSaver: StateSaver<S>, autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
+): ViewStore<S, A, E> {
+    val store = remember {
+        // if savedState is null, the initial State specified by the developer
+        factory(stateSaver.restore())
+    }
+
+    val state by store.state.collectAsState()
+
+    LaunchedEffect(state) {
+        stateSaver.save(state)
+    }
+
+    DisposableEffect(Unit) {
         onDispose {
             if (autoDispose) {
                 store.dispose()
