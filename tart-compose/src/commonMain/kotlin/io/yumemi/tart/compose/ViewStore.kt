@@ -160,11 +160,12 @@ fun <S : State, A : Action, E : Event> rememberViewStore(
         }
     }
 
-    val state by store.state.collectAsState()
+    var state by remember { mutableStateOf(store.currentState) }
 
     LaunchedEffect(Unit) {
-        store.state.drop(1).collect { state ->
-            stateSaver.save(state)
+        store.state.drop(1).collect {
+            state = it
+            stateSaver.save(it)
         }
     }
 
