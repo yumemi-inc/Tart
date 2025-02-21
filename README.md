@@ -1,13 +1,13 @@
-# Tart
+# <img src="doc/logo.png" style="height: 1em; margin-bottom: -0.2em;"> Tart
 
-<div align="left">
-  <img src="doc/logo.png" width=12% />
-</div>
+![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)
+![License](https://img.shields.io/github/license/yumemi-inc/Tart)
+[![Java CI with Gradle](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml/badge.svg)](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml)
 
 Tart is a state management framework for Kotlin Multiplatform.
 
 - Data flow is one-way, making it easy to understand.
-- Since the state during processing is unchanged, there is no need to be aware of side effects.
+- Since the state remains unchanged during processing, there is no need to worry about side effects.
 - Code becomes declarative.
 - Works on multiple platforms (currently on Android and iOS).
 
@@ -18,7 +18,7 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 </div>
 </br>
 
-The processing on the *Store* is expressed by the following function:
+The core functionality of the *Store* can be represented by the following function:
 
 ```kt
 (State, Action) -> State
@@ -60,7 +60,7 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 )
 ```
 
-Overrides the `onDispatch()` and define how the *State* is changed by *Action*.
+Override `onDispatch()` and define how the *State* is changed by *Action*.
 This is a `(State, Action) -> State` function.
 
 ```kt
@@ -235,12 +235,12 @@ The state diagram is as follows:
 </div>
 </br>
 
-This framework works well with state diagrams.
+This framework's architecture can be easily visualized using state diagrams.
 It would be a good idea to document it and share it with your development team.
 
 ### Error handling
 
-If you prepare a *State* for error display and handle the error in the `onEnterDidpatch()`, it will be as follows:
+If you prepare a *State* for error display and handle the error in the `onEnter()`, it will be as follows:
 
 ```kt
 sealed interface CounterState : State {
@@ -301,77 +301,13 @@ On the other hand, to save the *State*, it is convenient to obtain the latest *S
 
 #### coroutineContext [option]
 
-You can pass any `CoroutieneContext`.
-If omitted, the default context will be used.
-
-<details>
-<summary>more</summary>
-
-If you keep the *Store* in Android's ViewModel, it will be `viewModelScope.coroutineContext`.
-
-```kt
-class CounterStore(
-    coroutineContext: CoroutineContext, // pass to Store.Base
-) : Store.Base<CounterState, CounterAction, CounterEvent>(
-    initialState = CounterState.Loading,
-    coroutineContext = coroutineContext,
-)
-
-// ...
-
-class CounterViewModel : ViewModel() {
-    val store = CounterStore(viewModelScope.coroutineContext)
-}
-```
-
-If you are not using ViewModel, `lifecycleScope.coroutineContext` can be used on Android.
-In these cases, the Store's Coroutines will be disposed of according to the those lifecycle.
-
-In this way, when using `viewModelScope.coroutineContext` or `lifecycleScope.coroutineContext`, call the *Store* constructor on the ViewModel or Activity to pass `CoroutieneContext`.
-And, if you need Repository, UseCase, etc., it is necessary to inject them into ViewModel or Activity.
-
-```kt
-class CounterViewModel(
-    counterRepository: CounterRepository, // inject to ViewModel
-) : ViewModel() {
-    val store = CounterStore(
-        counterRepository = counterRepository, // pass to Store
-        coroutineContext = viewModelScope.coroutineContext,
-    )
-}
-```
-
-In such cases, it is better to prepare a factory class as follows:
-
-```kt
-// provide with DI libraries
-class CounterStoreFactory(
-    private val counterRepository: CounterRepository,
-) {
-    fun create(coroutineContext: CoroutineContext): CounterStore {
-        return CounterStore(
-            counterRepository = counterRepository,
-            coroutineContext = coroutineContext,
-        )
-    }
-}
-
-// ...
-
-class CounterViewModel(
-    counterStoreFactory: CounterStoreFactory, // inject to ViewModel
-) : ViewModel() {
-    val store = counterStoreFactory.create(viewModelScope.coroutineContext)
-}
-```
-
-Even if you omit the `CoroutieneContext` specification, it is a good practice to prepare a factory class for creating a *Store*.
-</details>
+If omitted, only the `Dispatcher.Default` thread will be used without inheriting the context.
+Specify it when you want to match the Store's Coroutines lifecycle with another context or change the thread on which it operates.
 
 #### onError [option]
 
-Uncaught errors can be received with this callback.
-For logging, do as follows:
+This callback can handle uncaught errors.
+For example, logging can be done as follows:
 
 ```kt
 class CounterStore(
@@ -389,7 +325,7 @@ If the *State* or *Event* changes, you will be notified through these callbacks.
 
 ### Disposal of Coroutines
 
-If you are not using an automatically disposed scope like Android's `ViewModelScope` or `LificycleScope`, call Store's `.dispose()` explicitly when *Store* is no longer needed.
+If you do not specify a context that is automatically disposed like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()` in the constructor of the *Store*, call Store's `.dispose()` explicitly when the *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
 ## Compose
@@ -407,6 +343,22 @@ Create an instance of the `ViewStore` from a *Store* instance using the `remembe
 For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
+@HiltViewModel
+class CounterViewModel @Inject constructor(
+    counterRepository: CounterRepository,
+) : ViewModel() {
+    val store = CounterStore(
+        counterRepository = counterRepository,
+    )
+
+    override fun onCleared() {
+        store.dispose()
+    }
+}
+```
+
+```kt
+@AndroidEntryPoint
 class CounterActivity : ComponentActivity() {
 
     private val counterViewModel: CounterViewModel by viewModels()
@@ -415,7 +367,7 @@ class CounterActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // create an instance of ViewStore at the top level of Compose
+            // create an instance of ViewStore
             val viewStore = rememberViewStore(counterViewModel.store)
 
             MyApplicationTheme {
@@ -423,32 +375,80 @@ class CounterActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     // pass the ViewStore instance to lower components
-                    YourComposableComponent(
+                    YourComposable(
                         viewStore = viewStore,
                     )
             // ... 
 ```
 
-Even if you create an instance of the `ViewStore` as shown below, you can restore *State* when the Activity configuration changes without using ViewModel.
-However, note that *States* must implement `Parcelable` or `Serializable` because they are used internally for [rememberSaveable](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/package-summary.html).
+You can create a `ViewStore` instance without using ViewModel as shown below, but note that *States* must implement `Parcelable` or `Serializable` because they are used internally for [rememberSaveable](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/package-summary.html).
 
 ```kt
+@AndroidEntryPoint
 class CounterActivity : ComponentActivity() {
+    @Inject
+    lateinit var counterRepository: CounterRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // create an instance of ViewStore with support for State restore
-            val viewStore = rememberViewStore { savedState: CounterState? ->
+            // create an instance of ViewStore
+            val viewStore = rememberViewStoreSaveable { savedState: CounterState? ->
                 CounterStore(
+                    counterRepository = counterRepository,
                     initialState = savedState ?: CounterState.Loading,
-                    coroutineContext = coroutineContext,
                 )
             }
 
             // ... 
 ```
+
+Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and handle the persistence yourself.
+
+<details>
+<summary>TIPS: Preparing a Store Factory class</summary>
+
+Like Repository and UseCase, if there are many dependencies that need to be passed to the *Store* constructor, it is better to prepare a factory class as follows:
+
+```kt
+// provide with DI libraries
+class CounterStoreFactory(
+    private val counterRepository: CounterRepository,
+    private val userRepository: UserRepository,
+    private val logger: YourLogger,
+) {
+    fun create(initialState: CounterState): CounterStore {
+        return CounterStore(
+            counterRepository = counterRepository,
+            userRepository = userRepository,
+            logger = logger,
+            initialState = initialState,
+        )
+    }
+}
+
+// ...
+
+@AndroidEntryPoint
+class CounterActivity : ComponentActivity() {
+    @Inject
+    lateinit var counterStoreFactory: CounterStoreFactory
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            // create an instance of ViewStore
+            val viewStore = rememberViewStoreSaveable { savedState: CounterState? ->
+`               counterStoreFactory.create(
+                    initialState = savedState ?: CounterState.Loading,
+                )
+            }
+
+            // ... 
+```
+</details>
 
 ### Rendering using State
 
@@ -491,7 +491,7 @@ If you use lower components in the `render()` block, pass its instance.
 
 ```kt
 viewStore.render<CounterState.Main> {
-    YourComposableComponent(
+    YourComposable(
         viewStore = this, // ViewStore instance for CounterState.Main
     )
 }
@@ -499,7 +499,7 @@ viewStore.render<CounterState.Main> {
 // ...
 
 @Composable
-fun YourComposableComponent(
+fun YourComposable(
     // Main state is confirmed
     viewStore: ViewStore<CounterState.Main, CounterAction, CounterEvent>,
 ) {
@@ -554,7 +554,7 @@ You can statically create a ViewStore instance without a *Store* instance.
 @Composable
 fun LoadingPreview() {
     MyApplicationTheme {
-        YourComposableComponent(
+        YourComposable(
             viewStore = ViewStore.mock(
                 state = CounterState.Loading,
             ),
