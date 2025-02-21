@@ -17,7 +17,7 @@ interface Store<S : State, A : Action, E : Event> {
 
     fun dispatch(action: A)
 
-    fun collectState(state: (state: S) -> Unit)
+    fun collectState(skipInitialState: Boolean = false, startStore: Boolean = true, state: (state: S) -> Unit)
 
     fun collectEvent(event: (event: E) -> Unit)
 
@@ -42,7 +42,7 @@ interface Store<S : State, A : Action, E : Event> {
                 override val event: Flow<E> = emptyFlow()
                 override val currentState: S = state
                 override fun dispatch(action: A) {}
-                override fun collectState(state: (state: S) -> Unit) {}
+                override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (state: S) -> Unit) {}
                 override fun collectEvent(event: (event: E) -> Unit) {}
                 override fun dispose() {}
             }
