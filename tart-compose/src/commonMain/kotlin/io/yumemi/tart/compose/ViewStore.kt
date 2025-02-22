@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,6 +18,7 @@ import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
@@ -104,18 +106,18 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
     }
 }
 
-@Suppress("unused")
+@Deprecated("Use rememberViewStoreSaveable instead")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(
-    composeSaver: Saver<S?, out Any> = autoSaver(), autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
-): ViewStore<S, A, E> {
-    var savedState: S? by rememberSaveable(stateSaver = composeSaver) {
+fun <S : State, A : Action, E : Event> rememberViewStore(saver: Saver<S?, out Any> = autoSaver(), factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
+    var savedState: S? by rememberSaveable(stateSaver = saver) {
         mutableStateOf(null)
     }
 
+    val scope = rememberCoroutineScope()
+
     val store = remember {
         // if savedState is null, the initial State specified by the developer
-        factory(savedState)
+        factory(scope, savedState)
     }
 
     // store.currentState .. get the State when the Store instance is created, before the State is changed in TartStore's init() process
@@ -128,14 +130,6 @@ fun <S : State, A : Action, E : Event> rememberViewStore(
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            if (autoDispose) {
-                store.dispose()
-            }
-        }
-    }
-
     return remember(state) {
         ViewStore.create(
             state = state,
@@ -145,15 +139,33 @@ fun <S : State, A : Action, E : Event> rememberViewStore(
     }
 }
 
+@Composable
+fun <S : State> defaultStateSaver(saver: Saver<S?, out Any> = autoSaver()): StateSaver<S> {
+    var savedState: S? by rememberSaveable(stateSaver = saver) {
+        mutableStateOf(null)
+    }
+
+    return remember {
+        object : StateSaver<S> {
+            override fun save(state: S) {
+                savedState = state
+            }
+
+            override fun restore(): S? {
+                return savedState
+            }
+        }
+    }
+}
+
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(
-    stateSaver: StateSaver<S>, autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
+fun <S : State, A : Action, E : Event> rememberViewStoreSaveable(
+    stateSaver: StateSaver<S> = defaultStateSaver(), autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
 ): ViewStore<S, A, E> {
     val store = remember {
         val savedState = stateSaver.restore()
-        // if savedState is null, the initial State specified by the developer
-        factory(savedState).apply {
+        factory(savedState).apply { // if savedState is null, the initial State specified by the developer
             savedState ?: run {
                 stateSaver.save(currentState)
             }
