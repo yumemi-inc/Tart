@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -52,10 +53,11 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         }
     }
 
-    final override fun collectState(state: (state: S) -> Unit) {
+    final override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (state: S) -> Unit) {
         coroutineScope.launch(Dispatchers.Unconfined) {
-            this@TartStore.state.collect { state(it) }
+            this@TartStore._state.drop(if (skipInitialState) 1 else 0).collect { state(it) }
         }
+        if (startStore) this.state // initialize if need
     }
 
     final override fun collectEvent(event: (event: E) -> Unit) {
