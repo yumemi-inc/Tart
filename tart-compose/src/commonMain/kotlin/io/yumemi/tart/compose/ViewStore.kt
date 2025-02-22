@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
+import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
@@ -144,25 +145,28 @@ fun <S : State, A : Action, E : Event> rememberViewStore(
     }
 }
 
-interface StateSaver<S : State> {
-    fun save(state: S)
-    fun restore(): S?
-}
-
 @Suppress("unused")
 @Composable
 fun <S : State, A : Action, E : Event> rememberViewStore(
     stateSaver: StateSaver<S>, autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
 ): ViewStore<S, A, E> {
     val store = remember {
+        val savedState = stateSaver.restore()
         // if savedState is null, the initial State specified by the developer
-        factory(stateSaver.restore())
+        factory(savedState).apply {
+            savedState ?: run {
+                stateSaver.save(currentState)
+            }
+        }
     }
 
-    val state by store.state.collectAsState()
+    var state by remember { mutableStateOf(store.currentState) }
 
-    LaunchedEffect(state) {
-        stateSaver.save(state)
+    LaunchedEffect(Unit) {
+        store.state.drop(1).collect {
+            state = it
+            stateSaver.save(it)
+        }
     }
 
     DisposableEffect(Unit) {
