@@ -10,6 +10,7 @@ Tart is a state management framework for Kotlin Multiplatform.
 - Since the state remains unchanged during processing, there is no need to worry about side effects.
 - Code becomes declarative.
 - Works on multiple platforms (currently on Android and iOS).
+  - Therefore, code can be shared across platforms.
 
 The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
 
@@ -405,6 +406,7 @@ class CounterActivity : ComponentActivity() {
 ```
 
 Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and handle the persistence yourself.
+For details, see [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
 
 <details>
 <summary>TIPS: Preparing a Store Factory class</summary>
