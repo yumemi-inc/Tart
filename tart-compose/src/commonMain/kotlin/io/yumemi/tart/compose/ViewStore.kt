@@ -45,11 +45,13 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
     inline fun <reified S2 : S> render(block: ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
             block(
-                create(
-                    state = state,
-                    dispatch = dispatch,
-                    eventFlow = eventFlow,
-                ),
+                remember(state) {
+                    create(
+                        state = state,
+                        dispatch = dispatch,
+                        eventFlow = eventFlow,
+                    )
+                },
             )
         }
     }
