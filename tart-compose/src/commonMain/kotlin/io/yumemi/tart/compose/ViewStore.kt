@@ -108,7 +108,7 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
     }
 }
 
-@Deprecated("Use rememberViewStoreSaveable instead")
+@Deprecated("Use rememberViewStoreSaveable() function instead")
 @Composable
 fun <S : State, A : Action, E : Event> rememberViewStore(saver: Saver<S?, out Any> = autoSaver(), factory: CoroutineScope.(savedState: S?) -> Store<S, A, E>): ViewStore<S, A, E> {
     var savedState: S? by rememberSaveable(stateSaver = saver) {
@@ -165,11 +165,13 @@ fun <S : State> defaultStateSaver(saver: Saver<S?, out Any> = autoSaver()): Stat
 fun <S : State, A : Action, E : Event> rememberViewStoreSaveable(
     stateSaver: StateSaver<S> = defaultStateSaver(), autoDispose: Boolean = true, factory: (savedState: S?) -> Store<S, A, E>,
 ): ViewStore<S, A, E> {
+    val rememberStateSaver = remember { stateSaver }
+
     val store = remember {
-        val savedState = stateSaver.restore()
+        val savedState = rememberStateSaver.restore()
         factory(savedState).apply { // if savedState is null, the initial State specified by the developer
             savedState ?: run {
-                stateSaver.save(currentState)
+                rememberStateSaver.save(currentState)
             }
         }
     }
@@ -179,7 +181,7 @@ fun <S : State, A : Action, E : Event> rememberViewStoreSaveable(
     LaunchedEffect(Unit) {
         store.state.drop(1).collect {
             state = it
-            stateSaver.save(it)
+            rememberStateSaver.save(it)
         }
     }
 
