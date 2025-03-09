@@ -52,3 +52,14 @@ abstract class MessageMiddleware<S : State, A : Action, E : Event> : Middleware<
 suspend fun send(message: Message) {
     MessageHub.send(message = message)
 }
+
+@Suppress("unused")
+fun <S : State, A : Action, E : Event> messageMiddleware(
+    receive: suspend (message: Message, dispatch: (action: A) -> Unit) -> Unit,
+): Middleware<S, A, E> {
+    return object : MessageMiddleware<S, A, E>() {
+        override suspend fun receive(message: Message, dispatch: (action: A) -> Unit) {
+            receive.invoke(message, dispatch)
+        }
+    }
+}

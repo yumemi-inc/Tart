@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.filter
 
 @Suppress("unused")
 @Stable
-class ViewStore<S : State, A : Action, E : Event> private constructor(
+class ViewStore<S : State, A : Action, E : Event> internal constructor(
     val state: S,
     val dispatch: (action: A) -> Unit,
     val eventFlow: Flow<E>,
@@ -46,7 +46,7 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
         if (state is S2) {
             block(
                 remember(state) {
-                    create(
+                    viewStore(
                         state = state,
                         dispatch = dispatch,
                         eventFlow = eventFlow,
@@ -66,6 +66,7 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
     }
 
     companion object {
+        @Deprecated("Use viewStore() function instead")
         fun <S : State, A : Action, E : Event> create(state: S, dispatch: (action: A) -> Unit, eventFlow: Flow<E>): ViewStore<S, A, E> {
             return ViewStore(
                 state = state,
@@ -74,6 +75,7 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
             )
         }
 
+        @Deprecated("Use viewStore() function instead")
         fun <S : State, A : Action, E : Event> mock(state: S): ViewStore<S, A, E> {
             return ViewStore(
                 state = state,
@@ -82,6 +84,14 @@ class ViewStore<S : State, A : Action, E : Event> private constructor(
             )
         }
     }
+}
+
+fun <S : State, A : Action, E : Event> viewStore(state: S, dispatch: (action: A) -> Unit = {}, eventFlow: Flow<E> = emptyFlow()): ViewStore<S, A, E> {
+    return ViewStore(
+        state = state,
+        dispatch = dispatch,
+        eventFlow = eventFlow,
+    )
 }
 
 @Suppress("unused")
@@ -100,7 +110,7 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
     }
 
     return remember(state) {
-        ViewStore.create(
+        ViewStore(
             state = state,
             dispatch = rememberStore::dispatch,
             eventFlow = rememberStore.event,
@@ -133,7 +143,7 @@ fun <S : State, A : Action, E : Event> rememberViewStore(saver: Saver<S?, out An
     }
 
     return remember(state) {
-        ViewStore.create(
+        ViewStore(
             state = state,
             dispatch = store::dispatch,
             eventFlow = store.event,
@@ -192,7 +202,7 @@ fun <S : State, A : Action, E : Event> rememberViewStoreSaveable(
     }
 
     return remember(state) {
-        ViewStore.create(
+        ViewStore(
             state = state,
             dispatch = store::dispatch,
             eventFlow = store.event,
