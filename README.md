@@ -262,6 +262,7 @@ override suspend fun onEnter(state: CounterState): CounterState = when (state) {
     }
 
     else -> state
+}
 ```
 
 This is fine, but you can also handle errors by overriding the `onError()`.
@@ -408,6 +409,22 @@ class CounterActivity : ComponentActivity() {
 Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and handle the persistence yourself.
 For details, see [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
 
+Tart has prepared two types of `StateSaver` implementations:
+
+- **Persistent State Saver** (`persistentStateSaver()`)
+  - Persists state across app restarts (using SharedPreferences on Android, NSUserDefaults on iOS)
+  - Requires `kotlinx.serialization` for serializing *States*
+  - `implementation("io.yumemi.tart:tart-saver-persistent:<latest-release>")`
+
+- **Retained State Saver** (`retainedStateSaver()`)
+  - Retains state in memory across configuration changes and process recreation
+  - No special serialization required
+  - Uses [Rin](https://github.com/takahirom/Rin) library internally for state retention
+  - Must be used within a `@Composable` function
+  - `implementation("io.yumemi.tart:tart-saver-retained:<latest-release>")`
+
+Please note that both implementations are marked with the `@ExperimentalTartApi` annotation and may change in future releases.
+
 <details>
 <summary>TIPS: Preparing a Store Factory class</summary>
 
@@ -443,7 +460,7 @@ class CounterActivity : ComponentActivity() {
         setContent {
             // create an instance of ViewStore
             val viewStore = rememberViewStoreSaveable { savedState: CounterState? ->
-`               counterStoreFactory.create(
+                counterStoreFactory.create(
                     initialState = savedState ?: CounterState.Loading,
                 )
             }
