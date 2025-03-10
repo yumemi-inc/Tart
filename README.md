@@ -548,7 +548,7 @@ viewStore.handle<CounterEvent> { event ->
 
 ### Mock for preview and testing
 
-Create an instance of ViewStore using the `mock()` with target *State*.
+Create an instance of ViewStore using the `viewStore()` with target *State*.
 You can statically create a ViewStore instance without a *Store* instance.
 
 ```kt
@@ -557,7 +557,7 @@ You can statically create a ViewStore instance without a *Store* instance.
 fun LoadingPreview() {
     MyApplicationTheme {
         YourComposable(
-            viewStore = ViewStore.mock(
+            viewStore = viewStore(
                 state = CounterState.Loading,
             ),
         )

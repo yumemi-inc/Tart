@@ -6,7 +6,7 @@ interface StateSaver<S : State> {
 }
 
 @Suppress("unused")
-fun <S : State> StateSaver(
+fun <S : State> stateSaver(
     save: (state: S) -> Unit,
     restore: () -> S?,
 ): StateSaver<S> {
