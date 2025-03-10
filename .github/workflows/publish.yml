@@ -3,11 +3,11 @@ on:
   release:
     types: [ prereleased ]
 jobs:
-  build:
+  test:
     uses: ./.github/workflows/gradle.yml
   publish:
     name: Release build and publish
-    needs: build
+    needs: test
     runs-on: macOS-latest
     steps:
       - name: Check out code
