@@ -3,7 +3,7 @@ package io.yumemi.tart.logging
 import co.touchlab.kermit.Severity
 import co.touchlab.kermit.Logger.Companion as Kermit
 
-class TartLogger : Logger {
+class DefaultLogger : Logger {
     override suspend fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: String) {
         if (isDisabled) return
         Kermit.log(
