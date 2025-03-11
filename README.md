@@ -407,9 +407,8 @@ class CounterActivity : ComponentActivity() {
 ```
 
 Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and handle the persistence yourself.
-For details, see [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
 
-Tart has prepared two types of `StateSaver` implementations:
+In this regard, Tart has prepared two types of `StateSaver` implementations:
 
 - **Persistent State Saver** (`persistentStateSaver()`)
   - Persists state across app restarts (using SharedPreferences on Android, NSUserDefaults on iOS)
@@ -424,6 +423,11 @@ Tart has prepared two types of `StateSaver` implementations:
   - `implementation("io.yumemi.tart:tart-saver-retained:<latest-release>")`
 
 Please note that both implementations are marked with the `@ExperimentalTartApi` annotation and may change in future releases.
+
+For more details, please refer to the following posts.
+
+- [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
+- [Introduction to RetainedStateSaver in Tart 1.4.0](https://medium.com/@kusu0806/introduction-to-retainedstatesaver-in-tart-1-4-0-28dc24f8a565)
 
 <details>
 <summary>TIPS: Preparing a Store Factory class</summary>
