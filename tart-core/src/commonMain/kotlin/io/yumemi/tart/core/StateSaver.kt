@@ -5,7 +5,6 @@ interface StateSaver<S : State> {
     fun restore(): S?
 }
 
-@Suppress("unused")
 fun <S : State> stateSaver(
     save: (state: S) -> Unit,
     restore: () -> S?,
