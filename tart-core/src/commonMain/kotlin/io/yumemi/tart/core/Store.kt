@@ -27,12 +27,16 @@ interface Store<S : State, A : Action, E : Event> {
     abstract class Base<S : State, A : Action, E : Event>(
         initialState: S,
         coroutineContext: CoroutineContext = Dispatchers.Default,
-        onError: (error: Throwable) -> Unit = { throw it },
+        onError: (error: Throwable) -> Unit = {}, // deprecated
     ) : TartStore<S, A, E>(
         initialState = initialState,
         coroutineContext = coroutineContext,
         onError = onError,
-    )
+    ) {
+        override val exceptionHandler: (error: Throwable) -> Unit = { throw it }
+        override val stateSaver: StateSaver<S>? = null
+        override val middlewares: List<Middleware<S, A, E>> = emptyList()
+    }
 
     companion object {
         @Deprecated("Use store() function instead")

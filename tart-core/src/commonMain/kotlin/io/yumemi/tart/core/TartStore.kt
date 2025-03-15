@@ -17,12 +17,25 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
-open class TartStore<S : State, A : Action, E : Event> internal constructor(
-    private val initialState: S,
+abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
+    initialState: S,
     coroutineContext: CoroutineContext,
-    private val onError: (error: Throwable) -> Unit,
+    onError: (error: Throwable) -> Unit, // deprecated
 ) : Store<S, A, E> {
-    private val _state: MutableStateFlow<S> = MutableStateFlow(initialState)
+    protected abstract val exceptionHandler: (error: Throwable) -> Unit
+    protected abstract val stateSaver: StateSaver<S>?
+
+    private val _state: MutableStateFlow<S> by lazy {
+        MutableStateFlow(
+            try {
+                stateSaver?.restore() ?: initialState
+            } catch (t: Throwable) {
+                exceptionHandler(t)
+                onError(t)
+                initialState
+            },
+        )
+    }
     final override val state: StateFlow<S> by lazy {
         init()
         _state
@@ -33,11 +46,12 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override val currentState: S get() = _state.value
 
-    protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
+    protected abstract val middlewares: List<Middleware<S, A, E>>
 
     private val coroutineScope = CoroutineScope(
         coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
             val t = if (exception is InternalError) exception.original else exception
+            exceptionHandler(t)
             onError(t)
         },
     )
@@ -89,7 +103,7 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineScope.launch {
             mutex.withLock {
                 processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
-                onStateEntered(initialState)
+                onStateEntered(currentState)
             }
         }
     }
@@ -189,6 +203,11 @@ open class TartStore<S : State, A : Action, E : Event> internal constructor(
     private suspend fun processStateChange(state: S, nextState: S) {
         processMiddleware { beforeStateChange(state, nextState) }
         _state.update { nextState }
+        try {
+            stateSaver?.save(nextState)
+        } catch (t: Throwable) {
+            throw InternalError(t)
+        }
         processMiddleware { afterStateChange(nextState, state) }
     }
 
