@@ -285,6 +285,20 @@ override suspend fun onError(state: CounterState, error: Throwable): CounterStat
 ```
 
 Errors can be caught not only in the `onEnter()` but also in the `onDispatch()` and `onExit()`.
+In other words, your business logic errors can be handled in `onError()`.
+
+On the other hand, uncaught errors in the entire Store (such as system errors) can be handled with the `exceptionHandler` property:
+
+```kt
+class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+) {
+    override val exceptionHandler: (error: Throwable) -> Unit = {
+        // do something..
+    }
+
+    // ...
+```
 
 ### Constructor arguments when creating a *Store*
 
@@ -295,30 +309,28 @@ Specify the first *State*.
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState.Loading,
-)
+) {
+  // ...  
 ```
 
-Also, specify it when restoring the *State* saved to ViewModel's SavedStateHandle etc.
+Also, specify the restored *State* saved to ViewModel's SavedStateHandle etc., if necessary.
 On the other hand, to save the *State*, it is convenient to obtain the latest *State* using the [collectState()](#for-ios).
+
+Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and use the `stateSaver` property to automatically handle state persistence:
+
+```kt
+class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+) {
+    override val stateSaver: StateSaver<CounterState> = YourStateSaver()
+
+    // ...
+```
 
 #### coroutineContext [option]
 
 If omitted, only the `Dispatcher.Default` thread will be used without inheriting the context.
 Specify it when you want to match the Store's Coroutines lifecycle with another context or change the thread on which it operates.
-
-#### onError [option]
-
-This callback can handle uncaught errors.
-For example, logging can be done as follows:
-
-```kt
-class CounterStore(
-    logger: YourLogger = YourLogger(),
-) : Store.Base<CounterState, CounterAction, CounterEvent>(
-    initialState = CounterState.Loading,
-    onError = { logger.log(it) },
-)
-```
 
 ### For iOS
 
@@ -429,6 +441,7 @@ For more details, please refer to the following posts.
 - [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
 - [Introduction to RetainedStateSaver in Tart 1.4.0](https://medium.com/@kusu0806/introduction-to-retainedstatesaver-in-tart-1-4-0-28dc24f8a565)
 
+</br>
 <details>
 <summary>TIPS: Preparing a Store Factory class</summary>
 
@@ -439,13 +452,13 @@ Like Repository and UseCase, if there are many dependencies that need to be pass
 class CounterStoreFactory(
     private val counterRepository: CounterRepository,
     private val userRepository: UserRepository,
-    private val logger: YourLogger,
+    private val commentRepository: CommentRepository,
 ) {
     fun create(initialState: CounterState): CounterStore {
         return CounterStore(
             counterRepository = counterRepository,
             userRepository = userRepository,
-            logger = logger,
+            commentRepository = commentRepository,
             initialState = initialState,
         )
     }
@@ -608,7 +621,7 @@ class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
 Apply the created Middleware as follows:
 
 ```kt
-class MainStore(
+class CounterStore(
     // ...
 ) : Store.Base<CounterState, CounterAction, CounterEvent>(
     // ...
