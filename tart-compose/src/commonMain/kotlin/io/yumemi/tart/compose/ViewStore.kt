@@ -19,10 +19,10 @@ import kotlinx.coroutines.flow.filter
 
 @Suppress("unused")
 @Stable
-class ViewStore<S : State, A : Action, E : Event> internal constructor(
+class ViewStore<S : State, A : Action, E : Event>(
     val state: S,
-    val dispatch: (action: A) -> Unit,
-    val eventFlow: Flow<E>,
+    val dispatch: (action: A) -> Unit = {},
+    val eventFlow: Flow<E> = emptyFlow(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -39,7 +39,7 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
         if (state is S2) {
             block(
                 remember(state) {
-                    viewStore(
+                    ViewStore(
                         state = state,
                         dispatch = dispatch,
                         eventFlow = eventFlow,
@@ -57,14 +57,6 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
             }
         }
     }
-}
-
-fun <S : State, A : Action, E : Event> viewStore(state: S, dispatch: (action: A) -> Unit = {}, eventFlow: Flow<E> = emptyFlow()): ViewStore<S, A, E> {
-    return ViewStore(
-        state = state,
-        dispatch = dispatch,
-        eventFlow = eventFlow,
-    )
 }
 
 @Suppress("unused")

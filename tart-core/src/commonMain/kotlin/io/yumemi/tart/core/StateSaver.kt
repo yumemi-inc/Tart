@@ -5,7 +5,7 @@ interface StateSaver<S : State> {
     fun restore(): S?
 }
 
-fun <S : State> stateSaver(
+fun <S : State> StateSaver(
     save: (state: S) -> Unit,
     restore: () -> S?,
 ): StateSaver<S> {

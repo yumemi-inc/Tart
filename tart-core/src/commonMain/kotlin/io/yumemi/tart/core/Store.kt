@@ -28,10 +28,10 @@ interface Store<S : State, A : Action, E : Event> {
         initialState: S,
         coroutineContext: CoroutineContext = Dispatchers.Default,
     ) : TartStore<S, A, E>(initialState, coroutineContext) {
-        override val exceptionHandler: ExceptionHandler = exceptionHandler {
+        override val exceptionHandler: ExceptionHandler = ExceptionHandler {
             it.printStackTrace()
         }
-        override val stateSaver: StateSaver<S> = stateSaver(
+        override val stateSaver: StateSaver<S> = StateSaver(
             save = {},
             restore = { null },
         )
@@ -46,7 +46,7 @@ interface Store<S : State, A : Action, E : Event> {
 }
 
 @Suppress("unused")
-fun <S : State, A : Action, E : Event> store(state: S): Store<S, A, E> {
+fun <S : State, A : Action, E : Event> Store(state: S): Store<S, A, E> {
     return object : Store<S, A, E> {
         override val state: StateFlow<S> = MutableStateFlow(state)
         override val event: Flow<E> = emptyFlow()

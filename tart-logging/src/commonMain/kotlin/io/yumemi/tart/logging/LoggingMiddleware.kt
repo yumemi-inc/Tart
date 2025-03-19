@@ -46,16 +46,3 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
         }
     }
 }
-
-@Suppress("unused")
-fun <S : State, A : Action, E : Event> defaultLoggingMiddleware(
-    logger: Logger = DefaultLogger(),
-    tag: String = "Tart",
-    severity: Logger.Severity = Logger.Severity.Debug,
-): LoggingMiddleware<S, A, E> {
-    return object : LoggingMiddleware<S, A, E>(
-        logger = logger,
-        tag = tag,
-        severity = severity,
-    ) {}
-}
