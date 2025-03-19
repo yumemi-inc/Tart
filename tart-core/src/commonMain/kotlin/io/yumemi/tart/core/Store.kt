@@ -27,8 +27,7 @@ interface Store<S : State, A : Action, E : Event> {
     abstract class Base<S : State, A : Action, E : Event>(
         initialState: S,
         coroutineContext: CoroutineContext = Dispatchers.Default,
-        onError: (error: Throwable) -> Unit = {}, // deprecated
-    ) : TartStore<S, A, E>(initialState, coroutineContext, onError) {
+    ) : TartStore<S, A, E>(initialState, coroutineContext) {
         override val exceptionHandler: ExceptionHandler = exceptionHandler {
             it.printStackTrace()
         }
@@ -42,21 +41,6 @@ interface Store<S : State, A : Action, E : Event> {
         override suspend fun onDispatch(state: S, action: A): S = state
         override suspend fun onError(state: S, error: Throwable): S {
             throw error
-        }
-    }
-
-    companion object {
-        @Deprecated("Use store() function instead")
-        fun <S : State, A : Action, E : Event> mock(state: S): Store<S, A, E> {
-            return object : Store<S, A, E> {
-                override val state: StateFlow<S> = MutableStateFlow(state)
-                override val event: Flow<E> = emptyFlow()
-                override val currentState: S = state
-                override fun dispatch(action: A) {}
-                override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (state: S) -> Unit) {}
-                override fun collectEvent(event: (event: E) -> Unit) {}
-                override fun dispose() {}
-            }
         }
     }
 }

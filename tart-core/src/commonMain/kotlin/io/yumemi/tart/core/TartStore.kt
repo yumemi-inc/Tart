@@ -20,7 +20,6 @@ import kotlin.coroutines.CoroutineContext
 abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     initialState: S,
     coroutineContext: CoroutineContext,
-    onError: (error: Throwable) -> Unit, // deprecated
 ) : Store<S, A, E> {
     protected abstract val exceptionHandler: ExceptionHandler
     protected abstract val stateSaver: StateSaver<S>
@@ -31,7 +30,6 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
                 stateSaver.restore() ?: initialState
             } catch (t: Throwable) {
                 exceptionHandler.handle(t)
-                onError(t)
                 initialState
             },
         )
@@ -52,7 +50,6 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
             val t = if (exception is InternalError) exception.original else exception
             exceptionHandler.handle(t)
-            onError(t)
         },
     )
 
