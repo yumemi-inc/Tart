@@ -7,9 +7,11 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import io.github.takahirom.rin.rememberRetained
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
+import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -86,5 +88,25 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
             dispatch = rememberStore::dispatch,
             eventFlow = rememberStore.event,
         )
+    }
+}
+
+private class StateSaverImpl<S : State> : StateSaver<S> {
+    private var savedState: S? = null
+
+    override fun save(state: S) {
+        savedState = state
+    }
+
+    override fun restore(): S? {
+        return savedState
+    }
+}
+
+@Suppress("unused")
+@Composable
+fun <S : State> rememberStateSaver(): StateSaver<S> {
+    return rememberRetained {
+        StateSaverImpl()
     }
 }

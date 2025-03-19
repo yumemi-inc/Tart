@@ -4,7 +4,6 @@ agp = "8.6.1"
 kotlin = "2.1.10"
 coroutines = "1.10.1"
 kermit = "1.2.2"
-serialization = "1.7.3"
 android-minSdk = "21"
 android-compileSdk = "34"
 androidTools = "31.7.3"
@@ -15,9 +14,8 @@ rin = "0.3.0"
 [libraries]
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 logger-kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 rin = { group = "io.github.takahirom.rin", name = "rin", version.ref = "rin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 android-tools-common = { group = "com.android.tools", name = "common", version.ref = "androidTools" }
