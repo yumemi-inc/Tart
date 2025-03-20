@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 interface Store<S : State, A : Action, E : Event> {
 
@@ -23,24 +24,16 @@ interface Store<S : State, A : Action, E : Event> {
 
     fun dispose()
 
-    @Suppress("unused")
     abstract class Base<S : State, A : Action, E : Event>(
         initialState: S,
-        coroutineContext: CoroutineContext = Dispatchers.Default,
-    ) : TartStore<S, A, E>(initialState, coroutineContext) {
-        override val exceptionHandler: ExceptionHandler = ExceptionHandler {
-            it.printStackTrace()
-        }
+        override val coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
+    ) : TartStore<S, A, E>(initialState) {
         override val stateSaver: StateSaver<S> = StateSaver(
             save = {},
             restore = { null },
         )
-        override val middlewares: List<Middleware<S, A, E>> = emptyList()
-        override suspend fun onEnter(state: S): S = state
-        override suspend fun onExit(state: S) {}
-        override suspend fun onDispatch(state: S, action: A): S = state
-        override suspend fun onError(state: S, error: Throwable): S {
-            throw error
+        override val exceptionHandler: ExceptionHandler = ExceptionHandler {
+            it.printStackTrace()
         }
     }
 }

@@ -13,7 +13,7 @@ import kotlin.coroutines.CoroutineContext
 
 @Suppress("unused")
 open class LoggingMiddleware<S : State, A : Action, E : Event>(
-    private val logger: Logger = DefaultLogger(),
+    private val logger: Logger = DefaultLogger,
     private val tag: String = "Tart",
     private val severity: Logger.Severity = Logger.Severity.Debug,
 ) : Middleware<S, A, E> {

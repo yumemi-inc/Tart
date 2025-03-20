@@ -19,11 +19,7 @@ import kotlin.coroutines.CoroutineContext
 
 abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     initialState: S,
-    coroutineContext: CoroutineContext,
 ) : Store<S, A, E> {
-    protected abstract val exceptionHandler: ExceptionHandler
-    protected abstract val stateSaver: StateSaver<S>
-
     private val _state: MutableStateFlow<S> by lazy {
         MutableStateFlow(
             try {
@@ -44,14 +40,22 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override val currentState: S get() = _state.value
 
-    protected abstract val middlewares: List<Middleware<S, A, E>>
+    protected abstract val coroutineContext: CoroutineContext
 
-    private val coroutineScope = CoroutineScope(
-        coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
-            val t = if (exception is InternalError) exception.original else exception
-            exceptionHandler.handle(t)
-        },
-    )
+    protected abstract val stateSaver: StateSaver<S>
+
+    protected abstract val exceptionHandler: ExceptionHandler
+
+    protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
+
+    private val coroutineScope by lazy {
+        CoroutineScope(
+            coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
+                val t = if (exception is InternalError) exception.original else exception
+                exceptionHandler.handle(t)
+            },
+        )
+    }
 
     private val mutex = Mutex()
 
@@ -66,7 +70,7 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (state: S) -> Unit) {
         coroutineScope.launch(Dispatchers.Unconfined) {
-            this@TartStore._state.drop(if (skipInitialState) 1 else 0).collect { state(it) }
+            _state.drop(if (skipInitialState) 1 else 0).collect { state(it) }
         }
         if (startStore) this.state // initialize if need
     }
@@ -81,13 +85,15 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineScope.cancel()
     }
 
-    protected abstract suspend fun onEnter(state: S): S
+    protected open suspend fun onEnter(state: S): S = state
 
-    protected abstract suspend fun onExit(state: S)
+    protected open suspend fun onExit(state: S) {}
 
-    protected abstract suspend fun onDispatch(state: S, action: A): S
+    protected open suspend fun onDispatch(state: S, action: A): S = state
 
-    protected abstract suspend fun onError(state: S, error: Throwable): S
+    protected open suspend fun onError(state: S, error: Throwable): S {
+        throw error
+    }
 
     @Suppress("unused")
     protected suspend fun emit(event: E) {
