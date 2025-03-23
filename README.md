@@ -45,7 +45,6 @@ First, prepare classes for *State*, *Action*, and *Event*.
 data class CounterState(val count: Int) : State
 
 sealed interface CounterAction : Action {
-    data class Set(val count: Int) : CounterAction
     data object Increment : CounterAction
     data object Decrement : CounterAction
 }
@@ -69,10 +68,6 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState(count = 0),
 ) {
     override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
-        is CounterAction.Set -> {
-            state.copy(count = action.count)
-        }
-
         is CounterAction.Increment -> {
             state.copy(count = state.count + 1)
         }
@@ -293,11 +288,7 @@ On the other hand, uncaught errors in the entire Store (such as system errors) c
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState.Loading,
 ) {
-    override val exceptionHandler: (error: Throwable) -> Unit = {
-        // do something..
-    }
-
-    // ...
+    override val exceptionHandler: ExceptionHandler = ...
 ```
 
 ### Constructor arguments when creating a *Store*
@@ -313,23 +304,18 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
   // ...  
 ```
 
-Also, specify the restored *State* saved to ViewModel's SavedStateHandle etc., if necessary.
-On the other hand, to save the *State*, it is convenient to obtain the latest *State* using the [collectState()](#for-ios).
-
-Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and use the `stateSaver` property to automatically handle state persistence:
+You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and use the `stateSaver` property to automatically handle state persistence:
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState.Loading,
 ) {
-    override val stateSaver: StateSaver<CounterState> = YourStateSaver()
-
-    // ...
+    override val stateSaver: StateSaver<CounterState> = ...
 ```
 
 #### coroutineContext [option]
 
-If omitted, only the `Dispatcher.Default` thread will be used without inheriting the context.
+If omitted, `EmptyCoroutineContext + Dispatchers.Default` will be applied.
 Specify it when you want to match the Store's Coroutines lifecycle with another context or change the thread on which it operates.
 
 ### For iOS
@@ -388,14 +374,24 @@ class CounterActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    // pass the ViewStore instance to lower components
+                    // pass the ViewStore instance to lower components if necessary
                     YourComposable(
                         viewStore = viewStore,
                     )
             // ... 
 ```
 
-You can create a `ViewStore` instance without using ViewModel as shown below, but note that *States* must implement `Parcelable` or `Serializable` because they are used internally for [rememberSaveable](https://developer.android.com/reference/kotlin/androidx/compose/runtime/saveable/package-summary.html).
+You can create a `ViewStore` instance without using ViewModel as shown below:
+
+```kt
+class CounterStore(
+    override val stateSaver: StateSaver<CounterState>, // required for state persistence during screen rotation, etc. if needed
+    private val counterRepository: CounterRepository,
+) : Store.Base<CounterState, CounterAction, CounterEvent>(
+    initialState = CounterState.Loading,
+) {
+  // ...  
+```
 
 ```kt
 @AndroidEntryPoint
@@ -408,40 +404,16 @@ class CounterActivity : ComponentActivity() {
 
         setContent {
             // create an instance of ViewStore
-            val viewStore = rememberViewStoreSaveable { savedState: CounterState? ->
+            val viewStore = rememberViewStore(
                 CounterStore(
+                    stateSaver = rememberStateSaver(),
                     counterRepository = counterRepository,
-                    initialState = savedState ?: CounterState.Loading,
                 )
-            }
+            )
 
             // ... 
 ```
 
-Alternatively, you can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and handle the persistence yourself.
-
-In this regard, Tart has prepared two types of `StateSaver` implementations:
-
-- **Persistent State Saver** (`persistentStateSaver()`)
-  - Persists state across app restarts (using SharedPreferences on Android, NSUserDefaults on iOS)
-  - Requires `kotlinx.serialization` for serializing *States*
-  - `implementation("io.yumemi.tart:tart-saver-persistent:<latest-release>")`
-
-- **Retained State Saver** (`retainedStateSaver()`)
-  - Retains state in memory across configuration changes and process recreation
-  - No special serialization required
-  - Uses [Rin](https://github.com/takahirom/Rin) library internally for state retention
-  - Must be used within a `@Composable` function
-  - `implementation("io.yumemi.tart:tart-saver-retained:<latest-release>")`
-
-Please note that both implementations are marked with the `@ExperimentalTartApi` annotation and may change in future releases.
-
-For more details, please refer to the following posts.
-
-- [Introduction to rememberViewStoreSaveable in Tart 1.3.0](https://medium.com/@kusu0806/introduction-to-rememberviewstoresaveable-in-tart-1-3-0-7e18034ed1e5).
-- [Introduction to RetainedStateSaver in Tart 1.4.0](https://medium.com/@kusu0806/introduction-to-retainedstatesaver-in-tart-1-4-0-28dc24f8a565)
-
-</br>
 <details>
 <summary>TIPS: Preparing a Store Factory class</summary>
 
@@ -452,20 +424,18 @@ Like Repository and UseCase, if there are many dependencies that need to be pass
 class CounterStoreFactory(
     private val counterRepository: CounterRepository,
     private val userRepository: UserRepository,
-    private val commentRepository: CommentRepository,
 ) {
-    fun create(initialState: CounterState): CounterStore {
+    fun create(stateSaver: StateSaver<CounterState>): CounterStore {
         return CounterStore(
+            stateSaver = stateSaver,
             counterRepository = counterRepository,
             userRepository = userRepository,
-            commentRepository = commentRepository,
-            initialState = initialState,
         )
     }
 }
+```
 
-// ...
-
+```kt
 @AndroidEntryPoint
 class CounterActivity : ComponentActivity() {
     @Inject
@@ -476,11 +446,9 @@ class CounterActivity : ComponentActivity() {
 
         setContent {
             // create an instance of ViewStore
-            val viewStore = rememberViewStoreSaveable { savedState: CounterState? ->
-                counterStoreFactory.create(
-                    initialState = savedState ?: CounterState.Loading,
-                )
-            }
+            val viewStore = rememberViewStore(
+                counterStoreFactory.create(rememberStateSaver())
+            )
 
             // ... 
 ```
@@ -496,7 +464,7 @@ Text(
 )
 ```
 
-If there are multiple *States*, use `.render()` method with target *State*.
+If there are multiple *States*, use `.render()` method with the target *State*.
 
 ```kt
 viewStore.render<CounterState.Main> {
@@ -531,9 +499,9 @@ viewStore.render<CounterState.Main> {
         viewStore = this, // ViewStore instance for CounterState.Main
     )
 }
+```
 
-// ...
-
+```kt
 @Composable
 fun YourComposable(
     // Main state is confirmed
@@ -547,7 +515,7 @@ fun YourComposable(
 
 ### Dispatch Action
 
-Use ViewStore's `.dispatch()` with target *Action*.
+Use ViewStore's `.dispatch()` with the target *Action*.
 
 ```kt
 Button(
@@ -561,7 +529,7 @@ Button(
 
 ### Event handling
 
-Use ViewStore's `.handle()` with target *Event*.
+Use ViewStore's `.handle()` with the target *Event*.
 
 ```kt
 viewStore.handle<CounterEvent.ShowToast> { event ->
@@ -582,8 +550,7 @@ viewStore.handle<CounterEvent> { event ->
 
 ### Mock for preview and testing
 
-Create an instance of ViewStore using the `viewStore()` with target *State*.
-You can statically create a ViewStore instance without a *Store* instance.
+Create an instance of `ViewStore` directly with the target *State*.
 
 ```kt
 @Preview
@@ -591,7 +558,7 @@ You can statically create a ViewStore instance without a *Store* instance.
 fun LoadingPreview() {
     MyApplicationTheme {
         YourComposable(
-            viewStore = viewStore(
+            viewStore = ViewStore(
                 state = CounterState.Loading,
             ),
         )
@@ -702,12 +669,10 @@ Apply the `MessageMiddleware` to the *Store* that receives messages.
 
 ```kt
 override val middlewares: List<Middleware<MyPageState, MyPageAction, MyPageEvent>> = listOf(
-    object : MessageMiddleware<MyPageState, MyPageAction, MyPageEvent>() {
-        override suspend fun receive(message: Message, dispatch: (action: MyPageAction) -> Unit) {
-            when (message) {
-                is MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
-                // ...
-            }
+    MessageMiddleware { message, dispatch ->
+        when (message) {
+            is MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
+            // ...
         }
     },
 )
