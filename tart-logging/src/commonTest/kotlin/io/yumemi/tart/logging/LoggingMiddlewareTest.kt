@@ -5,9 +5,9 @@ import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -23,7 +23,7 @@ class LoggingMiddlewareTest {
             logger = testLogger,
         )
 
-        val store = createTestStore(CounterState(10), testDispatcher, middleware)
+        val store = createTestStore(CounterState(10), middleware)
 
         store.dispatch(CounterAction.Increment)
 
@@ -49,10 +49,9 @@ private class TestLogger : Logger {
 
 private fun createTestStore(
     initialState: CounterState,
-    coroutineContext: CoroutineContext,
     middleware: Middleware<CounterState, CounterAction, CounterEvent>,
 ): Store<CounterState, CounterAction, CounterEvent> {
-    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, coroutineContext) {
+    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, Dispatchers.Unconfined) {
         override val middlewares = listOf(middleware)
         override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
             return when (action) {
