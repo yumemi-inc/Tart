@@ -30,7 +30,7 @@ kotlin {
                 // put your multiplatform dependencies here
                 implementation(project(":tart-core"))
                 implementation(compose.runtime)
-                implementation(compose.runtimeSaveable)
+                implementation(libs.rin)
             }
         }
         val commonTest by getting {
