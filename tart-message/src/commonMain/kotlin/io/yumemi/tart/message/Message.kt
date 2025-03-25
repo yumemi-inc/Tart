@@ -4,6 +4,10 @@ import io.yumemi.tart.core.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
+/**
+ * Marker interface representing notifications or messages within the application.
+ * Used to define messages for communication between different modules via Store.
+ */
 interface Message
 
 internal object MessageHub {
@@ -15,6 +19,9 @@ internal object MessageHub {
     }
 }
 
+/**
+ * Extension function for Store that provides a convenient method for sending messages.
+ */
 @Suppress("unused")
 suspend fun Store.Base<*, *, *>.send(message: Message) {
     MessageHub.send(message = message)

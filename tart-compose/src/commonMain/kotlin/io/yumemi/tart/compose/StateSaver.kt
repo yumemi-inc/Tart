@@ -17,6 +17,12 @@ private class StateSaverImpl<S : State> : StateSaver<S> {
     }
 }
 
+/**
+ * Creates and remembers a StateSaver instance that persists across recompositions.
+ * This implementation is retained in memory and suitable for use with Compose.
+ *
+ * @return A StateSaver instance for preserving state
+ */
 @Suppress("unused")
 @Composable
 fun <S : State> rememberStateSaver(): StateSaver<S> {

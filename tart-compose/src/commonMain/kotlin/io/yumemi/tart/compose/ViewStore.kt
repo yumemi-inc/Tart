@@ -15,6 +15,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 
+/**
+ * Store wrapper class for use with Compose UI.
+ * Provides state, action dispatching, and event handling.
+ *
+ * @param state The current state
+ * @param dispatch Function to dispatch actions
+ * @param eventFlow Flow to receive events
+ */
 @Suppress("unused")
 @Stable
 class ViewStore<S : State, A : Action, E : Event>(
@@ -32,6 +40,11 @@ class ViewStore<S : State, A : Action, E : Event>(
         return state.hashCode()
     }
 
+    /**
+     * Renders UI for a state of a specified type.
+     *
+     * @param block Composable function to perform rendering
+     */
     @Composable
     inline fun <reified S2 : S> render(block: ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
@@ -47,6 +60,11 @@ class ViewStore<S : State, A : Action, E : Event>(
         }
     }
 
+    /**
+     * Handles events of a specified type.
+     *
+     * @param block Callback function to process the event
+     */
     @Composable
     inline fun <reified E2 : E> handle(crossinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
         LaunchedEffect(Unit) {
@@ -57,6 +75,14 @@ class ViewStore<S : State, A : Action, E : Event>(
     }
 }
 
+/**
+ * Composable function that creates and returns a new ViewStore instance from a Store.
+ * Monitors state changes in the Store and triggers UI redrawing.
+ *
+ * @param store The source Store instance
+ * @param autoDispose Whether to dispose the Store when the component is disposed
+ * @return A new ViewStore instance
+ */
 @Suppress("unused")
 @Composable
 fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, autoDispose: Boolean = false): ViewStore<S, A, E> {
