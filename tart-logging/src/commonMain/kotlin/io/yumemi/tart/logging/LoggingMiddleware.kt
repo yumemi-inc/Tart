@@ -5,6 +5,7 @@ import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -16,11 +17,12 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val logger: Logger = DefaultLogger,
     private val tag: String = "Tart",
     private val severity: Logger.Severity = Logger.Severity.Debug,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Middleware<S, A, E> {
     private lateinit var coroutineScope: CoroutineScope
 
     final override suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {
-        this.coroutineScope = CoroutineScope(coroutineContext + Dispatchers.IO)
+        this.coroutineScope = CoroutineScope(coroutineContext + coroutineDispatcher)
     }
 
     override suspend fun beforeActionDispatch(state: S, action: A) {

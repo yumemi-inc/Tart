@@ -21,6 +21,7 @@ class LoggingMiddlewareTest {
         val testLogger = TestLogger()
         val middleware = LoggingMiddleware<CounterState, CounterAction, CounterEvent>(
             logger = testLogger,
+            coroutineDispatcher = Dispatchers.Unconfined,
         )
 
         val store = createTestStore(CounterState(10), middleware)
