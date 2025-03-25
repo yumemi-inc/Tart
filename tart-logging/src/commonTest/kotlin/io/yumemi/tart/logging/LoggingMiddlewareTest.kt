@@ -1,7 +1,6 @@
 package io.yumemi.tart.logging
 
 import io.yumemi.tart.core.Action
-import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
@@ -19,7 +18,7 @@ class LoggingMiddlewareTest {
     @Test
     fun loggingMiddleware_shouldLogAction() = runTest(testDispatcher) {
         val testLogger = TestLogger()
-        val middleware = LoggingMiddleware<CounterState, CounterAction, CounterEvent>(
+        val middleware = LoggingMiddleware<CounterState, CounterAction, Nothing>(
             logger = testLogger,
             coroutineDispatcher = Dispatchers.Unconfined,
         )
@@ -34,12 +33,11 @@ class LoggingMiddlewareTest {
 }
 
 private data class CounterState(val count: Int) : State
+
 private sealed interface CounterAction : Action {
     data object Increment : CounterAction
     data object Decrement : CounterAction
 }
-
-private interface CounterEvent : Event
 
 private class TestLogger : Logger {
     val logs = mutableListOf<String>()
@@ -50,9 +48,9 @@ private class TestLogger : Logger {
 
 private fun createTestStore(
     initialState: CounterState,
-    middleware: Middleware<CounterState, CounterAction, CounterEvent>,
-): Store<CounterState, CounterAction, CounterEvent> {
-    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, Dispatchers.Unconfined) {
+    middleware: Middleware<CounterState, CounterAction, Nothing>,
+): Store<CounterState, CounterAction, Nothing> {
+    return object : Store.Base<CounterState, CounterAction, Nothing>(initialState, Dispatchers.Unconfined) {
         override val middlewares = listOf(middleware)
         override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
             return when (action) {

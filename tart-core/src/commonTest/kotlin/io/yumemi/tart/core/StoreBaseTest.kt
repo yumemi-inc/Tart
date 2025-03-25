@@ -13,7 +13,7 @@ class StoreBaseTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Test
-    fun tartStore_shouldHandleMultipleActions() = runTest(testDispatcher) {
+    fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
         val store = createTestStore(CounterState.Main(0))
 
         store.dispatch(CounterAction.Increment)
