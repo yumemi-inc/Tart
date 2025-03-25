@@ -415,7 +415,25 @@ class CounterActivity : ComponentActivity() {
 ```
 
 <details>
-<summary>TIPS: Preparing a Store Factory class</summary>
+<summary>TIPS: Fake Store constructor</summary>
+
+Instead of defining a *Store* class, you can create an instance using a function as follows.
+This allows you to use Composable functions like `rememberStateSaver()`.
+
+```kt
+@Composable
+fun CounterStore(counterRepository: CounterRepository): Store<CounterState, CounterAction, CounterEvent> {
+    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState = CounterState.Loading) {
+
+        override val stateSaver: StateSaver<CounterState> = rememberStateSaver()
+
+        override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
+            // ...
+```
+</details>
+
+<details>
+<summary>TIPS: Store factory class</summary>
 
 Like Repository and UseCase, if there are many dependencies that need to be passed to the *Store* constructor, it is better to prepare a factory class as follows:
 
@@ -451,6 +469,23 @@ class CounterActivity : ComponentActivity() {
             )
 
             // ... 
+```
+
+When combined with the fake constructor mentioned above, it would look like this:
+
+```kt
+class CounterStoreFactory(
+    private val counterRepository: CounterRepository,
+    private val userRepository: UserRepository,
+) {
+    @Composable
+    fun create(): Store<CounterState, CounterAction, CounterEvent> {
+        return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState = CounterState.Loading) {
+
+            override val stateSaver: StateSaver<CounterState> = rememberStateSaver()
+
+            override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
+                // ...
 ```
 </details>
 
