@@ -1,7 +1,5 @@
 package io.yumemi.tart.message
 
-import io.yumemi.tart.core.Action
-import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
@@ -21,7 +19,7 @@ class MessageMiddlewareTest {
         val sendMessage = TestMessage("Hello")
 
         var receivedMessage: TestMessage? = null
-        val middleware = MessageMiddleware<CounterState, CounterAction, CounterEvent> { message, _ ->
+        val middleware = MessageMiddleware<CounterState, Nothing, Nothing> { message, _ ->
             if (message is TestMessage) {
                 receivedMessage = message
             }
@@ -29,28 +27,23 @@ class MessageMiddlewareTest {
 
         val store = createTestStore(CounterState(10), middleware)
 
-        // Access state to initialize the store
-        store.state
+        store.state // access state to initialize the store
 
-        // Send a message
         MessageHub.send(sendMessage)
 
-        // Verify message was received
         assertEquals(sendMessage, receivedMessage)
     }
 }
 
 private data class CounterState(val count: Int) : State
-private interface CounterAction : Action
-private interface CounterEvent : Event
 
 private data class TestMessage(val value: String) : Message
 
 private fun createTestStore(
     initialState: CounterState,
-    middleware: Middleware<CounterState, CounterAction, CounterEvent>,
-): Store<CounterState, CounterAction, CounterEvent> {
-    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, Dispatchers.Unconfined) {
+    middleware: Middleware<CounterState, Nothing, Nothing>,
+): Store<CounterState, Nothing, Nothing> {
+    return object : Store.Base<CounterState, Nothing, Nothing>(initialState, Dispatchers.Unconfined) {
         override val middlewares = listOf(middleware)
     }
 }
