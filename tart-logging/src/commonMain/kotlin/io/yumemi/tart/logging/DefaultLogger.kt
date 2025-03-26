@@ -3,9 +3,21 @@ package io.yumemi.tart.logging
 import co.touchlab.kermit.Severity
 import co.touchlab.kermit.Logger.Companion as Kermit
 
+/**
+ * Default implementation of the Logger interface using Kermit.
+ * Used as the default logger for the Tart framework.
+ */
 object DefaultLogger : Logger {
     private var isDisabled = false
 
+    /**
+     * Outputs a log with the specified severity.
+     *
+     * @param severity The severity of the log
+     * @param tag The tag for the log
+     * @param throwable Associated exception (if any)
+     * @param message The log message
+     */
     override suspend fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: String) {
         if (isDisabled) return
         Kermit.log(
@@ -16,6 +28,9 @@ object DefaultLogger : Logger {
         )
     }
 
+    /**
+     * Disables the logger. After disabling, no logs will be output.
+     */
     @Suppress("unused")
     fun disable() {
         isDisabled = true

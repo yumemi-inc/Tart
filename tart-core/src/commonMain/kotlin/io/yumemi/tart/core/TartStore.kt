@@ -17,6 +17,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Abstract class providing the basic implementation of the Store interface.
+ * Implements core functionality such as state management, event emission, middleware processing, etc.
+ */
 abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     initialState: S,
 ) : Store<S, A, E> {

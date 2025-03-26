@@ -12,6 +12,15 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Middleware that logs Store operations.
+ * Logs action dispatches, state changes, event emissions, error occurrences, etc.
+ *
+ * @param logger Logger to use
+ * @param tag Tag for the logs
+ * @param severity Severity of the logs
+ * @param coroutineDispatcher Coroutine dispatcher to use for log processing
+ */
 @Suppress("unused")
 open class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val logger: Logger = DefaultLogger,
