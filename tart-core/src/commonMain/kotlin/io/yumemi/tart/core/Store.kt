@@ -62,6 +62,7 @@ interface Store<S : State, A : Action, E : Event> {
      * @param initialState Initial state
      * @param coroutineContext CoroutineContext to use
      */
+    @Deprecated("Use Store() instead", ReplaceWith("Store()"))
     abstract class Base<S : State, A : Action, E : Event>(
         initialState: S,
         override val coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
@@ -74,5 +75,47 @@ interface Store<S : State, A : Action, E : Event> {
         override val exceptionHandler: ExceptionHandler = ExceptionHandler {
             it.printStackTrace()
         }
+    }
+}
+
+/**
+ * Factory function to create a Store instance with customizable behavior.
+ *
+ * @param initialState The initial state of the store
+ * @param coroutineContext The context used for launching coroutines (defaults to EmptyCoroutineContext + Dispatchers.Default)
+ * @param stateSaver Implementation for persisting and restoring state (defaults to no-op implementation)
+ * @param exceptionHandler Handler for exceptions that occur during store operations (defaults to printStackTrace)
+ * @param middlewares List of middlewares to apply to this store (empty by default)
+ * @param onEnter Function called when a state is entered (defaults to returning the state unchanged)
+ * @param onExit Function called when a state is exited (no-op by default)
+ * @param onDispatch Function that handles actions and transforms state (defaults to returning the state unchanged)
+ * @param onError Function called when an error occurs (defaults to rethrowing the error)
+ * @return A new Store instance configured with the provided parameters
+ */
+fun <S : State, A : Action, E : Event> Store(
+    initialState: S,
+    coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
+    stateSaver: StateSaver<S> = StateSaver(
+        save = {},
+        restore = { null },
+    ),
+    exceptionHandler: ExceptionHandler = ExceptionHandler {
+        it.printStackTrace()
+    },
+    middlewares: List<Middleware<S, A, E>> = emptyList(),
+    onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> state },
+    onExit: suspend TartStore<S, A, E>.(S) -> Unit = { _ -> },
+    onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, _ -> state },
+    onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { _, error -> throw error },
+): Store<S, A, E> {
+    return object : TartStore<S, A, E>(initialState) {
+        override val coroutineContext: CoroutineContext = coroutineContext
+        override val stateSaver: StateSaver<S> = stateSaver
+        override val exceptionHandler: ExceptionHandler = exceptionHandler
+        override val middlewares: List<Middleware<S, A, E>> = middlewares
+        override val onEnter: suspend TartStore<S, A, E>.(S) -> S = onEnter
+        override val onExit: suspend TartStore<S, A, E>.(S) -> Unit = onExit
+        override val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = onDispatch
+        override val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = onError
     }
 }

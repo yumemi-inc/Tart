@@ -42,14 +42,16 @@ private sealed interface TransitionAction : Action {
 private fun createTestStore(
     initialState: TransitionState,
 ): Store<TransitionState, TransitionAction, Nothing> {
-    return object : Store.Base<TransitionState, TransitionAction, Nothing>(initialState, Dispatchers.Unconfined) {
-        override val onEnter: suspend (TransitionState) -> TransitionState = { state ->
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        onEnter = { state ->
             when (state) {
                 TransitionState.Loading -> TransitionState.Success
                 else -> state
             }
-        }
-        override val onDispatch: suspend (TransitionState, TransitionAction) -> TransitionState = { state, action ->
+        },
+        onDispatch = { state, action ->
             when (state) {
                 TransitionState.Success -> {
                     when (action) {
@@ -59,9 +61,9 @@ private fun createTestStore(
 
                 else -> state
             }
-        }
-        override val onError: suspend (TransitionState, Throwable) -> TransitionState = { _, error ->
+        },
+        onError = { _, error ->
             TransitionState.Error(error.message ?: "unknown error")
-        }
-    }
+        },
+    )
 }

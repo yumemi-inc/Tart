@@ -73,28 +73,28 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
      * This allows for custom state initialization or transformation when entering a state.
      * The function receives the current state and returns a potentially modified state.
      */
-    protected open val onEnter: suspend (S) -> S = { state -> onEnter(state) }
+    protected open val onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> onEnter(state) }
 
     /**
      * Function called when a state is exited.
      * This allows for cleanup operations when transitioning away from a state.
      * The function receives the current state that is being exited.
      */
-    protected open val onExit: suspend (S) -> Unit = { state -> onExit(state) }
+    protected open val onExit: suspend TartStore<S, A, E>.(S) -> Unit = { state -> onExit(state) }
 
     /**
      * Function called when an action is dispatched.
      * This handles the core business logic of transforming the current state based on the action.
      * The function receives the current state and action, and returns the new state.
      */
-    protected open val onDispatch: suspend (S, A) -> S = { state, action -> onDispatch(state, action) }
+    protected open val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, action -> onDispatch(state, action) }
 
     /**
      * Function called when an error occurs during store operations.
      * This allows for custom error handling logic that can transform the state in response to errors.
      * The function receives the current state and the error, and returns a potentially modified state.
      */
-    protected open val onError: suspend (S, Throwable) -> S = { state, error -> onError(state, error) }
+    protected open val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { state, error -> onError(state, error) }
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -133,17 +133,17 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineScope.cancel()
     }
 
-    @Deprecated("Use onEnter instead", ReplaceWith("onEnter"))
+    @Deprecated("Use onEnter property instead", ReplaceWith("onEnter"))
     protected open suspend fun onEnter(state: S): S = state
 
-    @Deprecated("Use onExit instead", ReplaceWith("onExit"))
+    @Deprecated("Use onExit property instead", ReplaceWith("onExit"))
     protected open suspend fun onExit(state: S) {
     }
 
-    @Deprecated("Use onDispatch instead", ReplaceWith("onDispatch"))
+    @Deprecated("Use onDispatch property instead", ReplaceWith("onDispatch"))
     protected open suspend fun onDispatch(state: S, action: A): S = state
 
-    @Deprecated("Use onError instead", ReplaceWith("onError"))
+    @Deprecated("Use onError property instead", ReplaceWith("onError"))
     protected open suspend fun onError(state: S, error: Throwable): S {
         throw error
     }
@@ -155,7 +155,7 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
      * @param event The event to emit
      */
     @Suppress("unused")
-    protected suspend fun emit(event: E) {
+    suspend fun emit(event: E) {
         processEventEmit(currentState, event)
     }
 
@@ -242,21 +242,21 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onDispatch.invoke(state, action)
+        val nextState = onDispatch.invoke(this, state, action)
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        val nextState = onEnter.invoke(state)
+        val nextState = onEnter.invoke(this, state)
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
         processMiddleware { beforeStateExit(state) }
-        onExit.invoke(state)
+        onExit.invoke(this, state)
         processMiddleware { afterStateExit(state) }
     }
 
@@ -273,7 +273,7 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processError(state: S, throwable: Throwable): S {
         processMiddleware { beforeError(state, throwable) }
-        val nextState = onError.invoke(state, throwable)
+        val nextState = onError.invoke(this, state, throwable)
         processMiddleware { afterError(state, nextState, throwable) }
         return nextState
     }

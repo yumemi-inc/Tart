@@ -69,23 +69,25 @@ private sealed interface CounterEvent : Event {
 private fun createTestStore(
     initialState: CounterState,
 ): Store<CounterState, CounterAction, CounterEvent> {
-    return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, Dispatchers.Unconfined) {
-        override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        onDispatch = { state, action ->
             when (state) {
                 CounterState.Loading -> state
-                is CounterState.Main -> state.handleAction(action)
+                is CounterState.Main -> state.handleAction(action, ::emit)
             }
-        }
+        },
+    )
+}
 
-        private suspend fun CounterState.Main.handleAction(action: CounterAction): CounterState {
-            return when (action) {
-                CounterAction.Increment -> copy(count = count + 1)
-                CounterAction.Decrement -> copy(count = count - 1)
-                CounterAction.EmitEvent -> {
-                    emit(CounterEvent.CountUpdated(count))
-                    this
-                }
-            }
+private suspend fun CounterState.Main.handleAction(action: CounterAction, emit: suspend (CounterEvent) -> Unit): CounterState {
+    return when (action) {
+        CounterAction.Increment -> copy(count = count + 1)
+        CounterAction.Decrement -> copy(count = count - 1)
+        CounterAction.EmitEvent -> {
+            emit(CounterEvent.CountUpdated(count))
+            this
         }
     }
 }
