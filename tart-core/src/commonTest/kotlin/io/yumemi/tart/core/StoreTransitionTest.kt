@@ -53,7 +53,7 @@ private fun createTestStore(
             when (state) {
                 TransitionState.Success -> {
                     when (action) {
-                        TransitionAction.CauseError -> TransitionState.Error("error")
+                        TransitionAction.CauseError -> throw RuntimeException("error")
                     }
                 }
 
