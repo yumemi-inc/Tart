@@ -44,20 +44,56 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override val currentState: S get() = _state.value
 
+    /**
+     * The coroutine context used for launching coroutines in this store.
+     * This context will be combined with a SupervisorJob and CoroutineExceptionHandler.
+     */
     protected abstract val coroutineContext: CoroutineContext
 
+    /**
+     * The state saver implementation used to persist and restore state.
+     * This is used to save state changes and restore initial state on creation.
+     */
     protected abstract val stateSaver: StateSaver<S>
 
+    /**
+     * The exception handler used to handle exceptions that occur during store operations.
+     * This is used to handle exceptions during state restoration, middleware execution, etc.
+     */
     protected abstract val exceptionHandler: ExceptionHandler
 
+    /**
+     * The list of middlewares to apply to this store.
+     * Middlewares are executed in the order they appear in this list.
+     */
     protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
 
+    /**
+     * Function called when a state is entered.
+     * This allows for custom state initialization or transformation when entering a state.
+     * The function receives the current state and returns a potentially modified state.
+     */
     protected open val onEnter: suspend (S) -> S = { state -> onEnter(state) }
 
+    /**
+     * Function called when a state is exited.
+     * This allows for cleanup operations when transitioning away from a state.
+     * The function receives the current state that is being exited.
+     */
     protected open val onExit: suspend (S) -> Unit = { state -> onExit(state) }
 
+    /**
+     * Function called when an action is dispatched.
+     * This handles the core business logic of transforming the current state based on the action.
+     * The function receives the current state and action, and returns the new state.
+     */
     protected open val onDispatch: suspend (S, A) -> S = { state, action -> onDispatch(state, action) }
 
+    /**
+     * Function called when an error occurs during store operations.
+     * This allows for custom error handling logic that can transform the state in response to errors.
+     * The function receives the current state and the error, and returns a potentially modified state.
+     */
     protected open val onError: suspend (S, Throwable) -> S = { state, error -> onError(state, error) }
 
     private val coroutineScope by lazy {
@@ -112,6 +148,12 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         throw error
     }
 
+    /**
+     * Emits an event to all event listeners.
+     * This is used to communicate with the outside world about important occurrences within the store.
+     *
+     * @param event The event to emit
+     */
     @Suppress("unused")
     protected suspend fun emit(event: E) {
         processEventEmit(currentState, event)

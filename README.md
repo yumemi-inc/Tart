@@ -60,23 +60,25 @@ class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
 )
 ```
 
-Override `onDispatch()` and define how the *State* is changed by *Action*.
+Override `onDispatch` property and define how the *State* is changed by *Action*.
 This is a `(State, Action) -> State` function.
 
 ```kt
 class CounterStore : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState(count = 0),
 ) {
-    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
-        is CounterAction.Increment -> {
-            state.copy(count = state.count + 1)
-        }
+    override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+        when (action) {
+            is CounterAction.Increment -> {
+                state.copy(count = state.count + 1)
+            }
 
-        is CounterAction.Decrement -> {
-            if (0 < state.count) {
-                state.copy(count = state.count - 1)
-            } else {
-                state // do not change State
+            is CounterAction.Decrement -> {
+                if (0 < state.count) {
+                    state.copy(count = state.count - 1)
+                } else {
+                    state // do not change State
+                }
             }
         }
     }
@@ -110,7 +112,7 @@ sealed interface CounterEvent : Event {
 }
 ```
 
-In the `dispatch()` method body, issue an *Event* using the `emit()`.
+In the `onDispatch` property, issue an *Event* using the `emit()`.
 
 ```kt
 is CounterAction.Decrement -> {
@@ -127,7 +129,7 @@ Subscribe to the Store's `.event` (Flow) on the UI, and process it.
 
 ### Access to Repository, UseCase, etc.
 
-Keep Repository, UseCase, etc. in the instance field of *Store* and use it from `dispatch()` method body.
+Keep Repository, UseCase, etc. in the instance field of *Store* and use it from the `onDispatch` property.
 
 ```kt
 class CounterStore(
@@ -135,33 +137,35 @@ class CounterStore(
 ) : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState(count = 0),
 ) {
-    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
-        CounterAction.Load -> {
-            val count = counterRepository.get() // load
-            state.copy(count = count)
-        }
-
-        is CounterAction.Increment -> {
-            val count = state.count + 1
-            state.copy(count = count).apply {
-                counterRepository.set(count) // save
+    override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+        when (action) {
+            CounterAction.Load -> {
+                val count = counterRepository.get() // load
+                state.copy(count = count)
             }
-        }
 
-        // ...
+            is CounterAction.Increment -> {
+                val count = state.count + 1
+                state.copy(count = count).apply {
+                    counterRepository.set(count) // save
+                }
+            }
+
+            // ...
 ```
 
 > [!TIP]
 > Processing other than changing the *State* may be defined using extension functions for *State* or *Action*.
 >
 > ```kt
-> override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (action) {
->     CounterAction.Load -> {
->         val count = action.loadCount() // call extension function
->         state.copy(count = count)
->     }
-> 
->     // ...
+> override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+>     when (action) {
+>         CounterAction.Load -> {
+>             val count = action.loadCount() // call extension function
+>             state.copy(count = count)
+>         }
+>
+>         // ...
 > }
 > 
 > // describe what to do for this Action
@@ -170,7 +174,7 @@ class CounterStore(
 > }
 > ```
 >
-> In any case, the `onDispatch()` is a simple method that simply returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
+> In any case, the `onDispatch` property is a simple function that returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
 
 ### Multiple states and transitions
 
@@ -190,38 +194,42 @@ class CounterStore(
 ) : Store.Base<CounterState, CounterAction, CounterEvent>(
     initialState = CounterState.Loading, // start from loading
 ) {
-    override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (state) {
-        CounterState.Loading -> when (action) {
-            CounterAction.Load -> {
-                val count = counterRepository.get()
-                CounterState.Main(count = count) // transition to Main state
+    override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+        when (state) {
+            CounterState.Loading -> when (action) {
+                CounterAction.Load -> {
+                    val count = counterRepository.get()
+                    CounterState.Main(count = count) // transition to Main state
+                }
+
+                else -> state
             }
 
-            else -> state
-        }
-
-        is CounterState.Main -> when (action) {
-            is CounterAction.Increment -> {
-                // ...
+            is CounterState.Main -> when (action) {
+                is CounterAction.Increment -> {
+                    // ...
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
-Otherwise, if you want to do something at the start of the *State*, override the `onEnter()` (similarly, you can override the `onExit()` if necessary).
+Otherwise, if you want to do something at the start of the *State*, use the `onEnter` property (similarly, you can use the `onExit` property if necessary).
 
 ```kt
-override suspend fun onEnter(state: CounterState): CounterState = when (state) {
-    CounterState.Loading -> {
-        val count = counterRepository.get()
-        CounterState.Main(count = count) // transition to Main state
-    }
+override val onEnter: suspend (CounterState) -> CounterState = { state ->
+    when (state) {
+        CounterState.Loading -> {
+            val count = counterRepository.get()
+            CounterState.Main(count = count) // transition to Main state
+        }
 
-    else -> state
+        else -> state
+    }
 }
 
-override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState = when (state) {
-    is CounterState.Main -> when (action) {
-        is CounterAction.Increment -> {
-            // ...
+override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+    when (state) {
+        is CounterState.Main -> when (action) {
+            is CounterAction.Increment -> {
+                // ...
 ```
 
 The state diagram is as follows:
@@ -236,7 +244,7 @@ It would be a good idea to document it and share it with your development team.
 
 ### Error handling
 
-If you prepare a *State* for error display and handle the error in the `onEnter()`, it will be as follows:
+If you prepare a *State* for error display and handle the error in the `onEnter` property, it will be as follows:
 
 ```kt
 sealed interface CounterState : State {
@@ -246,41 +254,45 @@ sealed interface CounterState : State {
 ```
 
 ```kt
-override suspend fun onEnter(state: CounterState): CounterState = when (state) {
-    CounterState.Loading -> {
-        try {
-            val count = counterRepository.get()
-            CounterState.Main(count = count)
-        } catch (t: Throwable) {
-            CounterState.Error(error = t)
+override val onEnter: suspend (CounterState) -> CounterState = { state ->
+    when (state) {
+        CounterState.Loading -> {
+            try {
+                val count = counterRepository.get()
+                CounterState.Main(count = count)
+            } catch (t: Throwable) {
+                CounterState.Error(error = t)
+            }
         }
-    }
 
-    else -> state
+        else -> state
+    }
 }
 ```
 
-This is fine, but you can also handle errors by overriding the `onError()`.
+This is fine, but you can also handle errors using the `onError` property.
 
 ```kt
-override suspend fun onEnter(state: CounterState): CounterState = when (state) {
-    CounterState.Loading -> {
-        // no error handling code
-        val count = counterRepository.get()
-        CounterState.Main(count = count)
-    }
+override val onEnter: suspend (CounterState) -> CounterState = { state ->
+    when (state) {
+        CounterState.Loading -> {
+            // no error handling code
+            val count = counterRepository.get()
+            CounterState.Main(count = count)
+        }
 
-    else -> state
+        else -> state
+    }
 }
 
-override suspend fun onError(state: CounterState, error: Throwable): CounterState {
+override val onError: suspend (CounterState, Throwable) -> CounterState = { state, error ->
     // you can also branch using state and error inputs if necessary
-    return CounterState.Error(error = error)
+    CounterState.Error(error = error)
 }
 ```
 
-Errors can be caught not only in the `onEnter()` but also in the `onDispatch()` and `onExit()`.
-In other words, your business logic errors can be handled in `onError()`.
+Errors can be caught not only in the `onEnter` but also in the `onDispatch` and `onExit` properties.
+In other words, your business logic errors can be handled in the `onError` property.
 
 On the other hand, uncaught errors in the entire Store (such as system errors) can be handled with the `exceptionHandler` property:
 
@@ -427,7 +439,7 @@ fun CounterStore(counterRepository: CounterRepository): Store<CounterState, Coun
 
         override val stateSaver: StateSaver<CounterState> = rememberStateSaver()
 
-        override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
+        override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
             // ...
 ```
 </details>
@@ -484,7 +496,7 @@ class CounterStoreFactory(
 
             override val stateSaver: StateSaver<CounterState> = rememberStateSaver()
 
-            override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
+            override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
                 // ...
 ```
 </details>
@@ -580,7 +592,6 @@ viewStore.handle<CounterEvent> { event ->
         is CounterEvent.ShowToast -> // do something..
         is CounterEvent.GoBack -> // do something..
         // ...
-    }
 ```
 
 ### Mock for preview and testing
@@ -716,12 +727,12 @@ override val middlewares: List<Middleware<MyPageState, MyPageAction, MyPageEvent
 Call the `send()` at any point in the *Store* that sends messages.
 
 ```kt
-override suspend fun onExit(state: MainState) = when (state) {
-    is MainState.LoggedIn -> { // leave the logged-in state
-        send(MainMessage.LoggedOut)
-    }
-
-    // ...
+override val onExit: suspend (MainState) -> Unit = { state ->
+    when (state) {
+        is MainState.LoggedIn -> { // leave the logged-in state
+            send(MainMessage.LoggedOut)
+        }
+        // ...
 ```
 </details>
 
