@@ -21,9 +21,7 @@ import kotlin.coroutines.CoroutineContext
  * Abstract class providing the basic implementation of the Store interface.
  * Implements core functionality such as state management, event emission, middleware processing, etc.
  */
-abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
-    initialState: S,
-) : Store<S, A, E> {
+abstract class TartStore<S : State, A : Action, E : Event> internal constructor() : Store<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
         MutableStateFlow(
             try {
@@ -44,57 +42,23 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override val currentState: S get() = _state.value
 
-    /**
-     * The coroutine context used for launching coroutines in this store.
-     * This context will be combined with a SupervisorJob and CoroutineExceptionHandler.
-     */
+    protected abstract val initialState: S
+
     protected abstract val coroutineContext: CoroutineContext
 
-    /**
-     * The state saver implementation used to persist and restore state.
-     * This is used to save state changes and restore initial state on creation.
-     */
     protected abstract val stateSaver: StateSaver<S>
 
-    /**
-     * The exception handler used to handle exceptions that occur during store operations.
-     * This is used to handle exceptions during state restoration, middleware execution, etc.
-     */
     protected abstract val exceptionHandler: ExceptionHandler
 
-    /**
-     * The list of middlewares to apply to this store.
-     * Middlewares are executed in the order they appear in this list.
-     */
-    protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
+    protected abstract val middlewares: List<Middleware<S, A, E>>
 
-    /**
-     * Function called when a state is entered.
-     * This allows for custom state initialization or transformation when entering a state.
-     * The function receives the current state and returns a potentially modified state.
-     */
-    protected open val onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> onEnter(state) }
+    protected abstract val onEnter: suspend TartStore<S, A, E>.(S) -> S
 
-    /**
-     * Function called when a state is exited.
-     * This allows for cleanup operations when transitioning away from a state.
-     * The function receives the current state that is being exited.
-     */
-    protected open val onExit: suspend TartStore<S, A, E>.(S) -> Unit = { state -> onExit(state) }
+    protected abstract val onExit: suspend TartStore<S, A, E>.(S) -> Unit
 
-    /**
-     * Function called when an action is dispatched.
-     * This handles the core business logic of transforming the current state based on the action.
-     * The function receives the current state and action, and returns the new state.
-     */
-    protected open val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, action -> onDispatch(state, action) }
+    protected abstract val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S
 
-    /**
-     * Function called when an error occurs during store operations.
-     * This allows for custom error handling logic that can transform the state in response to errors.
-     * The function receives the current state and the error, and returns a potentially modified state.
-     */
-    protected open val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { state, error -> onError(state, error) }
+    protected abstract val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S
 
     private val coroutineScope by lazy {
         CoroutineScope(

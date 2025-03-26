@@ -64,17 +64,21 @@ interface Store<S : State, A : Action, E : Event> {
      */
     @Deprecated("Use Store() instead", ReplaceWith("Store()"))
     abstract class Base<S : State, A : Action, E : Event>(
-        initialState: S,
+        override val initialState: S,
         override val coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
-    ) : TartStore<S, A, E>(initialState) {
+    ) : TartStore<S, A, E>() {
         override val stateSaver: StateSaver<S> = StateSaver(
             save = {},
             restore = { null },
         )
-
         override val exceptionHandler: ExceptionHandler = ExceptionHandler {
             it.printStackTrace()
         }
+        override val middlewares: List<Middleware<S, A, E>> = emptyList()
+        override val onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> onEnter(state) }
+        override val onExit: suspend TartStore<S, A, E>.(S) -> Unit = { onExit(it) }
+        override val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, action -> onDispatch(state, action) }
+        override val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { state, error -> onError(state, error) }
     }
 }
 
@@ -108,7 +112,8 @@ fun <S : State, A : Action, E : Event> Store(
     onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, _ -> state },
     onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { _, error -> throw error },
 ): Store<S, A, E> {
-    return object : TartStore<S, A, E>(initialState) {
+    return object : TartStore<S, A, E>() {
+        override val initialState: S = initialState
         override val coroutineContext: CoroutineContext = coroutineContext
         override val stateSaver: StateSaver<S> = stateSaver
         override val exceptionHandler: ExceptionHandler = exceptionHandler
