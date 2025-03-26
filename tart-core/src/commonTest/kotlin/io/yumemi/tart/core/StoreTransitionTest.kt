@@ -43,27 +43,25 @@ private fun createTestStore(
     initialState: TransitionState,
 ): Store<TransitionState, TransitionAction, Nothing> {
     return object : Store.Base<TransitionState, TransitionAction, Nothing>(initialState, Dispatchers.Unconfined) {
-        override suspend fun onEnter(state: TransitionState): TransitionState {
-            return when (state) {
+        override val onEnter: suspend (TransitionState) -> TransitionState = { state ->
+            when (state) {
                 TransitionState.Loading -> TransitionState.Success
                 else -> state
             }
         }
-
-        override suspend fun onDispatch(state: TransitionState, action: TransitionAction): TransitionState {
-            return when (state) {
+        override val onDispatch: suspend (TransitionState, TransitionAction) -> TransitionState = { state, action ->
+            when (state) {
                 TransitionState.Success -> {
                     when (action) {
-                        TransitionAction.CauseError -> throw RuntimeException("error")
+                        TransitionAction.CauseError -> TransitionState.Error("error")
                     }
                 }
 
                 else -> state
             }
         }
-
-        override suspend fun onError(state: TransitionState, error: Throwable): TransitionState {
-            return TransitionState.Error(error.message ?: "unknown error")
+        override val onError: suspend (TransitionState, Throwable) -> TransitionState = { _, error ->
+            TransitionState.Error(error.message ?: "unknown error")
         }
     }
 }

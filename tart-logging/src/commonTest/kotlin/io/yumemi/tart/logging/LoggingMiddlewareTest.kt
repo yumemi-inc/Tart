@@ -52,8 +52,8 @@ private fun createTestStore(
 ): Store<CounterState, CounterAction, Nothing> {
     return object : Store.Base<CounterState, CounterAction, Nothing>(initialState, Dispatchers.Unconfined) {
         override val middlewares = listOf(middleware)
-        override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
-            return when (action) {
+        override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+            when (action) {
                 CounterAction.Increment -> CounterState(state.count + 1)
                 CounterAction.Decrement -> CounterState(state.count - 1)
             }

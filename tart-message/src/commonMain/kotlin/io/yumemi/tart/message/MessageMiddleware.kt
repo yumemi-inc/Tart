@@ -17,7 +17,7 @@ import kotlin.coroutines.CoroutineContext
  */
 @Suppress("unused")
 class MessageMiddleware<S : State, A : Action, E : Event>(
-    private val receive: suspend (message: Message, dispatch: (action: A) -> Unit) -> Unit,
+    private val receive: suspend (Message, (A) -> Unit) -> Unit,
 ) : Middleware<S, A, E> {
     override suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {
         CoroutineScope(coroutineContext).launch {

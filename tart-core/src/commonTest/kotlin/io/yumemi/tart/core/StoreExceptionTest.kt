@@ -36,8 +36,6 @@ private fun createTestStore(
 ): Store<ExceptionState, Nothing, Nothing> {
     return object : Store.Base<ExceptionState, Nothing, Nothing>(initialState, Dispatchers.Unconfined) {
         override val exceptionHandler: ExceptionHandler = exceptionHandler
-        override suspend fun onEnter(state: ExceptionState): ExceptionState {
-            throw RuntimeException("error")
-        }
+        override val onEnter: suspend (ExceptionState) -> ExceptionState = { throw RuntimeException("error") }
     }
 }

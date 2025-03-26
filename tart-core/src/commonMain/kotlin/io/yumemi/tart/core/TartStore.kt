@@ -52,6 +52,14 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     protected open val middlewares: List<Middleware<S, A, E>> = emptyList()
 
+    protected open val onEnter: suspend (S) -> S = { state -> onEnter(state) }
+
+    protected open val onExit: suspend (S) -> Unit = { state -> onExit(state) }
+
+    protected open val onDispatch: suspend (S, A) -> S = { state, action -> onDispatch(state, action) }
+
+    protected open val onError: suspend (S, Throwable) -> S = { state, error -> onError(state, error) }
+
     private val coroutineScope by lazy {
         CoroutineScope(
             coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
@@ -72,14 +80,14 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         }
     }
 
-    final override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (state: S) -> Unit) {
+    final override fun collectState(skipInitialState: Boolean, startStore: Boolean, state: (S) -> Unit) {
         coroutineScope.launch(Dispatchers.Unconfined) {
             _state.drop(if (skipInitialState) 1 else 0).collect { state(it) }
         }
         if (startStore) this.state // initialize if need
     }
 
-    final override fun collectEvent(event: (event: E) -> Unit) {
+    final override fun collectEvent(event: (E) -> Unit) {
         coroutineScope.launch((Dispatchers.Unconfined)) {
             this@TartStore.event.collect { event(it) }
         }
@@ -89,12 +97,17 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         coroutineScope.cancel()
     }
 
+    @Deprecated("Use onEnter instead", ReplaceWith("onEnter"))
     protected open suspend fun onEnter(state: S): S = state
 
-    protected open suspend fun onExit(state: S) {}
+    @Deprecated("Use onExit instead", ReplaceWith("onExit"))
+    protected open suspend fun onExit(state: S) {
+    }
 
+    @Deprecated("Use onDispatch instead", ReplaceWith("onDispatch"))
     protected open suspend fun onDispatch(state: S, action: A): S = state
 
+    @Deprecated("Use onError instead", ReplaceWith("onError"))
     protected open suspend fun onError(state: S, error: Throwable): S {
         throw error
     }
@@ -187,21 +200,21 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onDispatch(state, action)
+        val nextState = onDispatch.invoke(state, action)
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        val nextState = onEnter(state)
+        val nextState = onEnter.invoke(state)
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
         processMiddleware { beforeStateExit(state) }
-        onExit(state)
+        onExit.invoke(state)
         processMiddleware { afterStateExit(state) }
     }
 
@@ -218,7 +231,7 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processError(state: S, throwable: Throwable): S {
         processMiddleware { beforeError(state, throwable) }
-        val nextState = onError(state, throwable)
+        val nextState = onError.invoke(state, throwable)
         processMiddleware { afterError(state, nextState, throwable) }
         return nextState
     }

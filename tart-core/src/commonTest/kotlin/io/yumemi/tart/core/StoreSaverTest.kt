@@ -42,8 +42,8 @@ private fun createTestStore(
 ): Store<SaverState, SaverAction, Nothing> {
     return object : Store.Base<SaverState, SaverAction, Nothing>(initialState, Dispatchers.Unconfined) {
         override val stateSaver = stateSaver
-        override suspend fun onDispatch(state: SaverState, action: SaverAction): SaverState {
-            return when (action) {
+        override val onDispatch: suspend (SaverState, SaverAction) -> SaverState = { _, action ->
+            when (action) {
                 is SaverAction.Update -> SaverState(action.value)
             }
         }

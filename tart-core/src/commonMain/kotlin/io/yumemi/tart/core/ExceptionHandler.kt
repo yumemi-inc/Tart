@@ -19,7 +19,7 @@ interface ExceptionHandler {
  * @param block Callback function to handle exceptions
  * @return A new ExceptionHandler instance
  */
-fun ExceptionHandler(block: (error: Throwable) -> Unit): ExceptionHandler {
+fun ExceptionHandler(block: (Throwable) -> Unit): ExceptionHandler {
     return object : ExceptionHandler {
         override fun handle(error: Throwable) {
             block.invoke(error)

@@ -11,7 +11,7 @@ interface StateSaver<S : State> {
      * @param state The state to save
      */
     fun save(state: S)
-    
+
     /**
      * Restores the saved state.
      *
@@ -28,7 +28,7 @@ interface StateSaver<S : State> {
  * @return A new StateSaver instance
  */
 fun <S : State> StateSaver(
-    save: (state: S) -> Unit,
+    save: (S) -> Unit,
     restore: () -> S?,
 ): StateSaver<S> {
     return object : StateSaver<S> {

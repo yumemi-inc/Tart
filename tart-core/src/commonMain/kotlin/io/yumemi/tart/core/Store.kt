@@ -41,14 +41,14 @@ interface Store<S : State, A : Action, E : Event> {
      * @param startStore Whether to start the Store with this call
      * @param state Callback called when the state changes
      */
-    fun collectState(skipInitialState: Boolean = false, startStore: Boolean = true, state: (state: S) -> Unit)
+    fun collectState(skipInitialState: Boolean = false, startStore: Boolean = true, state: (S) -> Unit)
 
     /**
      * Collects events.
      *
      * @param event Callback called when an event is emitted
      */
-    fun collectEvent(event: (event: E) -> Unit)
+    fun collectEvent(event: (E) -> Unit)
 
     /**
      * Releases the Store's resources.
@@ -70,7 +70,7 @@ interface Store<S : State, A : Action, E : Event> {
             save = {},
             restore = { null },
         )
-        
+
         override val exceptionHandler: ExceptionHandler = ExceptionHandler {
             it.printStackTrace()
         }

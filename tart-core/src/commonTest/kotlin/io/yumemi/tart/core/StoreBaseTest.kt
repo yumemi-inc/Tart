@@ -70,8 +70,8 @@ private fun createTestStore(
     initialState: CounterState,
 ): Store<CounterState, CounterAction, CounterEvent> {
     return object : Store.Base<CounterState, CounterAction, CounterEvent>(initialState, Dispatchers.Unconfined) {
-        override suspend fun onDispatch(state: CounterState, action: CounterAction): CounterState {
-            return when (state) {
+        override val onDispatch: suspend (CounterState, CounterAction) -> CounterState = { state, action ->
+            when (state) {
                 CounterState.Loading -> state
                 is CounterState.Main -> state.handleAction(action)
             }
