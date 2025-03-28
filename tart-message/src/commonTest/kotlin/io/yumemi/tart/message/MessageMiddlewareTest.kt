@@ -19,17 +19,15 @@ class MessageMiddlewareTest {
         val sendMessage = TestMessage("Hello")
 
         var receivedMessage: TestMessage? = null
-        val middleware = MessageMiddleware<CounterState, Nothing, Nothing> { message, _ ->
+        val middleware = MessageMiddleware<CounterState, Nothing, Nothing> { message ->
             if (message is TestMessage) {
                 receivedMessage = message
             }
         }
 
-        val store = createTestStore(CounterState(10), middleware)
+        val store = createTestStore(CounterState(10), middleware, sendMessage)
 
         store.state // access state to initialize the store
-
-        MessageHub.send(sendMessage)
 
         assertEquals(sendMessage, receivedMessage)
     }
@@ -42,8 +40,15 @@ private data class TestMessage(val value: String) : Message
 private fun createTestStore(
     initialState: CounterState,
     middleware: Middleware<CounterState, Nothing, Nothing>,
+    message: Message,
 ): Store<CounterState, Nothing, Nothing> {
-    return object : Store.Base<CounterState, Nothing, Nothing>(initialState, Dispatchers.Unconfined) {
-        override val middlewares = listOf(middleware)
-    }
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        middlewares = listOf(middleware),
+        onEnter = { state ->
+            send(message)
+            state
+        },
+    )
 }

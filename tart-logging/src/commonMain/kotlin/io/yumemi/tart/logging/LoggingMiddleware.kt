@@ -4,13 +4,12 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
-import io.yumemi.tart.core.Store
+import io.yumemi.tart.core.StoreContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Middleware that logs Store operations.
@@ -30,8 +29,8 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
 ) : Middleware<S, A, E> {
     private lateinit var coroutineScope: CoroutineScope
 
-    final override suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {
-        this.coroutineScope = CoroutineScope(coroutineContext + coroutineDispatcher)
+    override suspend fun onInit(context: StoreContext<S, A, E>) {
+        this.coroutineScope = CoroutineScope(context.coroutineContext + coroutineDispatcher)
     }
 
     override suspend fun beforeActionDispatch(state: S, action: A) {

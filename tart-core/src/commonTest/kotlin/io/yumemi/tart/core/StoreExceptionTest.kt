@@ -34,10 +34,10 @@ private fun createTestStore(
     initialState: ExceptionState,
     exceptionHandler: ExceptionHandler,
 ): Store<ExceptionState, Nothing, Nothing> {
-    return object : Store.Base<ExceptionState, Nothing, Nothing>(initialState, Dispatchers.Unconfined) {
-        override val exceptionHandler: ExceptionHandler = exceptionHandler
-        override suspend fun onEnter(state: ExceptionState): ExceptionState {
-            throw RuntimeException("error")
-        }
-    }
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        exceptionHandler = exceptionHandler,
+        onEnter = { throw RuntimeException("error") },
+    )
 }

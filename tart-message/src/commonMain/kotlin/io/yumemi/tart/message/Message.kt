@@ -1,6 +1,6 @@
 package io.yumemi.tart.message
 
-import io.yumemi.tart.core.Store
+import io.yumemi.tart.core.StoreContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -20,9 +20,10 @@ internal object MessageHub {
 }
 
 /**
- * Extension function for Store that provides a convenient method for sending messages.
+ * Extension property that provides a function for sending messages to the MessageHub.
+ * This allows any StoreContext to easily send messages to other components.
+ *
+ * @return A suspend function that takes a Message and sends it to the MessageHub
  */
-@Suppress("unused")
-suspend fun Store.Base<*, *, *>.send(message: Message) {
-    MessageHub.send(message = message)
-}
+val StoreContext<*, *, *>.send: suspend (Message) -> Unit
+    get() = { MessageHub.send(it) }

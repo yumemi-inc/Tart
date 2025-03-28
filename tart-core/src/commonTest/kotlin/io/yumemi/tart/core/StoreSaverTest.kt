@@ -40,12 +40,14 @@ private fun createTestStore(
     initialState: SaverState,
     stateSaver: StateSaver<SaverState>,
 ): Store<SaverState, SaverAction, Nothing> {
-    return object : Store.Base<SaverState, SaverAction, Nothing>(initialState, Dispatchers.Unconfined) {
-        override val stateSaver = stateSaver
-        override suspend fun onDispatch(state: SaverState, action: SaverAction): SaverState {
-            return when (action) {
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        stateSaver = stateSaver,
+        onDispatch = { _, action ->
+            when (action) {
                 is SaverAction.Update -> SaverState(action.value)
             }
-        }
-    }
+        },
+    )
 }

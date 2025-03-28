@@ -16,7 +16,11 @@ class StoreTransitionTest {
     fun tartStore_shouldTransitionBetweenStates() = runTest(testDispatcher) {
         val store = createTestStore(TransitionState.Loading)
 
-        assertEquals(TransitionState.Success, store.state.value)
+        assertEquals(TransitionState.Loading, store.currentState)
+
+        store.state // access state to initialize the store
+
+        assertEquals(TransitionState.Success, store.currentState)
     }
 
     @Test
@@ -42,16 +46,17 @@ private sealed interface TransitionAction : Action {
 private fun createTestStore(
     initialState: TransitionState,
 ): Store<TransitionState, TransitionAction, Nothing> {
-    return object : Store.Base<TransitionState, TransitionAction, Nothing>(initialState, Dispatchers.Unconfined) {
-        override suspend fun onEnter(state: TransitionState): TransitionState {
-            return when (state) {
+    return Store(
+        initialState = initialState,
+        coroutineContext = Dispatchers.Unconfined,
+        onEnter = { state ->
+            when (state) {
                 TransitionState.Loading -> TransitionState.Success
                 else -> state
             }
-        }
-
-        override suspend fun onDispatch(state: TransitionState, action: TransitionAction): TransitionState {
-            return when (state) {
+        },
+        onDispatch = { state, action ->
+            when (state) {
                 TransitionState.Success -> {
                     when (action) {
                         TransitionAction.CauseError -> throw RuntimeException("error")
@@ -60,10 +65,9 @@ private fun createTestStore(
 
                 else -> state
             }
-        }
-
-        override suspend fun onError(state: TransitionState, error: Throwable): TransitionState {
-            return TransitionState.Error(error.message ?: "unknown error")
-        }
-    }
+        },
+        onError = { _, error ->
+            TransitionState.Error(error.message ?: "unknown error")
+        },
+    )
 }
