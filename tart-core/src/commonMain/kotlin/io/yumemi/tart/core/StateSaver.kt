@@ -18,6 +18,21 @@ interface StateSaver<S : State> {
      * @return The restored state, or null if there is no saved state
      */
     fun restore(): S?
+
+    companion object {
+        /**
+         * Creates a no-op implementation of StateSaver that doesn't persist or restore any state.
+         *
+         * @return A StateSaver instance that does not persist or restore any state
+         */
+        @Suppress("FunctionName")
+        fun <S : State> Noop(): StateSaver<S> = object : StateSaver<S> {
+            override fun save(state: S) {}
+            override fun restore(): S? {
+                return null
+            }
+        }
+    }
 }
 
 /**
@@ -27,17 +42,12 @@ interface StateSaver<S : State> {
  * @param restore Callback function to restore state
  * @return A new StateSaver instance
  */
-fun <S : State> StateSaver(
-    save: (S) -> Unit,
-    restore: () -> S?,
-): StateSaver<S> {
-    return object : StateSaver<S> {
-        override fun save(state: S) {
-            save.invoke(state)
-        }
+fun <S : State> StateSaver(save: (S) -> Unit, restore: () -> S?) = object : StateSaver<S> {
+    override fun save(state: S) {
+        save.invoke(state)
+    }
 
-        override fun restore(): S? {
-            return restore.invoke()
-        }
+    override fun restore(): S? {
+        return restore.invoke()
     }
 }

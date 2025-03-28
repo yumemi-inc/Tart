@@ -63,6 +63,7 @@ interface Store<S : State, A : Action, E : Event> {
      * @param coroutineContext CoroutineContext to use
      */
     @Deprecated("Use Store() instead", ReplaceWith("Store()"))
+    @Suppress("DEPRECATION")
     abstract class Base<S : State, A : Action, E : Event>(
         override val initialState: S,
         override val coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
@@ -99,13 +100,8 @@ interface Store<S : State, A : Action, E : Event> {
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
     coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default,
-    stateSaver: StateSaver<S> = StateSaver(
-        save = {},
-        restore = { null },
-    ),
-    exceptionHandler: ExceptionHandler = ExceptionHandler {
-        it.printStackTrace()
-    },
+    stateSaver: StateSaver<S> = StateSaver.Noop(),
+    exceptionHandler: ExceptionHandler = ExceptionHandler.Default,
     middlewares: List<Middleware<S, A, E>> = emptyList(),
     onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> state },
     onExit: suspend TartStore<S, A, E>.(S) -> Unit = { _ -> },
