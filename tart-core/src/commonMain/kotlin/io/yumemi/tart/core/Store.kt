@@ -76,10 +76,10 @@ interface Store<S : State, A : Action, E : Event> {
             it.printStackTrace()
         }
         override val middlewares: List<Middleware<S, A, E>> = emptyList()
-        override val onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> onEnter(state) }
-        override val onExit: suspend TartStore<S, A, E>.(S) -> Unit = { onExit(it) }
-        override val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, action -> onDispatch(state, action) }
-        override val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { state, error -> onError(state, error) }
+        override val onEnter: suspend StoreContext<S, A, E>.(S) -> S = { state -> onEnter(state) }
+        override val onExit: suspend StoreContext<S, A, E>.(S) -> Unit = { onExit(it) }
+        override val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = { state, action -> onDispatch(state, action) }
+        override val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = { state, error -> onError(state, error) }
     }
 }
 
@@ -103,10 +103,10 @@ fun <S : State, A : Action, E : Event> Store(
     stateSaver: StateSaver<S> = StateSaver.Noop(),
     exceptionHandler: ExceptionHandler = ExceptionHandler.Default,
     middlewares: List<Middleware<S, A, E>> = emptyList(),
-    onEnter: suspend TartStore<S, A, E>.(S) -> S = { state -> state },
-    onExit: suspend TartStore<S, A, E>.(S) -> Unit = { _ -> },
-    onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = { state, _ -> state },
-    onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = { _, error -> throw error },
+    onEnter: suspend StoreContext<S, A, E>.(S) -> S = { state -> state },
+    onExit: suspend StoreContext<S, A, E>.(S) -> Unit = { _ -> },
+    onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = { state, _ -> state },
+    onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = { _, error -> throw error },
 ): Store<S, A, E> {
     return object : TartStore<S, A, E>() {
         override val initialState: S = initialState
@@ -114,9 +114,9 @@ fun <S : State, A : Action, E : Event> Store(
         override val stateSaver: StateSaver<S> = stateSaver
         override val exceptionHandler: ExceptionHandler = exceptionHandler
         override val middlewares: List<Middleware<S, A, E>> = middlewares
-        override val onEnter: suspend TartStore<S, A, E>.(S) -> S = onEnter
-        override val onExit: suspend TartStore<S, A, E>.(S) -> Unit = onExit
-        override val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S = onDispatch
-        override val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S = onError
+        override val onEnter: suspend StoreContext<S, A, E>.(S) -> S = onEnter
+        override val onExit: suspend StoreContext<S, A, E>.(S) -> Unit = onExit
+        override val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = onDispatch
+        override val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = onError
     }
 }

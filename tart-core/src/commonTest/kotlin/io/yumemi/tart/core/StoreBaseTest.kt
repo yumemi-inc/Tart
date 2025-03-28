@@ -73,9 +73,10 @@ private fun createTestStore(
         initialState = initialState,
         coroutineContext = Dispatchers.Unconfined,
         onDispatch = { state, action ->
+
             when (state) {
                 CounterState.Loading -> state
-                is CounterState.Main -> state.handleAction(action, ::emit)
+                is CounterState.Main -> state.handleAction(action, emit)
             }
         },
     )

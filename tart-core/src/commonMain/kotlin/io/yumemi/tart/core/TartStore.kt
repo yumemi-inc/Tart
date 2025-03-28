@@ -20,6 +20,9 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Abstract class providing the basic implementation of the Store interface.
  * Implements core functionality such as state management, event emission, middleware processing, etc.
+ *
+ * FIXME: Currently used with the deprecated Store.Base class, but in the future, the Store.Base class will be removed
+ *        and the visibility scope of this TartStore class will be changed to internal
  */
 abstract class TartStore<S : State, A : Action, E : Event> internal constructor() : Store<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
@@ -52,13 +55,13 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
-    protected abstract val onEnter: suspend TartStore<S, A, E>.(S) -> S
+    protected abstract val onEnter: suspend StoreContext<S, A, E>.(S) -> S
 
-    protected abstract val onExit: suspend TartStore<S, A, E>.(S) -> Unit
+    protected abstract val onExit: suspend StoreContext<S, A, E>.(S) -> Unit
 
-    protected abstract val onDispatch: suspend TartStore<S, A, E>.(S, A) -> S
+    protected abstract val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S
 
-    protected abstract val onError: suspend TartStore<S, A, E>.(S, Throwable) -> S
+    protected abstract val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -70,6 +73,12 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     private val mutex = Mutex()
+
+    private val storeContext: StoreContext<S, A, E> = object : StoreContext<S, A, E> {
+        override val dispatch: (A) -> Unit = ::dispatch
+        override val emit: suspend (E) -> Unit = ::emit
+        override val coroutineContext: CoroutineContext get() = coroutineScope.coroutineContext
+    }
 
     final override fun dispatch(action: A) {
         state // initialize if need
@@ -112,24 +121,17 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
         throw error
     }
 
-    /**
-     * Emits an event to all event listeners.
-     * This is used to communicate with the outside world about important occurrences within the store.
-     *
-     * @param event The event to emit
-     */
-    @Suppress("unused")
-    suspend fun emit(event: E) {
-        processEventEmit(currentState, event)
-    }
-
     private fun init() {
         coroutineScope.launch {
             mutex.withLock {
-                processMiddleware { onInit(this@TartStore, coroutineScope.coroutineContext) }
+                processMiddleware { onInit(storeContext) }
                 onStateEntered(currentState)
             }
         }
+    }
+
+    private suspend fun emit(event: E) {
+        processEventEmit(currentState, event)
     }
 
     private suspend fun onActionDispatched(state: S, action: A) {
@@ -206,21 +208,21 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onDispatch.invoke(this, state, action)
+        val nextState = onDispatch.invoke(storeContext, state, action)
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        val nextState = onEnter.invoke(this, state)
+        val nextState = onEnter.invoke(storeContext, state)
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
         processMiddleware { beforeStateExit(state) }
-        onExit.invoke(this, state)
+        onExit.invoke(storeContext, state)
         processMiddleware { afterStateExit(state) }
     }
 
@@ -237,7 +239,7 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     private suspend fun processError(state: S, throwable: Throwable): S {
         processMiddleware { beforeError(state, throwable) }
-        val nextState = onError.invoke(this, state, throwable)
+        val nextState = onError.invoke(storeContext, state, throwable)
         processMiddleware { afterError(state, nextState, throwable) }
         return nextState
     }
@@ -261,4 +263,18 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
+}
+
+/**
+ * Provides context for store operations.
+ */
+interface StoreContext<S : State, A : Action, E : Event> {
+    /** Dispatches an action to the store */
+    val dispatch: (A) -> Unit
+
+    /** Emits an event from the store */
+    val emit: suspend (E) -> Unit
+
+    /** The coroutine context for execution */
+    val coroutineContext: CoroutineContext
 }

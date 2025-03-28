@@ -16,7 +16,11 @@ class StoreTransitionTest {
     fun tartStore_shouldTransitionBetweenStates() = runTest(testDispatcher) {
         val store = createTestStore(TransitionState.Loading)
 
-        assertEquals(TransitionState.Success, store.state.value)
+        assertEquals(TransitionState.Loading, store.currentState)
+
+        store.state // access state to initialize the store
+
+        assertEquals(TransitionState.Success, store.currentState)
     }
 
     @Test

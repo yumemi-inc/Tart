@@ -19,7 +19,7 @@ class MessageMiddlewareTest {
         val sendMessage = TestMessage("Hello")
 
         var receivedMessage: TestMessage? = null
-        val middleware = MessageMiddleware<CounterState, Nothing, Nothing> { message, _ ->
+        val middleware = MessageMiddleware<CounterState, Nothing, Nothing> { message ->
             if (message is TestMessage) {
                 receivedMessage = message
             }

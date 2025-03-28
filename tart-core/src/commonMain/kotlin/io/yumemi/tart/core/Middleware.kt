@@ -1,7 +1,5 @@
 package io.yumemi.tart.core
 
-import kotlin.coroutines.CoroutineContext
-
 /**
  * Interface for intercepting Store lifecycle events.
  * By implementing Middleware, you can insert processing at various lifecycle points
@@ -11,11 +9,10 @@ interface Middleware<S : State, A : Action, E : Event> {
     /**
      * Called when the Store is initialized.
      *
-     * @param store The initialized Store
-     * @param coroutineContext The CoroutineContext used by the Store
+     * @param context The StoreContext providing access to store functionality
      */
-    suspend fun onInit(store: Store<S, A, E>, coroutineContext: CoroutineContext) {}
-    
+    suspend fun onInit(context: StoreContext<S, A, E>) {}
+
     /**
      * Called before an action is dispatched.
      *
@@ -23,7 +20,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param action The action being dispatched
      */
     suspend fun beforeActionDispatch(state: S, action: A) {}
-    
+
     /**
      * Called after an action is dispatched.
      *
@@ -32,7 +29,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param nextState The new state after action processing
      */
     suspend fun afterActionDispatch(state: S, action: A, nextState: S) {}
-    
+
     /**
      * Called before an event is emitted.
      *
@@ -40,7 +37,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param event The event being emitted
      */
     suspend fun beforeEventEmit(state: S, event: E) {}
-    
+
     /**
      * Called after an event is emitted.
      *
@@ -48,14 +45,14 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param event The emitted event
      */
     suspend fun afterEventEmit(state: S, event: E) {}
-    
+
     /**
      * Called before a new state begins.
      *
      * @param state The state that is beginning
      */
     suspend fun beforeStateEnter(state: S) {}
-    
+
     /**
      * Called after a new state has begun.
      *
@@ -63,21 +60,21 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param nextState The new state after beginning
      */
     suspend fun afterStateEnter(state: S, nextState: S) {}
-    
+
     /**
      * Called before a state ends.
      *
      * @param state The state that is ending
      */
     suspend fun beforeStateExit(state: S) {}
-    
+
     /**
      * Called after a state has ended.
      *
      * @param state The state that ended
      */
     suspend fun afterStateExit(state: S) {}
-    
+
     /**
      * Called before a state changes.
      *
@@ -85,7 +82,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param nextState The next state
      */
     suspend fun beforeStateChange(state: S, nextState: S) {}
-    
+
     /**
      * Called after a state has changed.
      *
@@ -93,7 +90,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param prevState The previous state
      */
     suspend fun afterStateChange(state: S, prevState: S) {}
-    
+
     /**
      * Called before an error occurs.
      *
@@ -101,7 +98,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      * @param error The error that occurred
      */
     suspend fun beforeError(state: S, error: Throwable) {}
-    
+
     /**
      * Called after an error has been processed.
      *
