@@ -112,7 +112,7 @@ class LoginUseCaseTest {
 }
 
 // State definitions
-sealed interface LoginState : State {
+private sealed interface LoginState : State {
     data object Initial : LoginState
     data class Loading(val username: String, val password: String) : LoginState
     data class Success(val username: String) : LoginState
@@ -120,25 +120,25 @@ sealed interface LoginState : State {
 }
 
 // Action definitions
-sealed interface LoginAction : Action {
+private sealed interface LoginAction : Action {
     data class Login(val username: String, val password: String) : LoginAction
     data object ProcessLogin : LoginAction
     data object RetryFromError : LoginAction
 }
 
 // Event definitions
-sealed interface LoginEvent : Event {
+private sealed interface LoginEvent : Event {
     data class NavigateToHome(val username: String) : LoginEvent
     data class ShowError(val message: String) : LoginEvent
 }
 
 // Login repository interface
-interface LoginRepository {
+private interface LoginRepository {
     suspend fun login(username: String, password: String): Boolean
 }
 
 // Mock repository implementation
-class MockLoginRepository(var shouldSucceed: Boolean) : LoginRepository {
+private class MockLoginRepository(var shouldSucceed: Boolean) : LoginRepository {
     override suspend fun login(username: String, password: String): Boolean {
         return shouldSucceed
     }
