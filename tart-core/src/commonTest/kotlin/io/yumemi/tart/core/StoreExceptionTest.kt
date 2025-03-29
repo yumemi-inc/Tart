@@ -34,10 +34,9 @@ private fun createTestStore(
     initialState: ExceptionState,
     exceptionHandler: ExceptionHandler,
 ): Store<ExceptionState, Nothing, Nothing> {
-    return Store(
-        initialState = initialState,
-        coroutineContext = Dispatchers.Unconfined,
-        exceptionHandler = exceptionHandler,
-        onEnter = { throw RuntimeException("error") },
-    )
+    return Store(initialState) {
+        this.coroutineContext(Dispatchers.Unconfined)
+        exceptionHandler(exceptionHandler)
+        onEnter { throw RuntimeException("error") }
+    }
 }

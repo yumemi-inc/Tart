@@ -148,11 +148,9 @@ private class MockLoginRepository(var shouldSucceed: Boolean) : LoginRepository 
 private fun createLoginStore(
     repository: LoginRepository,
 ): Store<LoginState, LoginAction, LoginEvent> {
-    return Store(
-        initialState = LoginState.Initial,
-        coroutineContext = Dispatchers.Unconfined,
-        onDispatch = { state, action ->
-
+    return Store(LoginState.Initial) {
+        coroutineContext(Dispatchers.Unconfined)
+        onDispatch { state, action ->
             suspend fun handleInitialState(state: LoginState.Initial): LoginState = when (action) {
                 is LoginAction.Login -> {
                     // Validation check
@@ -194,13 +192,13 @@ private fun createLoginStore(
                 is LoginState.Success -> state
                 is LoginState.Error -> handleErrorState(state)
             }
-        },
-        onError = { state, error ->
+        }
+        onError { state, error ->
             emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
             when (state) {
                 is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")
                 else -> state
             }
-        },
-    )
+        }
+    }
 }

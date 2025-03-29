@@ -42,13 +42,12 @@ private fun createTestStore(
     middleware: Middleware<CounterState, Nothing, Nothing>,
     message: Message,
 ): Store<CounterState, Nothing, Nothing> {
-    return Store(
-        initialState = initialState,
-        coroutineContext = Dispatchers.Unconfined,
-        middlewares = listOf(middleware),
-        onEnter = { state ->
+    return Store(initialState) {
+        coroutineContext(Dispatchers.Unconfined)
+        middleware(middleware)
+        onEnter { state ->
             send(message)
             state
-        },
-    )
+        }
+    }
 }

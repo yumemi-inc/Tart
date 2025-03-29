@@ -69,10 +69,9 @@ private sealed interface CounterEvent : Event {
 private fun createTestStore(
     initialState: CounterState,
 ): Store<CounterState, CounterAction, CounterEvent> {
-    return Store(
-        initialState = initialState,
-        coroutineContext = Dispatchers.Unconfined,
-        onDispatch = { state, action ->
+    return Store(initialState) {
+        coroutineContext(Dispatchers.Unconfined)
+        onDispatch { state, action ->
             suspend fun handleMainState(state: CounterState.Main): CounterState = when (action) {
                 CounterAction.Increment -> state.copy(count = state.count + 1)
                 CounterAction.Decrement -> state.copy(count = state.count - 1)
@@ -85,6 +84,6 @@ private fun createTestStore(
                 CounterState.Loading -> state
                 is CounterState.Main -> handleMainState(state)
             }
-        },
-    )
+        }
+    }
 }

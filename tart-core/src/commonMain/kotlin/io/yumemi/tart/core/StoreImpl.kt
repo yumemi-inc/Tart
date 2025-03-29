@@ -17,14 +17,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
-/**
- * Abstract class providing the basic implementation of the Store interface.
- * Implements core functionality such as state management, event emission, middleware processing, etc.
- *
- * FIXME: Currently used with the deprecated Store.Base class, but in the future, the Store.Base class will be removed
- *        and the visibility scope of this TartStore class will be changed to internal
- */
-abstract class TartStore<S : State, A : Action, E : Event> internal constructor() : Store<S, A, E> {
+internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
         MutableStateFlow(
             try {
@@ -98,27 +91,12 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
 
     final override fun collectEvent(event: (E) -> Unit) {
         coroutineScope.launch((Dispatchers.Unconfined)) {
-            this@TartStore.event.collect { event(it) }
+            this@StoreImpl.event.collect { event(it) }
         }
     }
 
     final override fun dispose() {
         coroutineScope.cancel()
-    }
-
-    @Deprecated("Use onEnter property instead", ReplaceWith("onEnter"))
-    protected open suspend fun onEnter(state: S): S = state
-
-    @Deprecated("Use onExit property instead", ReplaceWith("onExit"))
-    protected open suspend fun onExit(state: S) {
-    }
-
-    @Deprecated("Use onDispatch property instead", ReplaceWith("onDispatch"))
-    protected open suspend fun onDispatch(state: S, action: A): S = state
-
-    @Deprecated("Use onError property instead", ReplaceWith("onError"))
-    protected open suspend fun onError(state: S, error: Throwable): S {
-        throw error
     }
 
     private fun init() {
@@ -263,18 +241,4 @@ abstract class TartStore<S : State, A : Action, E : Event> internal constructor(
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
-}
-
-/**
- * Provides context for store operations.
- */
-interface StoreContext<S : State, A : Action, E : Event> {
-    /** Dispatches an action to the store */
-    val dispatch: (A) -> Unit
-
-    /** Emits an event from the store */
-    val emit: suspend (E) -> Unit
-
-    /** The coroutine context for execution */
-    val coroutineContext: CoroutineContext
 }
