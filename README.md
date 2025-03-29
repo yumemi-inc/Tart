@@ -68,7 +68,7 @@ This is a `(State, Action) -> State` function.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-    onDispatch { state, action ->
+    onDispatch<CounterState> { state, action ->
         when (action) {
             is CounterAction.Increment -> {
                 state.copy(count = state.count + 1)
@@ -137,7 +137,7 @@ class CounterStoreFactory( // instantiate with DI library etc.
     private val counterRepository: CounterRepository,
 ) {
     fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-        onDispatch { state, action ->
+        onDispatch<CounterState> { state, action ->
             when (action) {
                 CounterAction.Load -> {
                     val count = counterRepository.get() // load
@@ -157,31 +157,28 @@ class CounterStoreFactory( // instantiate with DI library etc.
 <details>
 <summary>TIPS: Define functions as needed</summary>
 
-Processing other than changing the *State* may be defined using extension functions for *State* or *Action*.
+Processing other than changing the *State* may be defined functions.
 
 ```kt
 class CounterStoreFactory(
     private val counterRepository: CounterRepository,
 ) {
     fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-        onDispatch { state, action ->
-            // describe what to do for this Action
-            suspend fun CounterAction.Load.loadCount(): Int {
+        onDispatch<CounterState> { state, action ->
+            // define a function
+            suspend fun loadCount(): Int {
                 return counterRepository.get()
             }
 
             when (action) {
                 CounterAction.Load -> {
-                    val count = action.loadCount() // call extension function
-                    state.copy(count = count)
+                    state.copy(count = loadCount()) // call the function
                 }
 
                 // ...
 ```
 
 In any case, the `onDispatch` parameter is a simple function that returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
-As shown [here](tart-core/src/commonTest/kotlin/io/yumemi/tart/core/LoginUseCaseTest.kt), one approach is to prepare functions for each State, which improves code readability.
-
 </details>
 
 ### Multiple states and transitions
@@ -201,20 +198,21 @@ class CounterStoreFactory(
     private val counterRepository: CounterRepository,
 ) {
     fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) { // start from loading
-        onDispatch { state, action ->
-            when (state) {
-                CounterState.Loading -> when (action) {
-                    CounterAction.Load -> {
-                        val count = counterRepository.get()
-                        CounterState.Main(count = count) // transition to Main state
-                    }
-
-                    else -> state
+        onDispatch<CounterState.Loading> { state, action -> // subscribe loading state
+            when (action) {
+                CounterAction.Load -> {
+                    val count = counterRepository.get()
+                    CounterState.Main(count = count) // transition to Main state
                 }
 
-                is CounterState.Main -> when (action) {
-                    is CounterAction.Increment -> {
-                        // ...
+                else -> state
+            }
+        }
+
+        onDispatch<CounterState.Main> { state, action -> // subscribe main state
+            when (action) {
+                is CounterAction.Increment -> {
+                    // ...
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
@@ -225,21 +223,14 @@ class CounterStoreFactory(
     private val counterRepository: CounterRepository,
 ) {
     fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
-        onEnter { state ->
-            when (state) {
-                CounterState.Loading -> {
-                    val count = counterRepository.get()
-                    CounterState.Main(count = count) // transition to Main state
-                }
-
-                else -> state
-            }
+        onEnter<CounterState.Loading> { state ->
+            val count = counterRepository.get()
+            CounterState.Main(count = count) // transition to Main state
         }
-        onDispatch { state, action ->
-            when (state) {
-                is CounterState.Main -> when (action) {
-                    is CounterAction.Increment -> {
-                        // ...
+        onDispatch<CounterState.Main> { state, action ->
+            when (action) {
+                is CounterAction.Increment -> {
+                    // ...
 ```
 
 The state diagram is as follows:
@@ -266,18 +257,12 @@ sealed interface CounterState : State {
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
-    onEnter { state ->
-        when (state) {
-            CounterState.Loading -> {
-                try {
-                    val count = counterRepository.get()
-                    CounterState.Main(count = count)
-                } catch (t: Throwable) {
-                    CounterState.Error(error = t)
-                }
-            }
-
-            else -> state
+    onEnter<CounterState.Loading> { state ->
+        try {
+            val count = counterRepository.get()
+            CounterState.Main(count = count)
+        } catch (t: Throwable) {
+            CounterState.Error(error = t)
         }
     }
 }
@@ -288,18 +273,12 @@ This is fine, but you can also handle errors using the `onError` parameter.
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
-    onEnter { state ->
-        when (state) {
-            CounterState.Loading -> {
-                // no error handling code
-                val count = counterRepository.get()
-                CounterState.Main(count = count)
-            }
-
-            else -> state
-        }
+    onEnter<CounterState.Loading> { state ->
+        // no error handling code
+        val count = counterRepository.get()
+        CounterState.Main(count = count)
     }
-    onError { state, error ->
+    onError<CounterState> { state, error ->
         // you can also branch using state and error inputs if necessary
         CounterState.Error(error = error)
     }
@@ -673,12 +652,9 @@ Call the `send()` at any point in the *Store* that sends messages.
 ```kt
 val mainStore: Store<MainState, MainAction, MainEvent> = Store {
     // ...
-    onExit { state ->
-        when (state) {
-            is MainState.LoggedIn -> { // leave the logged-in state
-                send(MainMessage.LoggedOut)
-            }
-            // ...
+    onExit<MainState.LoggedIn> { state -> // leave the logged-in state
+        send(MainMessage.LoggedOut)
+    }
 ```
 </details>
 
