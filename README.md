@@ -165,6 +165,11 @@ class CounterStoreFactory(
     fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(
         initialState = CounterState(count = 0),
         onDispatch = { state, action ->
+            // describe what to do for this Action
+            suspend fun CounterAction.Load.loadCount(): Int {
+                return counterRepository.get()
+            }
+
             when (action) {
                 CounterAction.Load -> {
                     val count = action.loadCount() // call extension function
@@ -172,13 +177,6 @@ class CounterStoreFactory(
                 }
 
                 // ...
-    )
-
-    // describe what to do for this Action
-    private suspend fun CounterAction.Load.loadCount(): Int {
-        return counterRepository.get()
-    }
-}
 ```
 
 In any case, the `onDispatch` parameter is a simple function that returns a new *State* from the current *State* and *Action*, so you can design the code as you like.

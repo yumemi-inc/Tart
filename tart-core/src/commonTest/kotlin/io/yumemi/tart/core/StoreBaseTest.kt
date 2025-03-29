@@ -73,22 +73,18 @@ private fun createTestStore(
         initialState = initialState,
         coroutineContext = Dispatchers.Unconfined,
         onDispatch = { state, action ->
-
+            suspend fun handleMainState(state: CounterState.Main): CounterState = when (action) {
+                CounterAction.Increment -> state.copy(count = state.count + 1)
+                CounterAction.Decrement -> state.copy(count = state.count - 1)
+                CounterAction.EmitEvent -> {
+                    emit(CounterEvent.CountUpdated(state.count))
+                    state
+                }
+            }
             when (state) {
                 CounterState.Loading -> state
-                is CounterState.Main -> state.handleAction(action, emit)
+                is CounterState.Main -> handleMainState(state)
             }
         },
     )
-}
-
-private suspend fun CounterState.Main.handleAction(action: CounterAction, emit: suspend (CounterEvent) -> Unit): CounterState {
-    return when (action) {
-        CounterAction.Increment -> copy(count = count + 1)
-        CounterAction.Decrement -> copy(count = count - 1)
-        CounterAction.EmitEvent -> {
-            emit(CounterEvent.CountUpdated(count))
-            this
-        }
-    }
 }
