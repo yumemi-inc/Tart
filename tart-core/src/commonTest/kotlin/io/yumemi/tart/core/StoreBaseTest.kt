@@ -71,18 +71,20 @@ private fun createTestStore(
 ): Store<CounterState, CounterAction, CounterEvent> {
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
-        onDispatch { state, action ->
-            suspend fun handleMainState(state: CounterState.Main): CounterState = when (action) {
+
+        onDispatch<CounterState.Loading> { state, action ->
+            // Ignore all actions in Loading state
+            state
+        }
+
+        onDispatch<CounterState.Main> { state, action ->
+            when (action) {
                 CounterAction.Increment -> state.copy(count = state.count + 1)
                 CounterAction.Decrement -> state.copy(count = state.count - 1)
                 CounterAction.EmitEvent -> {
                     emit(CounterEvent.CountUpdated(state.count))
                     state
                 }
-            }
-            when (state) {
-                CounterState.Loading -> state
-                is CounterState.Main -> handleMainState(state)
             }
         }
     }
