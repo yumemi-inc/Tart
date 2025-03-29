@@ -150,8 +150,10 @@ private fun createLoginStore(
 ): Store<LoginState, LoginAction, LoginEvent> {
     return Store(LoginState.Initial) {
         coroutineContext(Dispatchers.Unconfined)
-        onDispatch { state, action ->
-            suspend fun handleInitialState(state: LoginState.Initial): LoginState = when (action) {
+
+        // Processing for Initial state
+        onDispatch<LoginState.Initial> { state, action ->
+            when (action) {
                 is LoginAction.Login -> {
                     // Validation check
                     if (action.username.isNotBlank() && action.password.isNotBlank()) {
@@ -164,8 +166,11 @@ private fun createLoginStore(
 
                 else -> state
             }
+        }
 
-            suspend fun handleLoadingState(state: LoginState.Loading): LoginState = when (action) {
+        // Processing for Loading state
+        onDispatch<LoginState.Loading> { state, action ->
+            when (action) {
                 is LoginAction.ProcessLogin -> {
                     // Execute login process in repository
                     val success = repository.login(state.username, state.password)
@@ -180,20 +185,22 @@ private fun createLoginStore(
 
                 else -> state
             }
+        }
 
-            fun handleErrorState(state: LoginState.Error): LoginState = when (action) {
+        // Processing for Success state
+        onDispatch<LoginState.Success> { state, action ->
+            // No actions are processed in Success state
+            state
+        }
+
+        // Processing for Error state
+        onDispatch<LoginState.Error> { state, action ->
+            when (action) {
                 is LoginAction.RetryFromError -> LoginState.Initial
                 else -> state
             }
-
-            when (state) {
-                is LoginState.Initial -> handleInitialState(state)
-                is LoginState.Loading -> handleLoadingState(state)
-                is LoginState.Success -> state
-                is LoginState.Error -> handleErrorState(state)
-            }
         }
-        onError { state, error ->
+        onError<LoginState> { state, error ->
             emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
             when (state) {
                 is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")

@@ -22,10 +22,31 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     private var _stateSaver: StateSaver<S> = StateSaver.Noop()
     private var _exceptionHandler: ExceptionHandler = ExceptionHandler.Default
     private var _middlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
-    private var _onEnter: suspend StoreContext<S, A, E>.(S) -> S = { it }
-    private var _onExit: suspend StoreContext<S, A, E>.(S) -> Unit = { }
-    private var _onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = { state, _ -> state }
-    private var _onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = { _, error -> throw error }
+
+    val enterStateHandlers = mutableListOf<EnterStateHandler<S, A, E>>()
+    val exitStateHandlers = mutableListOf<ExitStateHandler<S, A, E>>()
+    val dispatchStateHandlers = mutableListOf<DispatchStateHandler<S, A, E>>()
+    val errorStateHandlers = mutableListOf<ErrorStateHandler<S, A, E>>()
+
+    private val onEnter: suspend StoreContext<S, A, E>.(S) -> S = { state ->
+        val matchingHandler = enterStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this, state) ?: state
+    }
+
+    private val onExit: suspend StoreContext<S, A, E>.(S) -> Unit = { state ->
+        val matchingHandler = exitStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this, state)
+    }
+
+    private val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = { state, action ->
+        val matchingHandler = dispatchStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this, state, action) ?: state
+    }
+
+    private val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = { state, error ->
+        val matchingHandler = errorStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this, state, error) ?: throw error
+    }
 
     /**
      * Sets the initial state of the store.
@@ -81,44 +102,62 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         _middlewares.add(middleware)
     }
 
-    /**
-     * Sets the handler for state entry logic.
-     * This is called when a state is entered.
-     *
-     * @param block The handler for state entry
-     */
-    fun onEnter(block: suspend StoreContext<S, A, E>.(S) -> S) {
-        _onEnter = block
+    inline fun <reified S2 : S> onEnter(noinline block: suspend StoreContext<S, A, E>.(S2) -> S) {
+        enterStateHandlers.add(
+            EnterStateHandler(
+                predicate = { it is S2 },
+                handler = { state ->
+                    if (state is S2) {
+                        block(state)
+                    } else {
+                        state
+                    }
+                },
+            ),
+        )
     }
 
-    /**
-     * Sets the handler for state exit logic.
-     * This is called when a state is exited.
-     *
-     * @param block The handler for state exit
-     */
-    fun onExit(block: suspend StoreContext<S, A, E>.(S) -> Unit) {
-        _onExit = block
+    inline fun <reified S2 : S> onExit(noinline block: suspend StoreContext<S, A, E>.(S2) -> Unit) {
+        exitStateHandlers.add(
+            ExitStateHandler(
+                predicate = { it is S2 },
+                handler = { state ->
+                    if (state is S2) {
+                        block(state)
+                    }
+                },
+            ),
+        )
     }
 
-    /**
-     * Sets the handler for action dispatch logic.
-     * This is called when an action is dispatched to the store.
-     *
-     * @param block The handler for action dispatch
-     */
-    fun onDispatch(block: suspend StoreContext<S, A, E>.(S, A) -> S) {
-        _onDispatch = block
+    inline fun <reified S2 : S> onDispatch(noinline block: suspend StoreContext<S, A, E>.(S2, A) -> S) {
+        dispatchStateHandlers.add(
+            DispatchStateHandler(
+                predicate = { it is S2 },
+                handler = { state, action ->
+                    if (state is S2) {
+                        block(state, action)
+                    } else {
+                        state
+                    }
+                },
+            ),
+        )
     }
 
-    /**
-     * Sets the handler for error handling logic.
-     * This is called when an error occurs during store operations.
-     *
-     * @param block The handler for error handling
-     */
-    fun onError(block: suspend StoreContext<S, A, E>.(S, Throwable) -> S) {
-        _onError = block
+    inline fun <reified S2 : S> onError(noinline block: suspend StoreContext<S, A, E>.(S2, Throwable) -> S) {
+        errorStateHandlers.add(
+            ErrorStateHandler(
+                predicate = { it is S2 },
+                handler = { state, error ->
+                    if (state is S2) {
+                        block(state, error)
+                    } else {
+                        state
+                    }
+                },
+            ),
+        )
     }
 
     internal fun build(): Store<S, A, E> {
@@ -130,12 +169,32 @@ class StoreBuilder<S : State, A : Action, E : Event> {
             override val stateSaver: StateSaver<S> = _stateSaver
             override val exceptionHandler: ExceptionHandler = _exceptionHandler
             override val middlewares: List<Middleware<S, A, E>> = _middlewares
-            override val onEnter: suspend StoreContext<S, A, E>.(S) -> S = _onEnter
-            override val onExit: suspend StoreContext<S, A, E>.(S) -> Unit = _onExit
-            override val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = _onDispatch
-            override val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = _onError
+            override val onEnter: suspend StoreContext<S, A, E>.(S) -> S = this@StoreBuilder.onEnter
+            override val onExit: suspend StoreContext<S, A, E>.(S) -> Unit = this@StoreBuilder.onExit
+            override val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = this@StoreBuilder.onDispatch
+            override val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S = this@StoreBuilder.onError
         }
     }
+
+    class EnterStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend StoreContext<S, A, E>.(S) -> S,
+    )
+
+    class ExitStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend StoreContext<S, A, E>.(S) -> Unit,
+    )
+
+    class DispatchStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend StoreContext<S, A, E>.(S, A) -> S,
+    )
+
+    class ErrorStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend StoreContext<S, A, E>.(S, Throwable) -> S,
+    )
 }
 
 /**

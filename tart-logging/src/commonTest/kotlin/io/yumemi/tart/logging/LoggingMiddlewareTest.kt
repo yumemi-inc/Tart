@@ -53,7 +53,7 @@ private fun createTestStore(
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
         middleware(middleware)
-        onDispatch { state, action ->
+        onDispatch<CounterState> { state, action ->
             when (action) {
                 CounterAction.Increment -> CounterState(state.count + 1)
                 CounterAction.Decrement -> CounterState(state.count - 1)
