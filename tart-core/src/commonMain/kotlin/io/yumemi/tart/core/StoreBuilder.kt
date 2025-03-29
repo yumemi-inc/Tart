@@ -102,6 +102,12 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         _middlewares.add(middleware)
     }
 
+    /**
+     * Registers a handler to be invoked when the state enters a specific type.
+     *
+     * @param block The handler function that will be executed when entering a state of type S2
+     * @return Updated StoreBuilder with the new handler registered
+     */
     inline fun <reified S2 : S> onEnter(noinline block: suspend StoreContext<S, A, E>.(S2) -> S) {
         enterStateHandlers.add(
             EnterStateHandler(
@@ -117,6 +123,12 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         )
     }
 
+    /**
+     * Registers a handler to be invoked when the state exits a specific type.
+     *
+     * @param block The handler function that will be executed when exiting a state of type S2
+     * @return Updated StoreBuilder with the new handler registered
+     */
     inline fun <reified S2 : S> onExit(noinline block: suspend StoreContext<S, A, E>.(S2) -> Unit) {
         exitStateHandlers.add(
             ExitStateHandler(
@@ -130,6 +142,12 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         )
     }
 
+    /**
+     * Registers a handler to process actions dispatched when in a specific state type.
+     *
+     * @param block The handler function that will be executed when an action is dispatched while in a state of type S2
+     * @return Updated StoreBuilder with the new handler registered
+     */
     inline fun <reified S2 : S> onDispatch(noinline block: suspend StoreContext<S, A, E>.(S2, A) -> S) {
         dispatchStateHandlers.add(
             DispatchStateHandler(
@@ -145,6 +163,12 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         )
     }
 
+    /**
+     * Registers a handler to process errors that occur when in a specific state type.
+     *
+     * @param block The handler function that will be executed when an error occurs while in a state of type S2
+     * @return Updated StoreBuilder with the new handler registered
+     */
     inline fun <reified S2 : S> onError(noinline block: suspend StoreContext<S, A, E>.(S2, Throwable) -> S) {
         errorStateHandlers.add(
             ErrorStateHandler(
