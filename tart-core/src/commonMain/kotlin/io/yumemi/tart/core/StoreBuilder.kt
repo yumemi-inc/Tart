@@ -147,7 +147,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
  */
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
-    block: StoreBuilder<S, A, E>.() -> Unit = {},
+    block: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
     return StoreBuilder<S, A, E>().apply {
         initialState(initialState)
