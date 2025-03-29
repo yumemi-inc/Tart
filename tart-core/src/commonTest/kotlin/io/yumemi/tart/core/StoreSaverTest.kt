@@ -40,14 +40,13 @@ private fun createTestStore(
     initialState: SaverState,
     stateSaver: StateSaver<SaverState>,
 ): Store<SaverState, SaverAction, Nothing> {
-    return Store(
-        initialState = initialState,
-        coroutineContext = Dispatchers.Unconfined,
-        stateSaver = stateSaver,
-        onDispatch = { _, action ->
+    return Store(initialState) {
+        coroutineContext(Dispatchers.Unconfined)
+        stateSaver(stateSaver)
+        onDispatch { _, action ->
             when (action) {
                 is SaverAction.Update -> SaverState(action.value)
             }
-        },
-    )
+        }
+    }
 }
