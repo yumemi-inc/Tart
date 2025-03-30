@@ -5,6 +5,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 @Suppress("unused")
+@TartDsl
 class StoreBuilder<S : State, A : Action, E : Event> {
     private var _initialState: S? = null
     private var _coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default
@@ -131,6 +132,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         )
     }
 
+    @TartDsl
     class ActionHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
         data class ActionHandler<S : State, A : Action, E : Event>(
             val isTypeOf: (A) -> Boolean,
