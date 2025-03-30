@@ -183,28 +183,6 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     }
 
     /**
-     * Registers a handler to process actions dispatched when in a specific state type.
-     *
-     * @param block The handler function that will be executed when an action is dispatched while in a state of type S2
-     * @return Updated StoreBuilder with the new handler registered
-     */
-    @Deprecated("Use state{} instead", ReplaceWith("state(block)"))
-    inline fun <reified S2 : S> onDispatch(noinline block: suspend StoreContext<S, A, E>.(S2, A) -> S) {
-        dispatchStateHandlers.add(
-            DispatchStateHandler(
-                predicate = { state, _ -> state is S2 },
-                handler = { state, action ->
-                    if (state is S2) {
-                        block(state, action)
-                    } else {
-                        state
-                    }
-                },
-            ),
-        )
-    }
-
-    /**
      * Registers a handler to process errors that occur when in a specific state type.
      *
      * @param block The handler function that will be executed when an error occurs while in a state of type S2
