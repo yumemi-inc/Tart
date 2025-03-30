@@ -4,17 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-/**
- * Builder class for configuring and creating a [Store] instance.
- *
- * This builder provides methods to configure various aspects of a store including:
- * - Initial state
- * - CoroutineContext for execution
- * - State saving mechanism
- * - Exception handling
- * - Middleware chain
- * - State transition handlers
- */
 @Suppress("unused")
 class StoreBuilder<S : State, A : Action, E : Event> {
     private var _initialState: S? = null
@@ -39,7 +28,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     }
 
     private val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S = { state, action ->
-        val matchingHandler = dispatchStateHandlers.firstOrNull { it.predicate(state) }
+        val matchingHandler = dispatchStateHandlers.firstOrNull { it.predicate(state, action) }
         matchingHandler?.handler?.invoke(this, state, action) ?: state
     }
 
@@ -108,7 +97,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
      * @param block The handler function that will be executed when entering a state of type S2
      * @return Updated StoreBuilder with the new handler registered
      */
-    inline fun <reified S2 : S> onEnter(noinline block: suspend StoreContext<S, A, E>.(S2) -> S) {
+    inline fun <reified S2 : S> enter(noinline block: suspend StoreContext<S, A, E>.(S2) -> S) {
         enterStateHandlers.add(
             EnterStateHandler(
                 predicate = { it is S2 },
@@ -129,7 +118,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
      * @param block The handler function that will be executed when exiting a state of type S2
      * @return Updated StoreBuilder with the new handler registered
      */
-    inline fun <reified S2 : S> onExit(noinline block: suspend StoreContext<S, A, E>.(S2) -> Unit) {
+    inline fun <reified S2 : S> exit(noinline block: suspend StoreContext<S, A, E>.(S2) -> Unit) {
         exitStateHandlers.add(
             ExitStateHandler(
                 predicate = { it is S2 },
@@ -142,16 +131,68 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         )
     }
 
+    class ActionHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
+        data class ActionHandler<S : State, A : Action, E : Event>(
+            val isTypeOf: (A) -> Boolean,
+            val handler: suspend StoreContext<S, A, E>.(S, A) -> S,
+        )
+
+        val handlers = mutableListOf<ActionHandler<S, A, E>>()
+
+        /**
+         * Registers a handler for a specific action type in the current state configuration.
+         *
+         * @param block The handler function that processes the action and returns a new state
+         */
+        inline fun <reified A2 : A> action(noinline block: suspend StoreContext<S, A, E>.(S2, A2) -> S) {
+            handlers.add(
+                ActionHandler(
+                    isTypeOf = { it is A2 },
+                    handler = { state, action ->
+                        if (action is A2) {
+                            @Suppress("UNCHECKED_CAST")
+                            block(state as S2, action)
+                        } else {
+                            state
+                        }
+                    },
+                ),
+            )
+        }
+    }
+
+    /**
+     * Configures handlers for actions when the store is in a specific state type.
+     * This creates a DSL scope for defining type-specific action handlers.
+     *
+     * @param block The configuration block where you can define action handlers using the action() function
+     */
+    inline fun <reified S2 : S> state(noinline block: ActionHandlerConfig<S, A, E, S2>.() -> Unit) {
+        val config = ActionHandlerConfig<S, A, E, S2>().apply(block)
+
+        for (actionHandler in config.handlers) {
+            dispatchStateHandlers.add(
+                DispatchStateHandler(
+                    predicate = { state, action ->
+                        state is S2 && actionHandler.isTypeOf(action)
+                    },
+                    handler = actionHandler.handler,
+                ),
+            )
+        }
+    }
+
     /**
      * Registers a handler to process actions dispatched when in a specific state type.
      *
      * @param block The handler function that will be executed when an action is dispatched while in a state of type S2
      * @return Updated StoreBuilder with the new handler registered
      */
+    @Deprecated("Use state{} instead", ReplaceWith("state(block)"))
     inline fun <reified S2 : S> onDispatch(noinline block: suspend StoreContext<S, A, E>.(S2, A) -> S) {
         dispatchStateHandlers.add(
             DispatchStateHandler(
-                predicate = { it is S2 },
+                predicate = { state, _ -> state is S2 },
                 handler = { state, action ->
                     if (state is S2) {
                         block(state, action)
@@ -169,7 +210,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
      * @param block The handler function that will be executed when an error occurs while in a state of type S2
      * @return Updated StoreBuilder with the new handler registered
      */
-    inline fun <reified S2 : S> onError(noinline block: suspend StoreContext<S, A, E>.(S2, Throwable) -> S) {
+    inline fun <reified S2 : S> error(noinline block: suspend StoreContext<S, A, E>.(S2, Throwable) -> S) {
         errorStateHandlers.add(
             ErrorStateHandler(
                 predicate = { it is S2 },
@@ -211,7 +252,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     )
 
     class DispatchStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S) -> Boolean,
+        val predicate: (S, A) -> Boolean,
         val handler: suspend StoreContext<S, A, E>.(S, A) -> S,
     )
 

@@ -43,9 +43,9 @@ private fun createTestStore(
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
         stateSaver(stateSaver)
-        onDispatch<SaverState> { _, action ->
-            when (action) {
-                is SaverAction.Update -> SaverState(action.value)
+        state<SaverState> {
+            action<SaverAction.Update> { state, action ->
+                state.copy(value = action.value)
             }
         }
     }
