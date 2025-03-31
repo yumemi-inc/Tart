@@ -14,7 +14,7 @@ class StoreBaseTest {
 
     @Test
     fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
-        val store = createTestStore(CounterState.Main(0))
+        val store = createTestStore(CounterState.Loading)
 
         store.dispatch(CounterAction.Increment)
         store.dispatch(CounterAction.Increment)
@@ -24,19 +24,8 @@ class StoreBaseTest {
     }
 
     @Test
-    fun tartStore_shouldIgnoreActionsInLoadingState() = runTest(testDispatcher) {
-        val store = createTestStore(CounterState.Loading)
-
-        store.dispatch(CounterAction.Increment)
-        store.dispatch(CounterAction.Increment)
-        store.dispatch(CounterAction.Decrement)
-
-        assertEquals(CounterState.Loading, store.currentState)
-    }
-
-    @Test
     fun tartStore_shouldEmitEvents() = runTest(testDispatcher) {
-        val store = createTestStore(CounterState.Main(0))
+        val store = createTestStore(CounterState.Loading)
 
         var emittedEvent: CounterEvent? = null
         store.collectEvent { event ->
@@ -71,6 +60,11 @@ private fun createTestStore(
 ): Store<CounterState, CounterAction, CounterEvent> {
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
+        state<CounterState.Loading> {
+            enter {
+                CounterState.Main(count = 0)
+            }
+        }
         state<CounterState.Main> {
             action<CounterAction.Increment> {
                 state.copy(count = state.count + 1)
