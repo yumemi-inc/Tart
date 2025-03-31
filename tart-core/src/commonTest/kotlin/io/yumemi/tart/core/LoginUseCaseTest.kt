@@ -150,57 +150,39 @@ private fun createLoginStore(
 ): Store<LoginState, LoginAction, LoginEvent> {
     return Store(LoginState.Initial) {
         coroutineContext(Dispatchers.Unconfined)
-
         // Processing for Initial state
-        onDispatch<LoginState.Initial> { state, action ->
-            when (action) {
-                is LoginAction.Login -> {
-                    // Validation check
-                    if (action.username.isNotBlank() && action.password.isNotBlank()) {
-                        LoginState.Loading(action.username, action.password)
-                    } else {
-                        emit(LoginEvent.ShowError("Username and password must not be empty"))
-                        LoginState.Error("Username and password must not be empty")
-                    }
+        state<LoginState.Initial> {
+            action<LoginAction.Login> { _, action ->
+                // Validation check
+                if (action.username.isNotBlank() && action.password.isNotBlank()) {
+                    LoginState.Loading(action.username, action.password)
+                } else {
+                    emit(LoginEvent.ShowError("Username and password must not be empty"))
+                    LoginState.Error("Username and password must not be empty")
                 }
-
-                else -> state
             }
         }
-
         // Processing for Loading state
-        onDispatch<LoginState.Loading> { state, action ->
-            when (action) {
-                is LoginAction.ProcessLogin -> {
-                    // Execute login process in repository
-                    val success = repository.login(state.username, state.password)
-                    if (success) {
-                        emit(LoginEvent.NavigateToHome(state.username))
-                        LoginState.Success(state.username)
-                    } else {
-                        emit(LoginEvent.ShowError("Authentication failed"))
-                        LoginState.Error("Authentication failed")
-                    }
+        state<LoginState.Loading> {
+            action<LoginAction.ProcessLogin> { state, _ ->
+                // Execute login process in repository
+                val success = repository.login(state.username, state.password)
+                if (success) {
+                    emit(LoginEvent.NavigateToHome(state.username))
+                    LoginState.Success(state.username)
+                } else {
+                    emit(LoginEvent.ShowError("Authentication failed"))
+                    LoginState.Error("Authentication failed")
                 }
-
-                else -> state
             }
         }
-
-        // Processing for Success state
-        onDispatch<LoginState.Success> { state, action ->
-            // No actions are processed in Success state
-            state
-        }
-
         // Processing for Error state
-        onDispatch<LoginState.Error> { state, action ->
-            when (action) {
-                is LoginAction.RetryFromError -> LoginState.Initial
-                else -> state
+        state<LoginState.Error> {
+            action<LoginAction.RetryFromError> { _, _ ->
+                LoginState.Initial
             }
         }
-        onError<LoginState> { state, error ->
+        error<LoginState> { state, error ->
             emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
             when (state) {
                 is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")

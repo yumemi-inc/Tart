@@ -17,3 +17,11 @@ package io.yumemi.tart.core
     AnnotationTarget.FUNCTION,
 )
 annotation class ExperimentalTartApi
+
+/**
+ * Annotation to mark classes for DSL marker usage.
+ * This annotation restricts the scope of implicit receivers to avoid confusion between receivers.
+ */
+@DslMarker
+@Target(AnnotationTarget.CLASS)
+annotation class TartDsl
