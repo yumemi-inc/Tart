@@ -14,66 +14,66 @@ class StoreBaseTest {
 
     @Test
     fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
-        val store = createTestStore(CounterState.Loading)
+        val store = createTestStore(BaseState.Loading)
 
-        store.dispatch(CounterAction.Increment)
-        store.dispatch(CounterAction.Increment)
-        store.dispatch(CounterAction.Decrement)
+        store.dispatch(BaseAction.Increment)
+        store.dispatch(BaseAction.Increment)
+        store.dispatch(BaseAction.Decrement)
 
-        assertEquals(CounterState.Main(1), store.currentState)
+        assertEquals(BaseState.Main(1), store.currentState)
     }
 
     @Test
     fun tartStore_shouldEmitEvents() = runTest(testDispatcher) {
-        val store = createTestStore(CounterState.Loading)
+        val store = createTestStore(BaseState.Loading)
 
-        var emittedEvent: CounterEvent? = null
+        var emittedEvent: BaseEvent? = null
         store.collectEvent { event ->
             emittedEvent = event
         }
 
-        store.dispatch(CounterAction.Increment)
-        store.dispatch(CounterAction.EmitEvent)
+        store.dispatch(BaseAction.Increment)
+        store.dispatch(BaseAction.EmitEvent)
 
         assertNotNull(emittedEvent)
-        assertEquals(CounterEvent.CountUpdated(1), emittedEvent)
+        assertEquals(BaseEvent.CountUpdated(1), emittedEvent)
     }
 }
 
-private sealed interface CounterState : State {
-    data object Loading : CounterState
-    data class Main(val count: Int) : CounterState
+private sealed interface BaseState : State {
+    data object Loading : BaseState
+    data class Main(val count: Int) : BaseState
 }
 
-private sealed interface CounterAction : Action {
-    data object Increment : CounterAction
-    data object Decrement : CounterAction
-    data object EmitEvent : CounterAction
+private sealed interface BaseAction : Action {
+    data object Increment : BaseAction
+    data object Decrement : BaseAction
+    data object EmitEvent : BaseAction
 }
 
-private sealed interface CounterEvent : Event {
-    data class CountUpdated(val count: Int) : CounterEvent
+private sealed interface BaseEvent : Event {
+    data class CountUpdated(val count: Int) : BaseEvent
 }
 
 private fun createTestStore(
-    initialState: CounterState,
-): Store<CounterState, CounterAction, CounterEvent> {
+    initialState: BaseState,
+): Store<BaseState, BaseAction, BaseEvent> {
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
-        state<CounterState.Loading> {
+        state<BaseState.Loading> {
             enter {
-                CounterState.Main(count = 0)
+                BaseState.Main(count = 0)
             }
         }
-        state<CounterState.Main> {
-            action<CounterAction.Increment> {
+        state<BaseState.Main> {
+            action<BaseAction.Increment> {
                 state.copy(count = state.count + 1)
             }
-            action<CounterAction.Decrement> {
+            action<BaseAction.Decrement> {
                 state.copy(count = state.count - 1)
             }
-            action<CounterAction.EmitEvent> {
-                emit(CounterEvent.CountUpdated(state.count))
+            action<BaseAction.EmitEvent> {
+                emit(BaseEvent.CountUpdated(state.count))
                 state
             }
         }
