@@ -14,8 +14,8 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     private var _middlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     val enterStateHandlers = mutableListOf<EnterStateHandler<S, A, E>>()
+    val actionStateHandlers = mutableListOf<ActionStateHandler<S, A, E>>()
     val exitStateHandlers = mutableListOf<ExitStateHandler<S, A, E>>()
-    val dispatchStateHandlers = mutableListOf<DispatchStateHandler<S, A, E>>()
     val errorStateHandlers = mutableListOf<ErrorStateHandler<S, A, E>>()
 
     private val onEnter: suspend EnterContext<S, A, E>.() -> S = {
@@ -23,14 +23,14 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         matchingHandler?.handler?.invoke(this) ?: state
     }
 
+    private val onAction: suspend ActionContext<S, A, E>.() -> S = {
+        val matchingHandler = actionStateHandlers.firstOrNull { it.predicate(state, action) }
+        matchingHandler?.handler?.invoke(this) ?: state
+    }
+
     private val onExit: suspend ExitContext<S, A, E>.() -> Unit = {
         val matchingHandler = exitStateHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this)
-    }
-
-    private val onDispatch: suspend DispatchContext<S, A, E>.() -> S = {
-        val matchingHandler = dispatchStateHandlers.firstOrNull { it.predicate(state, action) }
-        matchingHandler?.handler?.invoke(this) ?: state
     }
 
     private val onError: suspend ErrorContext<S, A, E>.() -> S = {
@@ -92,66 +92,60 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         _middlewares.add(middleware)
     }
 
-    /**
-     * Registers a handler to be invoked when the state enters a specific type.
-     *
-     * @param block The handler function that will be executed when entering a state of type S2
-     * @return Updated StoreBuilder with the new handler registered
-     */
-    inline fun <reified S2 : S> enter(noinline block: suspend EnterContext<S2, A, E>.() -> S) {
-        enterStateHandlers.add(
-            EnterStateHandler(
-                predicate = { it is S2 },
-                handler = {
-                    @Suppress("UNCHECKED_CAST")
-                    block(this as EnterContext<S2, A, E>)
-                },
-            ),
-        )
-    }
-
-    /**
-     * Registers a handler to be invoked when the state exits a specific type.
-     *
-     * @param block The handler function that will be executed when exiting a state of type S2
-     * @return Updated StoreBuilder with the new handler registered
-     */
-    inline fun <reified S2 : S> exit(noinline block: suspend ExitContext<S2, A, E>.() -> Unit) {
-        exitStateHandlers.add(
-            ExitStateHandler(
-                predicate = { it is S2 },
-                handler = {
-                    @Suppress("UNCHECKED_CAST")
-                    block(this as ExitContext<S2, A, E>)
-                },
-            ),
-        )
-    }
-
     @TartDsl
-    class ActionHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
+    class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
         data class ActionHandler<S : State, A : Action, E : Event>(
             val isTypeOf: (A) -> Boolean,
-            val handler: suspend DispatchContext<S, A, E>.() -> S,
+            val handler: suspend ActionContext<S, A, E>.() -> S,
         )
 
-        val handlers = mutableListOf<ActionHandler<S, A, E>>()
+        val enterHandlers = mutableListOf<(suspend EnterContext<S2, A, E>.() -> S)>()
+        val actionHandlers = mutableListOf<ActionHandler<S, A, E>>()
+        val exitHandlers = mutableListOf<(suspend ExitContext<S2, A, E>.() -> Unit)>()
+        val errorHandlers = mutableListOf<(suspend ErrorContext<S2, A, E>.() -> S)>()
+
+        /**
+         * Registers a handler to be invoked when entering this state.
+         *
+         * @param block The handler function that will be executed when entering this state
+         */
+        fun enter(block: suspend EnterContext<S2, A, E>.() -> S) {
+            enterHandlers.add(block)
+        }
 
         /**
          * Registers a handler for a specific action type in the current state configuration.
          *
          * @param block The handler function that processes the action and returns a new state
          */
-        inline fun <reified A2 : A> action(noinline block: suspend DispatchContext<S2, A2, E>.() -> S) {
-            handlers.add(
+        inline fun <reified A2 : A> action(noinline block: suspend ActionContext<S2, A2, E>.() -> S) {
+            actionHandlers.add(
                 ActionHandler(
                     isTypeOf = { it is A2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        block(this as DispatchContext<S2, A2, E>)
+                        block(this as ActionContext<S2, A2, E>)
                     },
                 ),
             )
+        }
+
+        /**
+         * Registers a handler to be invoked when exiting this state.
+         *
+         * @param block The handler function that will be executed when exiting this state
+         */
+        fun exit(block: suspend ExitContext<S2, A, E>.() -> Unit) {
+            exitHandlers.add(block)
+        }
+
+        /**
+         * Registers a handler for errors that occur when in this state.
+         *
+         * @param block The handler function that will be executed when an error occurs in this state
+         */
+        fun error(block: suspend ErrorContext<S2, A, E>.() -> S) {
+            errorHandlers.add(block)
         }
     }
 
@@ -161,12 +155,24 @@ class StoreBuilder<S : State, A : Action, E : Event> {
      *
      * @param block The configuration block where you can define action handlers using the action() function
      */
-    inline fun <reified S2 : S> state(noinline block: ActionHandlerConfig<S, A, E, S2>.() -> Unit) {
-        val config = ActionHandlerConfig<S, A, E, S2>().apply(block)
+    inline fun <reified S2 : S> state(noinline block: StateHandlerConfig<S, A, E, S2>.() -> Unit) {
+        val config = StateHandlerConfig<S, A, E, S2>().apply(block)
 
-        for (actionHandler in config.handlers) {
-            dispatchStateHandlers.add(
-                DispatchStateHandler(
+        for (enterHandler in config.enterHandlers) {
+            enterStateHandlers.add(
+                EnterStateHandler(
+                    predicate = { it is S2 },
+                    handler = {
+                        @Suppress("UNCHECKED_CAST")
+                        enterHandler(this as EnterContext<S2, A, E>)
+                    },
+                ),
+            )
+        }
+
+        for (actionHandler in config.actionHandlers) {
+            actionStateHandlers.add(
+                ActionStateHandler(
                     predicate = { state, action ->
                         state is S2 && actionHandler.isTypeOf(action)
                     },
@@ -174,24 +180,30 @@ class StoreBuilder<S : State, A : Action, E : Event> {
                 ),
             )
         }
-    }
 
-    /**
-     * Registers a handler to process errors that occur when in a specific state type.
-     *
-     * @param block The handler function that will be executed when an error occurs while in a state of type S2
-     * @return Updated StoreBuilder with the new handler registered
-     */
-    inline fun <reified S2 : S> error(noinline block: suspend ErrorContext<S2, A, E>.() -> S) {
-        errorStateHandlers.add(
-            ErrorStateHandler(
-                predicate = { it is S2 },
-                handler = {
-                    @Suppress("UNCHECKED_CAST")
-                    block(this as ErrorContext<S2, A, E>)
-                },
-            ),
-        )
+        for (exitHandler in config.exitHandlers) {
+            exitStateHandlers.add(
+                ExitStateHandler(
+                    predicate = { it is S2 },
+                    handler = {
+                        @Suppress("UNCHECKED_CAST")
+                        exitHandler(this as ExitContext<S2, A, E>)
+                    },
+                ),
+            )
+        }
+
+        for (errorHandler in config.errorHandlers) {
+            errorStateHandlers.add(
+                ErrorStateHandler(
+                    predicate = { it is S2 },
+                    handler = {
+                        @Suppress("UNCHECKED_CAST")
+                        errorHandler(this as ErrorContext<S2, A, E>)
+                    },
+                ),
+            )
+        }
     }
 
     internal fun build(): Store<S, A, E> {
@@ -204,8 +216,8 @@ class StoreBuilder<S : State, A : Action, E : Event> {
             override val exceptionHandler: ExceptionHandler = _exceptionHandler
             override val middlewares: List<Middleware<S, A, E>> = _middlewares
             override val onEnter: suspend EnterContext<S, A, E>.() -> S = this@StoreBuilder.onEnter
+            override val onAction: suspend ActionContext<S, A, E>.() -> S = this@StoreBuilder.onAction
             override val onExit: suspend ExitContext<S, A, E>.() -> Unit = this@StoreBuilder.onExit
-            override val onDispatch: suspend DispatchContext<S, A, E>.() -> S = this@StoreBuilder.onDispatch
             override val onError: suspend ErrorContext<S, A, E>.() -> S = this@StoreBuilder.onError
         }
     }
@@ -215,14 +227,14 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         val handler: suspend EnterContext<S, A, E>.() -> S,
     )
 
+    class ActionStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S, A) -> Boolean,
+        val handler: suspend ActionContext<S, A, E>.() -> S,
+    )
+
     class ExitStateHandler<S : State, A : Action, E : Event>(
         val predicate: (S) -> Boolean,
         val handler: suspend ExitContext<S, A, E>.() -> Unit,
-    )
-
-    class DispatchStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S, A) -> Boolean,
-        val handler: suspend DispatchContext<S, A, E>.() -> S,
     )
 
     class ErrorStateHandler<S : State, A : Action, E : Event>(

@@ -37,6 +37,10 @@ private fun createTestStore(
     return Store(initialState) {
         this.coroutineContext(Dispatchers.Unconfined)
         exceptionHandler(exceptionHandler)
-        enter<ExceptionState> { throw RuntimeException("error") }
+        state<ExceptionState> {
+            enter {
+                throw RuntimeException("error")
+            }
+        }
     }
 }

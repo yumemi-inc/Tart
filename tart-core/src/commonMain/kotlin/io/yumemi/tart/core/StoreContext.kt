@@ -14,7 +14,7 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
     val emit: suspend (E) -> Unit
 }
 
-interface DispatchContext<S : State, A : Action, E : Event> : StoreContext {
+interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
     val state: S
     val action: A
     val emit: suspend (E) -> Unit

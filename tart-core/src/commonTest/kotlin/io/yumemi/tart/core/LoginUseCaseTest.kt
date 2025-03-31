@@ -182,11 +182,13 @@ private fun createLoginStore(
                 LoginState.Initial
             }
         }
-        error<LoginState> {
-            emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
-            when (state) {
-                is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")
-                else -> state
+        state<LoginState> {
+            error {
+                emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
+                when (state) {
+                    is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")
+                    else -> state
+                }
             }
         }
     }
