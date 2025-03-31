@@ -26,9 +26,7 @@ interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
     val emit: suspend (E) -> Unit
 }
 
-sealed interface MiddlewareContext
-
-interface InitContext<S : State, A : Action, E : Event> : MiddlewareContext {
+interface MiddlewareContext<S : State, A : Action, E : Event> : StoreContext {
     val dispatch: (A) -> Unit
     val coroutineContext: CoroutineContext
 }

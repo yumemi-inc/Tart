@@ -98,7 +98,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             mutex.withLock {
                 processMiddleware {
                     onInit(
-                        object : InitContext<S, A, E> {
+                        object : MiddlewareContext<S, A, E> {
                             override val dispatch: (A) -> Unit = ::dispatch
                             override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext
                         },
