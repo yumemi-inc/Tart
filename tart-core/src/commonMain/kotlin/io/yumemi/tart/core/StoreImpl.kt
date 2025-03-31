@@ -48,13 +48,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
-    protected abstract val onEnter: suspend StoreContext<S, A, E>.(S) -> S
+    protected abstract val onEnter: suspend EnterContext<S, A, E>.() -> S
 
-    protected abstract val onExit: suspend StoreContext<S, A, E>.(S) -> Unit
+    protected abstract val onExit: suspend ExitContext<S, A, E>.() -> Unit
 
-    protected abstract val onDispatch: suspend StoreContext<S, A, E>.(S, A) -> S
+    protected abstract val onDispatch: suspend DispatchContext<S, A, E>.() -> S
 
-    protected abstract val onError: suspend StoreContext<S, A, E>.(S, Throwable) -> S
+    protected abstract val onError: suspend ErrorContext<S, A, E>.() -> S
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -66,12 +66,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private val mutex = Mutex()
-
-    private val storeContext: StoreContext<S, A, E> = object : StoreContext<S, A, E> {
-        override val dispatch: (A) -> Unit = ::dispatch
-        override val emit: suspend (E) -> Unit = ::emit
-        override val coroutineContext: CoroutineContext get() = coroutineScope.coroutineContext
-    }
 
     final override fun dispatch(action: A) {
         state // initialize if need
@@ -102,7 +96,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun init() {
         coroutineScope.launch {
             mutex.withLock {
-                processMiddleware { onInit(storeContext) }
+                processMiddleware {
+                    onInit(
+                        object : InitContext<S, A, E> {
+                            override val dispatch: (A) -> Unit = ::dispatch
+                            override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext
+                        },
+                    )
+                }
                 onStateEntered(currentState)
             }
         }
@@ -186,21 +187,37 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onDispatch.invoke(storeContext, state, action)
+        val nextState = onDispatch.invoke(
+            object : DispatchContext<S, A, E> {
+                override val state = state
+                override val action = action
+                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+            },
+        )
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        val nextState = onEnter.invoke(storeContext, state)
+        val nextState = onEnter.invoke(
+            object : EnterContext<S, A, E> {
+                override val state = state
+                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+            },
+        )
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }
 
     private suspend fun processStateExit(state: S) {
         processMiddleware { beforeStateExit(state) }
-        onExit.invoke(storeContext, state)
+        onExit.invoke(
+            object : ExitContext<S, A, E> {
+                override val state = state
+                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+            },
+        )
         processMiddleware { afterStateExit(state) }
     }
 
@@ -217,7 +234,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processError(state: S, throwable: Throwable): S {
         processMiddleware { beforeError(state, throwable) }
-        val nextState = onError.invoke(storeContext, state, throwable)
+        val nextState = onError.invoke(
+            object : ErrorContext<S, A, E> {
+                override val state = state
+                override val error = throwable
+                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+            },
+        )
         processMiddleware { afterError(state, nextState, throwable) }
         return nextState
     }

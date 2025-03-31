@@ -45,7 +45,7 @@ private fun createTestStore(
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
         middleware(middleware)
-        enter<CounterState> { state ->
+        enter<CounterState> {
             send(message)
             state
         }

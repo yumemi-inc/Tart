@@ -152,7 +152,7 @@ private fun createLoginStore(
         coroutineContext(Dispatchers.Unconfined)
         // Processing for Initial state
         state<LoginState.Initial> {
-            action<LoginAction.Login> { _, action ->
+            action<LoginAction.Login> {
                 // Validation check
                 if (action.username.isNotBlank() && action.password.isNotBlank()) {
                     LoginState.Loading(action.username, action.password)
@@ -164,7 +164,7 @@ private fun createLoginStore(
         }
         // Processing for Loading state
         state<LoginState.Loading> {
-            action<LoginAction.ProcessLogin> { state, _ ->
+            action<LoginAction.ProcessLogin> {
                 // Execute login process in repository
                 val success = repository.login(state.username, state.password)
                 if (success) {
@@ -178,11 +178,11 @@ private fun createLoginStore(
         }
         // Processing for Error state
         state<LoginState.Error> {
-            action<LoginAction.RetryFromError> { _, _ ->
+            action<LoginAction.RetryFromError> {
                 LoginState.Initial
             }
         }
-        error<LoginState> { state, error ->
+        error<LoginState> {
             emit(LoginEvent.ShowError(error.message ?: "Unknown error"))
             when (state) {
                 is LoginState.Loading -> LoginState.Error(error.message ?: "Unknown error")

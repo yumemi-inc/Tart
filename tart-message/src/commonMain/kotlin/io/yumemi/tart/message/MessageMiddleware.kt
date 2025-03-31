@@ -2,9 +2,9 @@ package io.yumemi.tart.message
 
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
+import io.yumemi.tart.core.InitContext
 import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.State
-import io.yumemi.tart.core.StoreContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -16,12 +16,12 @@ import kotlinx.coroutines.launch
  */
 @Suppress("unused")
 class MessageMiddleware<S : State, A : Action, E : Event>(
-    private val receive: suspend StoreContext<S, A, E>.(Message) -> Unit,
+    private val receive: suspend InitContext<S, A, E>.(Message) -> Unit,
 ) : Middleware<S, A, E> {
-    override suspend fun onInit(context: StoreContext<S, A, E>) {
-        CoroutineScope(context.coroutineContext).launch {
+    override suspend fun onInit(initContext: InitContext<S, A, E>) {
+        CoroutineScope(initContext.coroutineContext).launch {
             MessageHub.messages.collect {
-                receive.invoke(context, it)
+                receive.invoke(initContext, it)
             }
         }
     }
