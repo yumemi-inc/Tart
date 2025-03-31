@@ -25,5 +25,5 @@ internal object MessageHub {
  *
  * @return A suspend function that takes a Message and sends it to the MessageHub
  */
-val StoreContext<*, *, *>.send: suspend (Message) -> Unit
+val StoreContext.send: suspend (Message) -> Unit
     get() = { MessageHub.send(it) }
