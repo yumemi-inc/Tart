@@ -34,7 +34,7 @@ import kotlin.test.assertTrue
 // Error: An error occurred during counter operation
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class CounterUseCaseStoreTest {
+class CounterUseCaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
