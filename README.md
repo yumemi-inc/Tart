@@ -52,34 +52,36 @@ sealed interface CounterAction : Action {
 sealed interface CounterEvent : Event {} // currently empty
 ```
 
-Create a *Store* instance using the `Store()` function with an initial *State*.
+Create a *Store* instance using the `Store{}` DSL with an initial *State*.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {}
 
-// or, use initialState parameter
+// or, use initialState specification
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+
     initialState(CounterState(count = 0))
 }
 ```
 
-Define how the *State* is changed by *Action* by providing the `onDispatch` parameter.
-This is a `(State, Action) -> State` function.
+Define how the *State* is changed by *Action* by using the `state{}` and `action{}` blocks.
+The `action{}` block should return a new *State*.
+This is like a `(State, Action) -> State` function.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-    onDispatch<CounterState> { state, action ->
-        when (action) {
-            is CounterAction.Increment -> {
-                state.copy(count = state.count + 1)
-            }
 
-            is CounterAction.Decrement -> {
-                if (0 < state.count) {
-                    state.copy(count = state.count - 1)
-                } else {
-                    state // do not change State
-                }
+    state<CounterState> {
+
+        action<CounterAction.Increment> {
+            state.copy(count = state.count + 1)
+        }
+        
+        action<CounterAction.Decrement> {
+            if (0 < state.count) {
+                state.copy(count = state.count - 1)
+            } else {
+                state // do not change State
             }
         }
     }
@@ -113,10 +115,10 @@ sealed interface CounterEvent : Event {
 }
 ```
 
-In the `onDispatch` parameter, issue an *Event* using the `emit()`.
+In the `action{}` block, issue an *Event* using the `emit()`.
 
 ```kt
-is CounterAction.Decrement -> {
+action<CounterAction.Decrement> {
     if (0 < state.count) {
         state.copy(count = state.count - 1)
     } else {
@@ -130,28 +132,29 @@ Subscribe to the Store's `.event` (Flow) on the UI, and process it.
 
 ### Access to Repository, UseCase, etc.
 
-Keep Repository, UseCase, etc. accessible from your store creation scope and use it from the `onDispatch` parameter.
+Keep Repository, UseCase, etc. accessible from your store creation scope and use them in the `action{}` block.
 
 ```kt
-class CounterStoreFactory( // instantiate with DI library etc.
+class CounterStoreContainer( // instantiate with DI library etc.
     private val counterRepository: CounterRepository,
 ) {
-    fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-        onDispatch<CounterState> { state, action ->
-            when (action) {
-                CounterAction.Load -> {
-                    val count = counterRepository.get() // load
-                    state.copy(count = count)
-                }
+    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
 
-                is CounterAction.Increment -> {
-                    val count = state.count + 1
-                    state.copy(count = count).apply {
-                        counterRepository.set(count) // save
-                    }
-                }
+        state<CounterState> {
 
-                // ...
+            action<CounterAction.Load> {
+                val count = counterRepository.get() // load
+                state.copy(count = count)
+            }
+
+            action<CounterAction.Increment> {
+                val count = state.count + 1
+                state.copy(count = count).apply {
+                    counterRepository.set(count) // save
+                }
+            }
+
+            // ...
 ```
 
 <details>
@@ -160,25 +163,26 @@ class CounterStoreFactory( // instantiate with DI library etc.
 Processing other than changing the *State* may be defined functions.
 
 ```kt
-class CounterStoreFactory(
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-        onDispatch<CounterState> { state, action ->
-            // define a function
-            suspend fun loadCount(): Int {
-                return counterRepository.get()
+    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+
+        // define a function
+        suspend fun loadCount(): Int {
+            return counterRepository.get()
+        }
+
+        state<CounterState> {
+
+            action<CounterAction.Load> {
+                state.copy(count = loadCount()) // call the function
             }
 
-            when (action) {
-                CounterAction.Load -> {
-                    state.copy(count = loadCount()) // call the function
-                }
-
-                // ...
+            // ...
 ```
 
-In any case, the `onDispatch` parameter is a simple function that returns a new *State* from the current *State* and *Action*, so you can design the code as you like.
+You may also define them as extension functions of *State* or *Action*.
 </details>
 
 ### Multiple states and transitions
@@ -194,43 +198,42 @@ sealed interface CounterState : State {
 ```
 
 ```kt
-class CounterStoreFactory(
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) { // start from loading
-        onDispatch<CounterState.Loading> { state, action -> // subscribe loading state
-            when (action) {
-                CounterAction.Load -> {
-                    val count = counterRepository.get()
-                    CounterState.Main(count = count) // transition to Main state
-                }
+    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
 
-                else -> state
+        state<CounterState.Loading> { // for Loading state
+            action<CounterAction.Load> {
+                val count = counterRepository.get()
+                CounterState.Main(count = count) // transition to Main state
             }
         }
 
-        onDispatch<CounterState.Main> { state, action -> // subscribe main state
-            when (action) {
-                is CounterAction.Increment -> {
-                    // ...
+        state<CounterState.Main> { // for Main state
+            action<CounterAction.Increment> {
+                // ...
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
-Otherwise, if you want to do something at the start of the *State*, use the `onEnter` parameter (similarly, you can use the `onExit` parameter if necessary).
+Otherwise, if you want to do something at the start of the *State*, use the `enter{}` block (similarly, you can use the `exit{}` block if necessary).
 
 ```kt
-class CounterStoreFactory(
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun create(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
-        onEnter<CounterState.Loading> { state ->
-            val count = counterRepository.get()
-            CounterState.Main(count = count) // transition to Main state
+    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+
+        state<CounterState.Loading> {
+            enter {
+                val count = counterRepository.get()
+                CounterState.Main(count = count) // transition to Main state
+            }
         }
-        onDispatch<CounterState.Main> { state, action ->
-            when (action) {
-                is CounterAction.Increment -> {
-                    // ...
+
+        state<CounterState.Main> {
+            action<CounterAction.Increment> {
+                // ...
 ```
 
 The state diagram is as follows:
@@ -245,7 +248,7 @@ It would be a good idea to document it and share it with your development team.
 
 ### Error handling
 
-If you prepare a *State* for error display and handle the error in the `onEnter` parameter, it will be as follows:
+If you prepare a *State* for error display and handle the error in the `enter{}` block, it will be as follows:
 
 ```kt
 sealed interface CounterState : State {
@@ -257,42 +260,51 @@ sealed interface CounterState : State {
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
-    onEnter<CounterState.Loading> { state ->
-        try {
-            val count = counterRepository.get()
-            CounterState.Main(count = count)
-        } catch (t: Throwable) {
-            CounterState.Error(error = t)
+
+    state<CounterState.Loading> {
+        enter {
+            try {
+                val count = counterRepository.get()
+                CounterState.Main(count = count)
+            } catch (t: Throwable) {
+                CounterState.Error(error = t)
+            }
         }
     }
 }
 ```
 
-This is fine, but you can also handle errors using the `onError` parameter.
+This is fine, but you can also handle errors using the `error{}` block.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
-    onEnter<CounterState.Loading> { state ->
-        // no error handling code
-        val count = counterRepository.get()
-        CounterState.Main(count = count)
-    }
-    onError<CounterState> { state, error ->
-        // you can also branch using state and error inputs if necessary
-        CounterState.Error(error = error)
+
+    state<CounterState.Loading> {
+
+        enter {
+            // no error handling code
+            val count = counterRepository.get()
+            CounterState.Main(count = count)
+        }
+
+        error {
+            // you can also branch using the error type if necessary
+            CounterState.Error(error = error)
+        }
     }
 }
 ```
 
-Errors can be caught not only in the `onEnter` but also in the `onDispatch` and `onExit` parameters.
-In other words, your business logic errors can be handled in the `onError` parameter.
+Errors can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
+In other words, your business logic errors can be handled in the `error{}` block.
 
-On the other hand, uncaught errors in the entire Store (such as system errors) can be handled with the `exceptionHandler` parameter:
+On the other hand, uncaught errors in the entire Store (such as system errors) can be handled with the `exceptionHandler()` specification:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
+
     exceptionHandler(...)
 }
 ```
@@ -305,17 +317,19 @@ Specify it when you want to match the Store's Coroutines lifecycle with another 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
+
     coroutineContext(...)
 }
 ```
 
 ### State Persistence
 
-You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) and provide the `stateSaver` parameter to automatically handle state persistence:
+You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) to automatically handle state persistence:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
+
     stateSaver(...)
 }
 ```
@@ -345,10 +359,10 @@ Create an instance of the `ViewStore` from a *Store* instance using the `remembe
 For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
-class CounterStoreFactory(
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun create(): Store<CounterState, CounterAction, CounterEvent> = Store {
+    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store {
         // ...
     }
 }
@@ -357,10 +371,10 @@ class CounterStoreFactory(
 ```kt
 @HiltViewModel
 class CounterViewModel @Inject constructor(
-    counterStoreFactory: CounterStoreFactory,
+    counterStoreContainer: CounterStoreContainer,
 ) : ViewModel() {
 
-    val store = counterStoreFactory.create()
+    val store = counterStoreContainer.build()
 
     override fun onCleared() {
         store.dispose()
@@ -395,11 +409,12 @@ class CounterActivity : ComponentActivity() {
 You can create a `ViewStore` instance without using ViewModel as shown below:
 
 ```kt
-class CounterStoreFactory(
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun create(stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
+    fun build(stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
         // ...
+
         stateSaver(stateSaver)
     }
 }
@@ -410,14 +425,14 @@ class CounterStoreFactory(
 class CounterActivity : ComponentActivity() {
 
     @Inject
-    lateinit var counterStoreFactory: CounterStoreFactory
+    lateinit var counterStoreContainer: CounterStoreContainer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             val viewStore = rememberViewStore(
-                counterStoreFactory.create(
+                counterStoreContainer.build(
                     stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
                 )
             )
@@ -597,6 +612,7 @@ implementation("io.yumemi.tart:tart-logging:<latest-release>")
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
+
     middleware(LoggingMiddleware())
 }
 ```
@@ -640,6 +656,7 @@ Apply the `MessageMiddleware` to the *Store* that receives messages.
 ```kt
 val myPageStore: Store<MyPageState, MyPageAction, MyPageEvent> = Store {
     // ...
+
     middleware(
         MessageMiddleware { message ->
             when (message) {
@@ -652,9 +669,13 @@ Call the `send()` at any point in the *Store* that sends messages.
 ```kt
 val mainStore: Store<MainState, MainAction, MainEvent> = Store {
     // ...
-    onExit<MainState.LoggedIn> { state -> // leave the logged-in state
-        send(MainMessage.LoggedOut)
+
+    state<MainState.LoggedIn> { // leave the logged-in state
+        exit {
+            send(MainMessage.LoggedOut)
+        }
     }
+}
 ```
 </details>
 
