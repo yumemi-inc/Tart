@@ -15,18 +15,18 @@ import kotlin.test.assertTrue
 
 // State Transition Diagram:
 //
-// ┌──────────────────────────────────────────┐
-// │                                          │
-// │  Initial ─────────► Active ────────┐     │
-// │                         ▲          │     │
-// │                         │          │     │
-// │                         │          │     │
-// │                         │          ▼     │
-// │  Error ◄── Any State    │        Paused  │
-// │                         │          │     │
-// │                         └──────────┘     │
-// │                                          │
-// └──────────────────────────────────────────┘
+// ┌─────────────────────────────────────────┐
+// │                                         │
+// │  Initial ─────────► Active ───────┐     │
+// │                        ▲          │     │
+// │                        │          │     │
+// │                        │          │     │
+// │                        │          ▼     │
+// │  Error ◄── Any State   │        Paused  │
+// │                        │          │     │
+// │                        └──────────┘     │
+// │                                         │
+// └─────────────────────────────────────────┘
 //
 // Initial: Counter not started yet
 // Active: Counter is running and can be incremented/decremented
