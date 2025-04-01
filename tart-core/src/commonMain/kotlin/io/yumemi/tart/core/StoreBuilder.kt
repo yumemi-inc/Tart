@@ -5,38 +5,13 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 @Suppress("unused")
-@TartDsl
-class StoreBuilder<S : State, A : Action, E : Event> {
+@TartStoreDsl
+class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var _initialState: S? = null
     private var _coroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default
     private var _stateSaver: StateSaver<S> = StateSaver.Noop()
     private var _exceptionHandler: ExceptionHandler = ExceptionHandler.Default
     private var _middlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
-
-    val enterStateHandlers = mutableListOf<EnterStateHandler<S, A, E>>()
-    val actionStateHandlers = mutableListOf<ActionStateHandler<S, A, E>>()
-    val exitStateHandlers = mutableListOf<ExitStateHandler<S, A, E>>()
-    val errorStateHandlers = mutableListOf<ErrorStateHandler<S, A, E>>()
-
-    private val onEnter: suspend EnterContext<S, A, E>.() -> S = {
-        val matchingHandler = enterStateHandlers.firstOrNull { it.predicate(state) }
-        matchingHandler?.handler?.invoke(this) ?: state
-    }
-
-    private val onAction: suspend ActionContext<S, A, E>.() -> S = {
-        val matchingHandler = actionStateHandlers.firstOrNull { it.predicate(state, action) }
-        matchingHandler?.handler?.invoke(this) ?: state
-    }
-
-    private val onExit: suspend ExitContext<S, A, E>.() -> Unit = {
-        val matchingHandler = exitStateHandlers.firstOrNull { it.predicate(state) }
-        matchingHandler?.handler?.invoke(this)
-    }
-
-    private val onError: suspend ErrorContext<S, A, E>.() -> S = {
-        val matchingHandler = errorStateHandlers.firstOrNull { it.predicate(state) }
-        matchingHandler?.handler?.invoke(this) ?: throw error
-    }
 
     /**
      * Sets the initial state of the store.
@@ -75,15 +50,6 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     }
 
     /**
-     * Adds multiple middleware instances to the store.
-     *
-     * @param middleware Array of middleware instances to add
-     */
-    fun middlewares(vararg middleware: Middleware<S, A, E>) {
-        _middlewares.addAll(middleware)
-    }
-
-    /**
      * Adds a single middleware instance to the store.
      *
      * @param middleware The middleware instance to add
@@ -92,9 +58,63 @@ class StoreBuilder<S : State, A : Action, E : Event> {
         _middlewares.add(middleware)
     }
 
-    @TartDsl
+    /**
+     * Adds multiple middleware instances to the store.
+     *
+     * @param middleware Array of middleware instances to add
+     */
+    fun middlewares(vararg middleware: Middleware<S, A, E>) {
+        _middlewares.addAll(middleware)
+    }
+
+    class EnterStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend EnterContext<S, A, E>.() -> S,
+    )
+
+    class ActionStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S, A) -> Boolean,
+        val handler: suspend ActionContext<S, A, E>.() -> S,
+    )
+
+    class ExitStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend ExitContext<S, A, E>.() -> Unit,
+    )
+
+    class ErrorStateHandler<S : State, A : Action, E : Event>(
+        val predicate: (S) -> Boolean,
+        val handler: suspend ErrorContext<S, A, E>.() -> S,
+    )
+
+    val enterStateHandlers = mutableListOf<EnterStateHandler<S, A, E>>()
+    val actionStateHandlers = mutableListOf<ActionStateHandler<S, A, E>>()
+    val exitStateHandlers = mutableListOf<ExitStateHandler<S, A, E>>()
+    val errorStateHandlers = mutableListOf<ErrorStateHandler<S, A, E>>()
+
+    private val onEnter: suspend EnterContext<S, A, E>.() -> S = {
+        val matchingHandler = enterStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this) ?: state
+    }
+
+    private val onAction: suspend ActionContext<S, A, E>.() -> S = {
+        val matchingHandler = actionStateHandlers.firstOrNull { it.predicate(state, action) }
+        matchingHandler?.handler?.invoke(this) ?: state
+    }
+
+    private val onExit: suspend ExitContext<S, A, E>.() -> Unit = {
+        val matchingHandler = exitStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this)
+    }
+
+    private val onError: suspend ErrorContext<S, A, E>.() -> S = {
+        val matchingHandler = errorStateHandlers.firstOrNull { it.predicate(state) }
+        matchingHandler?.handler?.invoke(this) ?: throw error
+    }
+
+    @TartStoreDsl
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
-        data class ActionHandler<S : State, A : Action, E : Event>(
+        class ActionHandler<S : State, A : Action, E : Event>(
             val isTypeOf: (A) -> Boolean,
             val handler: suspend ActionContext<S, A, E>.() -> S,
         )
@@ -207,7 +227,7 @@ class StoreBuilder<S : State, A : Action, E : Event> {
     }
 
     internal fun build(): Store<S, A, E> {
-        val state = requireNotNull(_initialState) { "Tart: InitialState must be set in Store configuration" }
+        val state = requireNotNull(_initialState) { "Tart: InitialState must be set in Store{} DSL" }
 
         return object : StoreImpl<S, A, E>() {
             override val initialState: S = state
@@ -221,26 +241,6 @@ class StoreBuilder<S : State, A : Action, E : Event> {
             override val onError: suspend ErrorContext<S, A, E>.() -> S = this@StoreBuilder.onError
         }
     }
-
-    class EnterStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S) -> Boolean,
-        val handler: suspend EnterContext<S, A, E>.() -> S,
-    )
-
-    class ActionStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S, A) -> Boolean,
-        val handler: suspend ActionContext<S, A, E>.() -> S,
-    )
-
-    class ExitStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S) -> Boolean,
-        val handler: suspend ExitContext<S, A, E>.() -> Unit,
-    )
-
-    class ErrorStateHandler<S : State, A : Action, E : Event>(
-        val predicate: (S) -> Boolean,
-        val handler: suspend ErrorContext<S, A, E>.() -> S,
-    )
 }
 
 /**
