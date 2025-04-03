@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 
 internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
@@ -66,6 +67,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private val mutex = Mutex()
+
+    private val stateScopes = mutableMapOf<KClass<out S>, CoroutineScope>()
 
     final override fun dispatch(action: A) {
         state // initialize if need
@@ -186,12 +189,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processActonDispatch(state: S, action: A): S {
+        val stateScope = stateScopes[state::class] ?: return state
         processMiddleware { beforeActionDispatch(state, action) }
         val nextState = onAction.invoke(
             object : ActionContext<S, A, E> {
                 override val state = state
                 override val action = action
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+                override val coroutineScope: CoroutineScope = stateScope
+                override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
             },
         )
         processMiddleware { afterActionDispatch(state, action, nextState) }
@@ -200,10 +206,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
+        stateScopes[state::class]?.cancel()
+        val stateScope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob())
+        stateScopes[state::class] = stateScope
         val nextState = onEnter.invoke(
             object : EnterContext<S, A, E> {
                 override val state = state
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+                override val coroutineScope: CoroutineScope = stateScope
+                override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
             },
         )
         processMiddleware { afterStateEnter(state, nextState) }
@@ -211,14 +222,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processStateExit(state: S) {
-        processMiddleware { beforeStateExit(state) }
-        onExit.invoke(
-            object : ExitContext<S, A, E> {
-                override val state = state
-                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-            },
-        )
-        processMiddleware { afterStateExit(state) }
+        try {
+            processMiddleware { beforeStateExit(state) }
+            onExit.invoke(
+                object : ExitContext<S, A, E> {
+                    override val state = state
+                    override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+                },
+            )
+            processMiddleware { afterStateExit(state) }
+        } finally {
+            stateScopes[state::class]?.cancel()
+            stateScopes.remove(state::class)
+        }
     }
 
     private suspend fun processStateChange(state: S, nextState: S) {

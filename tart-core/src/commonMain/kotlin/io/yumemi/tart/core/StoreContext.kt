@@ -1,5 +1,6 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -17,11 +18,23 @@ interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
      * The current state that's being entered
      */
     val state: S
-    
+
     /**
      * Function to emit events from the enter handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * A coroutine scope that will be valid until this state is exited.
+     * This scope can be used for state-specific background operations.
+     * The scope is automatically canceled when the state exits.
+     */
+    val coroutineScope: CoroutineScope
+
+    /**
+     * Function to dispatch actions from the enter handler
+     */
+    val dispatch: (A) -> Unit
 }
 
 /**
@@ -33,7 +46,7 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
      * The current state that's being exited
      */
     val state: S
-    
+
     /**
      * Function to emit events from the exit handler
      */
@@ -49,16 +62,28 @@ interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
      * The current state when the action is being processed
      */
     val state: S
-    
+
     /**
      * The action being processed
      */
     val action: A
-    
+
     /**
      * Function to emit events from the action handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * A coroutine scope that will be valid until this state is exited.
+     * This scope can be used for state-specific background operations.
+     * The scope is automatically canceled when the state exits.
+     */
+    val coroutineScope: CoroutineScope
+
+    /**
+     * Function to dispatch actions from the action handler
+     */
+    val dispatch: (A) -> Unit
 }
 
 /**
@@ -70,12 +95,12 @@ interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
      * The current state when the error occurred
      */
     val state: S
-    
+
     /**
      * The error that occurred
      */
     val error: Throwable
-    
+
     /**
      * Function to emit events from the error handler
      */
@@ -91,7 +116,7 @@ interface MiddlewareContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to dispatch actions from middleware
      */
     val dispatch: (A) -> Unit
-    
+
     /**
      * The coroutine context for executing middleware operations
      */

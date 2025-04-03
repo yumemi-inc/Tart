@@ -227,7 +227,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     internal fun build(): Store<S, A, E> {
-        val state = requireNotNull(_initialState) { "Tart: InitialState must be set in Store{} DSL" }
+        val state = requireNotNull(_initialState) { "[Tart] InitialState must be set in Store{} DSL" }
 
         return object : StoreImpl<S, A, E>() {
             override val initialState: S = state

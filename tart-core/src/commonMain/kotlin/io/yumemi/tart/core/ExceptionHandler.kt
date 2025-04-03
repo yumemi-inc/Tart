@@ -30,7 +30,7 @@ interface ExceptionHandler {
          */
         val Log: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {
-                println("Tart: An exception occurred in the Tart Framework: ${error.message ?: "Unknown error"}")
+                println("[Tart] An exception occurred in the Tart Framework: ${error.message ?: "Unknown error"}")
                 error.printStackTrace()
             }
         }
