@@ -16,7 +16,7 @@ package io.yumemi.tart.core
     AnnotationTarget.CLASS,
     AnnotationTarget.FUNCTION,
 )
-internal annotation class ExperimentalTartApi
+annotation class ExperimentalTartApi
 
 /**
  * Annotation to mark classes for DSL marker usage.
