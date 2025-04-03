@@ -72,18 +72,6 @@ interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to emit events from the action handler
      */
     val emit: suspend (E) -> Unit
-
-    /**
-     * A coroutine scope that will be valid until this state is exited.
-     * This scope can be used for state-specific background operations.
-     * The scope is automatically canceled when the state exits.
-     */
-    val coroutineScope: CoroutineScope
-
-    /**
-     * Function to dispatch actions from the action handler
-     */
-    val dispatch: (A) -> Unit
 }
 
 /**

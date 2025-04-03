@@ -189,15 +189,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processActonDispatch(state: S, action: A): S {
-        val stateScope = stateScopes[state::class] ?: return state
         processMiddleware { beforeActionDispatch(state, action) }
         val nextState = onAction.invoke(
             object : ActionContext<S, A, E> {
                 override val state = state
                 override val action = action
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-                override val coroutineScope: CoroutineScope = stateScope
-                override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
             },
         )
         processMiddleware { afterActionDispatch(state, action, nextState) }
