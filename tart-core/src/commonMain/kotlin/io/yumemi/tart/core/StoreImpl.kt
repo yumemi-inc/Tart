@@ -210,7 +210,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : EnterContext<S, A, E> {
                 override val state = state
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-                override val coroutineScope: CoroutineScope = stateScope
+                override val stateScope: CoroutineScope = stateScope
                 override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
             },
         )

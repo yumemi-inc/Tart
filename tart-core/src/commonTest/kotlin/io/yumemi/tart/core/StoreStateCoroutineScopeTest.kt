@@ -127,7 +127,7 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         state<StateScopeState.Running> {
             enter {
                 // Launch background task in coroutineScope
-                coroutineScope.launch {
+                stateScope.launch {
                     // Update state via action
                     dispatch(StateScopeAction.Update(5))
 
@@ -176,7 +176,7 @@ private fun createCancellationTestStore(
 
         state<StateScopeState.Running> {
             enter {
-                coroutineScope.launch {
+                stateScope.launch {
                     try {
                         onBackgroundTaskStart()
 

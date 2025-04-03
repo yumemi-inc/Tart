@@ -29,7 +29,7 @@ interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
      * This scope can be used for state-specific background operations.
      * The scope is automatically canceled when the state exits.
      */
-    val coroutineScope: CoroutineScope
+    val stateScope: CoroutineScope
 
     /**
      * Function to dispatch actions from the enter handler
