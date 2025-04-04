@@ -311,7 +311,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 ### Collecting Flows
 
-You can use the `launch` function in the `enter{}` block to collect flows and dispatch *Actions* based on the emitted values.
+You can use the `launch{}` in the `enter{}` block to collect flows and dispatch *Actions* based on the emitted values.
 This is useful for connecting external data streams to your *Store*:
 
 ```kt
