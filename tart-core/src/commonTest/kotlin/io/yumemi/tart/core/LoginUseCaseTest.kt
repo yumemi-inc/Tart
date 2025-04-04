@@ -9,7 +9,6 @@ import kotlin.test.assertIs
 
 /**
  * This test case was generated with assistance from Anthropic's Claude AI.
- * Tests the login flow state transitions in a Tart Store.
  */
 
 // State Transition Diagram:

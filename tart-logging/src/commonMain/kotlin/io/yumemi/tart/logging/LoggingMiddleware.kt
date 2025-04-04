@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -30,7 +31,7 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
     private lateinit var coroutineScope: CoroutineScope
 
     override suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {
-        this.coroutineScope = CoroutineScope(middlewareContext.coroutineContext + coroutineDispatcher)
+        this.coroutineScope = CoroutineScope(middlewareContext.coroutineContext + SupervisorJob() + coroutineDispatcher)
     }
 
     override suspend fun beforeActionDispatch(state: S, action: A) {

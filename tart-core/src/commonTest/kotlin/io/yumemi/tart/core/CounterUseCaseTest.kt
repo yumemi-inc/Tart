@@ -10,7 +10,6 @@ import kotlin.test.assertTrue
 
 /**
  * This test case was generated with assistance from Anthropic's Claude AI.
- * Tests the login flow state transitions in a Tart Store.
  */
 
 // State Transition Diagram:
@@ -147,7 +146,7 @@ class CounterUseCaseTest {
 }
 
 // State definitions
-sealed interface CounterState : State {
+private sealed interface CounterState : State {
     data object Initial : CounterState
     data class Active(val count: Int) : CounterState
     data class Paused(val count: Int) : CounterState
@@ -155,7 +154,7 @@ sealed interface CounterState : State {
 }
 
 // Action definitions
-sealed interface CounterAction : Action {
+private sealed interface CounterAction : Action {
     data object Start : CounterAction
     data object Increment : CounterAction
     data object Decrement : CounterAction
@@ -166,7 +165,7 @@ sealed interface CounterAction : Action {
 }
 
 // Event definitions
-sealed interface CounterEvent : Event {
+private sealed interface CounterEvent : Event {
     data class CountChanged(val newCount: Int) : CounterEvent
     data class ThresholdReached(val threshold: Int) : CounterEvent
     data class ErrorOccurred(val message: String) : CounterEvent

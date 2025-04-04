@@ -12,7 +12,6 @@ import kotlin.test.assertIs
 
 /**
  * This test case was generated with assistance from Anthropic's Claude AI.
- * Tests the login flow state transitions in a Tart Store.
  */
 
 // State Transition Diagram:
@@ -197,14 +196,14 @@ class TodoUseCaseTest {
 }
 
 // Todo item data class
-data class Todo(
+private data class Todo(
     val id: String,
     val title: String,
     val completed: Boolean = false,
 )
 
 // State definitions
-sealed interface TodoState : State {
+private sealed interface TodoState : State {
     data object Idle : TodoState
     data object Loading : TodoState
     data class Loaded(val todos: List<Todo>) : TodoState
@@ -213,7 +212,7 @@ sealed interface TodoState : State {
 }
 
 // Action definitions
-sealed interface TodoAction : Action {
+private sealed interface TodoAction : Action {
     data object LoadTodos : TodoAction
     data class AddTodo(val title: String) : TodoAction
     data class ToggleCompletion(val todoId: String) : TodoAction
@@ -236,7 +235,7 @@ private fun generateId(): String {
 }
 
 // Repository interface
-interface TodoRepository {
+private interface TodoRepository {
     suspend fun loadTodos(): List<Todo>
     suspend fun addTodo(todo: Todo): Todo
     suspend fun updateTodo(todo: Todo): Todo
@@ -244,7 +243,7 @@ interface TodoRepository {
 }
 
 // Mock repository implementation
-class MockTodoRepository(var shouldSucceed: Boolean) : TodoRepository {
+private class MockTodoRepository(var shouldSucceed: Boolean) : TodoRepository {
     val initialTodos = listOf(
         Todo("1", "Complete project", false),
         Todo("2", "Write tests", true),

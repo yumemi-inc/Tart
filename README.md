@@ -309,6 +309,36 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
+### Collecting Flows
+
+You can use the `stateScope` in the `enter{}` block to collect flows and dispatch *Actions* based on the emitted values.
+This is useful for connecting external data streams to your *Store*:
+
+```kt
+state<MyState.Active> {
+    enter {
+        // launch a coroutine that lives as long as this state is active
+        stateScope.launch {
+            // collect from an external data source
+            dataRepository.observeData().collect { newData ->
+                // dispatch actions to update state with the new data
+                dispatch(MyAction.UpdateData(newData))
+            }
+        }
+        // return current state
+        state
+    }
+
+    // handle actions dispatched from the flow collection
+    action<MyAction.UpdateData> {
+        state.copy(data = action.data)
+    }
+}
+```
+
+This pattern allows your *Store* to automatically react to external data changes, such as database updates, user preferences changes, or network events.
+The flow collection will be automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
+
 ### Specifying coroutineContext
 
 The Store operates using Coroutines, and the default CoroutineContext is `EmptyCoroutineContext + Dispatchers.Default`.
