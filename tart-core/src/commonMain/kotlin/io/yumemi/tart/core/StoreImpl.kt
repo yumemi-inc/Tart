@@ -3,6 +3,7 @@ package io.yumemi.tart.core
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
@@ -103,7 +104,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     onInit(
                         object : MiddlewareContext<S, A, E> {
                             override val dispatch: (A) -> Unit = ::dispatch
-                            override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext
+                            override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext + Job()
                         },
                     )
                 }
