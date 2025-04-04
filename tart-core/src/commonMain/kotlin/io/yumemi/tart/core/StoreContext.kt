@@ -25,11 +25,11 @@ interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
     val emit: suspend (E) -> Unit
 
     /**
-     * A coroutine scope that will be valid until this state is exited.
-     * This scope can be used for state-specific background operations.
-     * The scope is automatically canceled when the state exits.
+     * Function to launch a coroutine that will be valid until this state is exited.
+     * This function can be used for state-specific background operations.
+     * The coroutine is automatically canceled when the state exits.
      */
-    val stateScope: CoroutineScope
+    val launch: suspend (block: suspend () -> Unit) -> Unit
 
     /**
      * Function to dispatch actions from the enter handler

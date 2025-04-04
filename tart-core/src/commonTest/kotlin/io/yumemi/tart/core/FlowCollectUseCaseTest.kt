@@ -133,8 +133,8 @@ private fun createFlowCollectStore(
         // Active state handling
         state<FlowState.Active> {
             enter {
-                // Use stateScope to collect the flow
-                stateScope.launch {
+                // Use launch to collect the flow
+                launch {
                     dataFlow.collect { value ->
                         // Dispatch action to update state with the new value
                         dispatch(FlowAction.UpdateValue(value))
