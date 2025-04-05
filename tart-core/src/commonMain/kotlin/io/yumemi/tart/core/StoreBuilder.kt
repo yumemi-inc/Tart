@@ -74,7 +74,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
     class ActionStateHandler<S : State, A : Action, E : Event>(
         val predicate: (S, A) -> Boolean,
-        val handler: suspend ActionContext<S, A, E>.() -> S,
+        val handler: suspend ActionContext<S, A, E, S>.() -> Unit,
     )
 
     class ExitStateHandler<S : State, A : Action, E : Event>(
@@ -97,7 +97,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         matchingHandler?.handler?.invoke(this) ?: state
     }
 
-    private val onAction: suspend ActionContext<S, A, E>.() -> S = {
+    private val onAction: suspend ActionContext<S, A, E, S>.() -> Unit = {
         val matchingHandler = actionStateHandlers.firstOrNull { it.predicate(state, action) }
         matchingHandler?.handler?.invoke(this) ?: state
     }
@@ -116,7 +116,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
         class ActionHandler<S : State, A : Action, E : Event>(
             val isTypeOf: (A) -> Boolean,
-            val handler: suspend ActionContext<S, A, E>.() -> S,
+            val handler: suspend ActionContext<S, A, E, S>.() -> Unit,
         )
 
         val enterHandlers = mutableListOf<(suspend EnterContext<S2, A, E, S>.() -> Unit)>()
@@ -136,15 +136,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         /**
          * Registers a handler for a specific action type in the current state configuration.
          *
-         * @param block The handler function that processes the action and returns a new state
+         * @param block The handler function that processes the action and updates the state
          */
-        inline fun <reified A2 : A> action(noinline block: suspend ActionContext<S2, A2, E>.() -> S) {
+        inline fun <reified A2 : A> action(noinline block: suspend ActionContext<S2, A2, E, S>.() -> Unit) {
             actionHandlers.add(
                 ActionHandler(
                     isTypeOf = { it is A2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        block(this as ActionContext<S2, A2, E>)
+                        block(this as ActionContext<S2, A2, E, S>)
                     },
                 ),
             )
@@ -236,7 +236,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val exceptionHandler: ExceptionHandler = _exceptionHandler
             override val middlewares: List<Middleware<S, A, E>> = _middlewares
             override val onEnter: suspend EnterContext<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
-            override val onAction: suspend ActionContext<S, A, E>.() -> S = this@StoreBuilder.onAction
+            override val onAction: suspend ActionContext<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitContext<S, A, E>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend ErrorContext<S, A, E, S>.() -> Unit = this@StoreBuilder.onError
         }

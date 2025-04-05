@@ -118,7 +118,7 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         // Initial state handling
         state<StateScopeState.Initial> {
             action<StateScopeAction.Start> {
-                StateScopeState.Running()
+                state.update(StateScopeState.Running())
             }
         }
 
@@ -137,12 +137,12 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
 
             // Update action handling
             action<StateScopeAction.Update> {
-                StateScopeState.Running(action.newValue)
+                state.update(StateScopeState.Running(action.newValue))
             }
 
             // Stop action transitions to Final
             action<StateScopeAction.Stop> {
-                StateScopeState.Final
+                state.update(StateScopeState.Final)
             }
         }
 
@@ -165,7 +165,7 @@ private fun createCancellationTestStore(
 
         state<StateScopeState.Initial> {
             action<StateScopeAction.Start> {
-                StateScopeState.Running()
+                state.update(StateScopeState.Running())
             }
         }
 
@@ -187,7 +187,7 @@ private fun createCancellationTestStore(
             }
 
             action<StateScopeAction.Stop> {
-                StateScopeState.Final
+                state.update(StateScopeState.Final)
             }
         }
 

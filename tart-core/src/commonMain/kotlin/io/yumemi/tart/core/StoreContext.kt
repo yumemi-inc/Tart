@@ -64,7 +64,7 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
  * Context available when an action is being processed.
  * Used in action handlers to update state based on an action.
  */
-interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
+interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state when the action is being processed
      */
@@ -79,6 +79,14 @@ interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to emit events from the action handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within action handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**

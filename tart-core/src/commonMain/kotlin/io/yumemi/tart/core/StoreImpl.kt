@@ -52,7 +52,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onEnter: suspend EnterContext<S, A, E, S>.() -> Unit
 
-    protected abstract val onAction: suspend ActionContext<S, A, E>.() -> S
+    protected abstract val onAction: suspend ActionContext<S, A, E, S>.() -> Unit
 
     protected abstract val onExit: suspend ExitContext<S, A, E>.() -> Unit
 
@@ -191,13 +191,18 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processActonDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
-        val nextState = onAction.invoke(
-            object : ActionContext<S, A, E> {
+        var newState: S? = null
+        onAction.invoke(
+            object : ActionContext<S, A, E, S> {
                 override val state = state
                 override val action = action
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+                override fun S.update(state: S) {
+                    newState = state
+                }
             },
         )
+        val nextState = newState ?: state
         processMiddleware { afterActionDispatch(state, action, nextState) }
         return nextState
     }
