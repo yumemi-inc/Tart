@@ -84,7 +84,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
     class ErrorStateHandler<S : State, A : Action, E : Event>(
         val predicate: (S) -> Boolean,
-        val handler: suspend ErrorContext<S, A, E>.() -> S,
+        val handler: suspend ErrorContext<S, A, E, S>.() -> Unit,
     )
 
     val enterStateHandlers = mutableListOf<EnterStateHandler<S, A, E>>()
@@ -107,7 +107,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         matchingHandler?.handler?.invoke(this)
     }
 
-    private val onError: suspend ErrorContext<S, A, E>.() -> S = {
+    private val onError: suspend ErrorContext<S, A, E, S>.() -> Unit = {
         val matchingHandler = errorStateHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this) ?: throw error
     }
@@ -122,7 +122,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         val enterHandlers = mutableListOf<(suspend EnterContext<S2, A, E, S>.() -> Unit)>()
         val actionHandlers = mutableListOf<ActionHandler<S, A, E>>()
         val exitHandlers = mutableListOf<(suspend ExitContext<S2, A, E>.() -> Unit)>()
-        val errorHandlers = mutableListOf<(suspend ErrorContext<S2, A, E>.() -> S)>()
+        val errorHandlers = mutableListOf<(suspend ErrorContext<S2, A, E, S>.() -> Unit)>()
 
         /**
          * Registers a handler to be invoked when entering this state.
@@ -164,7 +164,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          *
          * @param block The handler function that will be executed when an error occurs in this state
          */
-        fun error(block: suspend ErrorContext<S2, A, E>.() -> S) {
+        fun error(block: suspend ErrorContext<S2, A, E, S>.() -> Unit) {
             errorHandlers.add(block)
         }
     }
@@ -219,7 +219,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        errorHandler(this as ErrorContext<S2, A, E>)
+                        errorHandler(this as ErrorContext<S2, A, E, S>)
                     },
                 ),
             )
@@ -238,7 +238,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val onEnter: suspend EnterContext<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionContext<S, A, E>.() -> S = this@StoreBuilder.onAction
             override val onExit: suspend ExitContext<S, A, E>.() -> Unit = this@StoreBuilder.onExit
-            override val onError: suspend ErrorContext<S, A, E>.() -> S = this@StoreBuilder.onError
+            override val onError: suspend ErrorContext<S, A, E, S>.() -> Unit = this@StoreBuilder.onError
         }
     }
 }

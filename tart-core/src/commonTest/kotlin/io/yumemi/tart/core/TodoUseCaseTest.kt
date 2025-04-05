@@ -371,7 +371,7 @@ private fun createTodoStore(
         // Global error handling
         state<TodoState> {
             error {
-                TodoState.Error(error.message ?: "Unknown error")
+                state.update(TodoState.Error(error.message ?: "Unknown error"))
             }
         }
     }

@@ -85,7 +85,7 @@ interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
  * Context available when an error occurs in a state handler.
  * Used in error handlers to recover from errors or update state accordingly.
  */
-interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
+interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state when the error occurred
      */
@@ -100,6 +100,14 @@ interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to emit events from the error handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within error handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**

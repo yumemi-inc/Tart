@@ -234,7 +234,7 @@ private fun createCounterStore(
             }
             error {
                 emit(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
-                CounterState.Error(error.message ?: "Unknown error")
+                state.update(CounterState.Error(error.message ?: "Unknown error"))
             }
         }
     }

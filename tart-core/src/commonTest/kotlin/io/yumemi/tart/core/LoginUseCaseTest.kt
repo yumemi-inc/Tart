@@ -170,7 +170,7 @@ private fun createLoginStore(
         // Error handling for all states
         state<LoginState> {
             error {
-                LoginState.Error(error.message ?: "Unknown error")
+                state.update(LoginState.Error(error.message ?: "Unknown error"))
             }
         }
     }
