@@ -50,7 +50,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
-    protected abstract val onEnter: suspend EnterContext<S, A, E>.() -> S
+    protected abstract val onEnter: suspend EnterContext<S, A, E, S>.() -> Unit
 
     protected abstract val onAction: suspend ActionContext<S, A, E>.() -> S
 
@@ -207,16 +207,21 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateScopes[state::class]?.cancel()
         val stateScope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob())
         stateScopes[state::class] = stateScope
-        val nextState = onEnter.invoke(
-            object : EnterContext<S, A, E> {
+        var newState: S? = null
+        onEnter.invoke(
+            object : EnterContext<S, A, E, S> {
                 override val state = state
                 override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
                 override val launch: suspend (block: suspend () -> Unit) -> Unit = { block ->
                     stateScope.launch { block() }
                 }
                 override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
+                override fun S.update(state: S) {
+                    newState = state
+                }
             },
         )
+        val nextState = newState ?: state
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
     }

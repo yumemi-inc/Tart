@@ -299,7 +299,7 @@ private fun createTodoStore(
         state<TodoState.Loading> {
             enter {
                 val todos = repository.loadTodos()
-                TodoState.Loaded(todos)
+                state.update(TodoState.Loaded(todos))
             }
         }
 

@@ -1,6 +1,5 @@
 package io.yumemi.tart.core
 
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -13,7 +12,7 @@ sealed interface StoreContext
  * Context available when a state is being entered.
  * Used in enter handlers to manage state transitions and side effects.
  */
-interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
+interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state that's being entered
      */
@@ -35,6 +34,14 @@ interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to dispatch actions from the enter handler
      */
     val dispatch: (A) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within enter handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**

@@ -3,7 +3,6 @@ package io.yumemi.tart.core
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -134,9 +133,6 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
                     // Emit event
                     emit(StateScopeEvent.ValueChanged(5))
                 }
-
-                // Return current state
-                state
             }
 
             // Update action handling
@@ -154,7 +150,6 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         state<StateScopeState.Final> {
             enter {
                 emit(StateScopeEvent.Completed)
-                state
             }
         }
     }
@@ -189,8 +184,6 @@ private fun createCancellationTestStore(
                         onBackgroundTaskCancel()
                     }
                 }
-
-                state
             }
 
             action<StateScopeAction.Stop> {

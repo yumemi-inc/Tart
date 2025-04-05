@@ -6,7 +6,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -140,9 +139,6 @@ private fun createFlowCollectStore(
                         dispatch(FlowAction.UpdateValue(value))
                     }
                 }
-
-                // Return current state
-                state
             }
 
             action<FlowAction.UpdateValue> {

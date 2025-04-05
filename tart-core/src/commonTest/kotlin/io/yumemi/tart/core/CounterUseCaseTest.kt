@@ -190,7 +190,6 @@ private fun createCounterStore(
             enter {
                 // Optional initialization when entering active state
                 emit(CounterEvent.CountChanged(state.count))
-                state
             }
 
             action<CounterAction.Increment> {
