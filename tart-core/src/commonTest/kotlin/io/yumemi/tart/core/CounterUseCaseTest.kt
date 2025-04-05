@@ -181,7 +181,7 @@ private fun createCounterStore(
         // Initial state handling
         state<CounterState.Initial> {
             action<CounterAction.Start> {
-                CounterState.Active(0)
+                state.update(CounterState.Active(0))
             }
         }
 
@@ -190,7 +190,6 @@ private fun createCounterStore(
             enter {
                 // Optional initialization when entering active state
                 emit(CounterEvent.CountChanged(state.count))
-                state
             }
 
             action<CounterAction.Increment> {
@@ -202,29 +201,29 @@ private fun createCounterStore(
                     emit(CounterEvent.ThresholdReached(10))
                 }
 
-                state.copy(count = newCount)
+                state.update(state.copy(count = newCount))
             }
 
             action<CounterAction.Decrement> {
                 val newCount = state.count - 1
                 emit(CounterEvent.CountChanged(newCount))
-                state.copy(count = newCount)
+                state.update(state.copy(count = newCount))
             }
 
             action<CounterAction.Reset> {
                 emit(CounterEvent.CountChanged(0))
-                state.copy(count = 0)
+                state.update(state.copy(count = 0))
             }
 
             action<CounterAction.Pause> {
-                CounterState.Paused(state.count)
+                state.update(CounterState.Paused(state.count))
             }
         }
 
         // Paused state handling
         state<CounterState.Paused> {
             action<CounterAction.Resume> {
-                CounterState.Active(state.count)
+                state.update(CounterState.Active(state.count))
             }
         }
 
@@ -235,7 +234,7 @@ private fun createCounterStore(
             }
             error {
                 emit(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
-                CounterState.Error(error.message ?: "Unknown error")
+                state.update(CounterState.Error(error.message ?: "Unknown error"))
             }
         }
     }

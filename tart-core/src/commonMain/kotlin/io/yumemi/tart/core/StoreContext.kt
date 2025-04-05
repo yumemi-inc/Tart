@@ -1,6 +1,5 @@
 package io.yumemi.tart.core
 
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -13,7 +12,7 @@ sealed interface StoreContext
  * Context available when a state is being entered.
  * Used in enter handlers to manage state transitions and side effects.
  */
-interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
+interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state that's being entered
      */
@@ -35,6 +34,14 @@ interface EnterContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to dispatch actions from the enter handler
      */
     val dispatch: (A) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within enter handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**
@@ -57,7 +64,7 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
  * Context available when an action is being processed.
  * Used in action handlers to update state based on an action.
  */
-interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
+interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state when the action is being processed
      */
@@ -72,13 +79,21 @@ interface ActionContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to emit events from the action handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within action handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**
  * Context available when an error occurs in a state handler.
  * Used in error handlers to recover from errors or update state accordingly.
  */
-interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
+interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
     /**
      * The current state when the error occurred
      */
@@ -93,6 +108,14 @@ interface ErrorContext<S : State, A : Action, E : Event> : StoreContext {
      * Function to emit events from the error handler
      */
     val emit: suspend (E) -> Unit
+
+    /**
+     * Updates the current state with a new state value.
+     * Used within error handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun S.update(state: S0)
 }
 
 /**

@@ -6,7 +6,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -126,7 +125,7 @@ private fun createFlowCollectStore(
         // Initial state handling
         state<FlowState.Initial> {
             action<FlowAction.StartCollecting> {
-                FlowState.Active(0) // Start with a default value before flow collection
+                state.update(FlowState.Active(0)) // Start with a default value before flow collection
             }
         }
 
@@ -140,18 +139,15 @@ private fun createFlowCollectStore(
                         dispatch(FlowAction.UpdateValue(value))
                     }
                 }
-
-                // Return current state
-                state
             }
 
             action<FlowAction.UpdateValue> {
                 // Update state with the latest value from flow
-                state.copy(value = action.value)
+                state.update(state.copy(value = action.value))
             }
 
             action<FlowAction.Complete> {
-                FlowState.Completed
+                state.update(FlowState.Completed)
             }
         }
 

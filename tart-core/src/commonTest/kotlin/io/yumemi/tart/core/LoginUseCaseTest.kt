@@ -142,9 +142,9 @@ private fun createLoginStore(
             action<LoginAction.Login> {
                 // Validation check
                 if (action.username.isNotBlank() && action.password.isNotBlank()) {
-                    LoginState.Loading(action.username, action.password)
+                    state.update(LoginState.Loading(action.username, action.password))
                 } else {
-                    LoginState.Error("Username and password must not be empty")
+                    state.update(LoginState.Error("Username and password must not be empty"))
                 }
             }
         }
@@ -155,22 +155,22 @@ private fun createLoginStore(
                 val success = repository.login(state.username, state.password)
                 if (success) {
                     emit(LoginEvent.NavigateToHome(state.username))
-                    LoginState.Success(state.username)
+                    state.update(LoginState.Success(state.username))
                 } else {
-                    LoginState.Error("Authentication failed")
+                    state.update(LoginState.Error("Authentication failed"))
                 }
             }
         }
         // Processing for Error state
         state<LoginState.Error> {
             action<LoginAction.RetryFromError> {
-                LoginState.Initial
+                state.update(LoginState.Initial)
             }
         }
         // Error handling for all states
         state<LoginState> {
             error {
-                LoginState.Error(error.message ?: "Unknown error")
+                state.update(LoginState.Error(error.message ?: "Unknown error"))
             }
         }
     }

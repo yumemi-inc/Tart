@@ -3,7 +3,6 @@ package io.yumemi.tart.core
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -119,7 +118,7 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         // Initial state handling
         state<StateScopeState.Initial> {
             action<StateScopeAction.Start> {
-                StateScopeState.Running()
+                state.update(StateScopeState.Running())
             }
         }
 
@@ -134,19 +133,16 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
                     // Emit event
                     emit(StateScopeEvent.ValueChanged(5))
                 }
-
-                // Return current state
-                state
             }
 
             // Update action handling
             action<StateScopeAction.Update> {
-                StateScopeState.Running(action.newValue)
+                state.update(StateScopeState.Running(action.newValue))
             }
 
             // Stop action transitions to Final
             action<StateScopeAction.Stop> {
-                StateScopeState.Final
+                state.update(StateScopeState.Final)
             }
         }
 
@@ -154,7 +150,6 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         state<StateScopeState.Final> {
             enter {
                 emit(StateScopeEvent.Completed)
-                state
             }
         }
     }
@@ -170,7 +165,7 @@ private fun createCancellationTestStore(
 
         state<StateScopeState.Initial> {
             action<StateScopeAction.Start> {
-                StateScopeState.Running()
+                state.update(StateScopeState.Running())
             }
         }
 
@@ -189,12 +184,10 @@ private fun createCancellationTestStore(
                         onBackgroundTaskCancel()
                     }
                 }
-
-                state
             }
 
             action<StateScopeAction.Stop> {
-                StateScopeState.Final
+                state.update(StateScopeState.Final)
             }
         }
 
