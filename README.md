@@ -9,6 +9,7 @@ Tart is a state management framework for Kotlin Multiplatform.
 - Data flow is one-way, making it easy to understand.
 - Since the state remains unchanged during processing, there is no need to worry about side effects.
 - Code becomes declarative.
+- Writing test code is straightforward and easy.
 - Works on multiple platforms (currently on Android and iOS).
   - Enables code sharing and consistent logic implementation across platforms.
 
@@ -155,6 +156,16 @@ class CounterStoreContainer( // instantiate with DI library etc.
             }
 
             // ...
+```
+
+Or, create a *Store* simply like this with a function:
+
+```kt
+fun createCounterStore(
+    counterRepository: CounterRepository
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+    // ...
+}
 ```
 
 <details>
@@ -352,6 +363,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
+If you do not specify a context that is automatically disposed like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.dispose()` explicitly when the *Store* is no longer needed.
+Then, processing of all Coroutines will stop.
+
 ### State Persistence
 
 You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) to automatically handle state persistence:
@@ -368,11 +382,6 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 Coroutines like Store's `.state` (StateFlow) and `.event` (Flow) cannot be used on iOS, so use the `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
-
-### Disposal of Coroutines
-
-If you do not specify a context that is automatically disposed like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()` in the constructor of the *Store*, call Store's `.dispose()` explicitly when the *Store* is no longer needed.
-Then, processing of all Coroutines will stop.
 
 ## Compose
 
@@ -708,6 +717,11 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 }
 ```
 </details>
+
+## Testing Store
+
+Tart's architecture makes writing unit tests for your *Store* straightforward.
+For test examples, see the [commonTest](tart-core/src/commonTest/kotlin/io/yumemi/tart/core) directory in the tart-core module.
 
 ## Acknowledgments
 
