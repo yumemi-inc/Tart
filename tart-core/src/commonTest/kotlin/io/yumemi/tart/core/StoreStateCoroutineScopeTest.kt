@@ -131,7 +131,7 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
                     dispatch(StateScopeAction.Update(5))
 
                     // Emit event
-                    emit(StateScopeEvent.ValueChanged(5))
+                    event(StateScopeEvent.ValueChanged(5))
                 }
             }
 
@@ -149,7 +149,7 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
         // Final state
         state<StateScopeState.Final> {
             enter {
-                emit(StateScopeEvent.Completed)
+                event(StateScopeEvent.Completed)
             }
         }
     }

@@ -299,7 +299,7 @@ private fun createTodoStore(
         state<TodoState.Loading> {
             enter {
                 val todos = repository.loadTodos()
-                state.update(TodoState.Loaded(todos))
+                state(TodoState.Loaded(todos))
             }
         }
 
@@ -319,11 +319,13 @@ private fun createTodoStore(
                 val todoToUpdate = state.todos.first { it.id == action.todoId }
                 val updatedTodo = todoToUpdate.copy(completed = !todoToUpdate.completed)
                 val savedTodo = repository.updateTodo(updatedTodo)
-                state.update(state.copy(
-                    todos = state.todos.map {
-                        if (it.id == action.todoId) savedTodo else it
-                    },
-                ))
+                state.update(
+                    state.copy(
+                        todos = state.todos.map {
+                            if (it.id == action.todoId) savedTodo else it
+                        },
+                    ),
+                )
             }
 
             action<TodoAction.DeleteTodo> {
@@ -347,11 +349,13 @@ private fun createTodoStore(
 
             action<TodoAction.SaveEdit> {
                 val updatedTodo = repository.updateTodo(state.editingTodo)
-                state.update(TodoState.Loaded(
-                    state.allTodos.map {
-                        if (it.id == updatedTodo.id) updatedTodo else it
-                    },
-                ))
+                state.update(
+                    TodoState.Loaded(
+                        state.allTodos.map {
+                            if (it.id == updatedTodo.id) updatedTodo else it
+                        },
+                    ),
+                )
             }
 
             action<TodoAction.CancelEdit> {

@@ -154,10 +154,10 @@ private fun createLoginStore(
                 // Execute login process in repository
                 val success = repository.login(state.username, state.password)
                 if (success) {
-                    emit(LoginEvent.NavigateToHome(state.username))
-                    state.update(LoginState.Success(state.username))
+                    event(LoginEvent.NavigateToHome(state.username))
+                    state(LoginState.Success(state.username))
                 } else {
-                    state.update(LoginState.Error("Authentication failed"))
+                    state(LoginState.Error("Authentication failed"))
                 }
             }
         }

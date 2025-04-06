@@ -19,29 +19,30 @@ interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
     val state: S
 
     /**
-     * Function to emit events from the enter handler
-     */
-    val emit: suspend (E) -> Unit
-
-    /**
-     * Function to launch a coroutine that will be valid until this state is exited.
-     * This function can be used for state-specific background operations.
-     * The coroutine is automatically canceled when the state exits.
-     */
-    val launch: suspend (block: suspend () -> Unit) -> Unit
-
-    /**
-     * Function to dispatch actions from the enter handler
-     */
-    val dispatch: (A) -> Unit
-
-    /**
-     * Updates the current state with a new state value.
-     * Used within enter handlers to modify the state.
+     * Emits an event from the enter handler.
+     * Use this to communicate with the outside world about important occurrences.
      *
-     * @param state The new state value to update to
+     * @param event The event to emit
      */
-    fun S.update(state: S0)
+    suspend fun event(event: E)
+
+    /**
+     * Launches a coroutine within the context of this state.
+     * The coroutine will be automatically cancelled when the state is exited.
+     *
+     * @param block The suspending block of code to execute
+     */
+    fun launch(block: suspend () -> Unit)
+
+    /**
+     * Dispatches an action to the store.
+     * Use this to trigger new state transitions from within a state.
+     *
+     * @param action The action to dispatch
+     */
+    fun dispatch(action: A)
+
+    fun state(state: S0)
 }
 
 /**

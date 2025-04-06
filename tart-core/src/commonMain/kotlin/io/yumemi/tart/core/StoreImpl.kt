@@ -216,12 +216,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         onEnter.invoke(
             object : EnterContext<S, A, E, S> {
                 override val state = state
-                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-                override val launch: suspend (block: suspend () -> Unit) -> Unit = { block ->
+                override suspend fun event(event: E) {
+                    emit(event)
+                }
+
+                override fun launch(block: suspend () -> Unit) {
                     stateScope.launch { block() }
                 }
-                override val dispatch: (A) -> Unit = this@StoreImpl::dispatch
-                override fun S.update(state: S) {
+
+                override fun dispatch(action: A) {
+                    this@StoreImpl.dispatch(action)
+                }
+
+                override fun state(state: S) {
                     newState = state
                 }
             },

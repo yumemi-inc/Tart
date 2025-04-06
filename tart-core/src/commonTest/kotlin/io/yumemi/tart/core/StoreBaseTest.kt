@@ -62,7 +62,7 @@ private fun createTestStore(
         coroutineContext(Dispatchers.Unconfined)
         state<BaseState.Loading> {
             enter {
-                state.update(BaseState.Main(count = 0))
+                state(BaseState.Main(count = 0))
             }
         }
         state<BaseState.Main> {
