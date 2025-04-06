@@ -196,8 +196,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ActionContext<S, A, E, S> {
                 override val state = state
                 override val action = action
-                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-                override fun S.update(state: S) {
+                override suspend fun event(event: E) {
+                    emit(event)
+                }
+
+                override fun state(state: S) {
                     newState = state
                 }
             },
@@ -244,7 +247,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             onExit.invoke(
                 object : ExitContext<S, A, E> {
                     override val state = state
-                    override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
+                    override suspend fun event(event: E) {
+                        emit(event)
+                    }
                 },
             )
             processMiddleware { afterStateExit(state) }
@@ -272,8 +277,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ErrorContext<S, A, E, S> {
                 override val state = state
                 override val error = throwable
-                override val emit: suspend (E) -> Unit = { this@StoreImpl.emit(it) }
-                override fun S.update(state: S) {
+                override suspend fun event(event: E) {
+                    emit(event)
+                }
+
+                override fun state(state: S) {
                     newState = state
                 }
             },

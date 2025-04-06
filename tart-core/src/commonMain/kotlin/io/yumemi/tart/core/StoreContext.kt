@@ -42,6 +42,12 @@ interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
      */
     fun dispatch(action: A)
 
+    /**
+     * Updates the current state with a new state value.
+     * Used within enter handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
     fun state(state: S0)
 }
 
@@ -56,9 +62,12 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
     val state: S
 
     /**
-     * Function to emit events from the exit handler
+     * Emits an event from the exit handler.
+     * Use this to communicate with the outside world about important occurrences.
+     *
+     * @param event The event to emit
      */
-    val emit: suspend (E) -> Unit
+    suspend fun event(event: E)
 }
 
 /**
@@ -77,9 +86,12 @@ interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreCon
     val action: A
 
     /**
-     * Function to emit events from the action handler
+     * Emits an event from the action handler.
+     * Use this to communicate with the outside world about important occurrences.
+     *
+     * @param event The event to emit
      */
-    val emit: suspend (E) -> Unit
+    suspend fun event(event: E)
 
     /**
      * Updates the current state with a new state value.
@@ -87,7 +99,7 @@ interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreCon
      *
      * @param state The new state value to update to
      */
-    fun S.update(state: S0)
+    fun state(state: S0)
 }
 
 /**
@@ -106,9 +118,12 @@ interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
     val error: Throwable
 
     /**
-     * Function to emit events from the error handler
+     * Emits an event from the error handler.
+     * Use this to communicate with the outside world about important occurrences.
+     *
+     * @param event The event to emit
      */
-    val emit: suspend (E) -> Unit
+    suspend fun event(event: E)
 
     /**
      * Updates the current state with a new state value.
@@ -116,7 +131,7 @@ interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
      *
      * @param state The new state value to update to
      */
-    fun S.update(state: S0)
+    fun state(state: S0)
 }
 
 /**

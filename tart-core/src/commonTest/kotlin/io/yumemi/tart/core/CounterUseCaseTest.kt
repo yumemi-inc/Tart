@@ -181,7 +181,7 @@ private fun createCounterStore(
         // Initial state handling
         state<CounterState.Initial> {
             action<CounterAction.Start> {
-                state.update(CounterState.Active(0))
+                state(CounterState.Active(0))
             }
         }
 
@@ -194,36 +194,36 @@ private fun createCounterStore(
 
             action<CounterAction.Increment> {
                 val newCount = state.count + 1
-                emit(CounterEvent.CountChanged(newCount))
+                event(CounterEvent.CountChanged(newCount))
 
                 // Emit threshold event if count reaches certain value
                 if (newCount == 10) {
-                    emit(CounterEvent.ThresholdReached(10))
+                    event(CounterEvent.ThresholdReached(10))
                 }
 
-                state.update(state.copy(count = newCount))
+                state(state.copy(count = newCount))
             }
 
             action<CounterAction.Decrement> {
                 val newCount = state.count - 1
-                emit(CounterEvent.CountChanged(newCount))
-                state.update(state.copy(count = newCount))
+                event(CounterEvent.CountChanged(newCount))
+                state(state.copy(count = newCount))
             }
 
             action<CounterAction.Reset> {
-                emit(CounterEvent.CountChanged(0))
-                state.update(state.copy(count = 0))
+                event(CounterEvent.CountChanged(0))
+                state(state.copy(count = 0))
             }
 
             action<CounterAction.Pause> {
-                state.update(CounterState.Paused(state.count))
+                state(CounterState.Paused(state.count))
             }
         }
 
         // Paused state handling
         state<CounterState.Paused> {
             action<CounterAction.Resume> {
-                state.update(CounterState.Active(state.count))
+                state(CounterState.Active(state.count))
             }
         }
 
@@ -233,8 +233,8 @@ private fun createCounterStore(
                 throw RuntimeException(action.message)
             }
             error {
-                emit(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
-                state.update(CounterState.Error(error.message ?: "Unknown error"))
+                event(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
+                state(CounterState.Error(error.message ?: "Unknown error"))
             }
         }
     }

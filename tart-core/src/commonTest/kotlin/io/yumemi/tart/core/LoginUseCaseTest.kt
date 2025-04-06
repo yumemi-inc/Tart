@@ -142,9 +142,9 @@ private fun createLoginStore(
             action<LoginAction.Login> {
                 // Validation check
                 if (action.username.isNotBlank() && action.password.isNotBlank()) {
-                    state.update(LoginState.Loading(action.username, action.password))
+                    state(LoginState.Loading(action.username, action.password))
                 } else {
-                    state.update(LoginState.Error("Username and password must not be empty"))
+                    state(LoginState.Error("Username and password must not be empty"))
                 }
             }
         }
@@ -164,13 +164,13 @@ private fun createLoginStore(
         // Processing for Error state
         state<LoginState.Error> {
             action<LoginAction.RetryFromError> {
-                state.update(LoginState.Initial)
+                state(LoginState.Initial)
             }
         }
         // Error handling for all states
         state<LoginState> {
             error {
-                state.update(LoginState.Error(error.message ?: "Unknown error"))
+                state(LoginState.Error(error.message ?: "Unknown error"))
             }
         }
     }

@@ -67,13 +67,13 @@ private fun createTestStore(
         }
         state<BaseState.Main> {
             action<BaseAction.Increment> {
-                state.update(state.copy(count = state.count + 1))
+                state(state.copy(count = state.count + 1))
             }
             action<BaseAction.Decrement> {
-                state.update(state.copy(count = state.count - 1))
+                state(state.copy(count = state.count - 1))
             }
             action<BaseAction.EmitEvent> {
-                emit(BaseEvent.CountUpdated(state.count))
+                event(BaseEvent.CountUpdated(state.count))
             }
         }
     }
