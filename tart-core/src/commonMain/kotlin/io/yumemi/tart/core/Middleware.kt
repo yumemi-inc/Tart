@@ -9,7 +9,7 @@ interface Middleware<S : State, A : Action, E : Event> {
     /**
      * Called when the Store is initialized.
      *
-     * @param middlewareContext The StoreContext providing access to store functionality
+     * @param middlewareContext The context providing access to store functionality
      */
     suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {}
 

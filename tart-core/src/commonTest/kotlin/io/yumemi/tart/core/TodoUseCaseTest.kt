@@ -291,7 +291,7 @@ private fun createTodoStore(
         // Idle state handling
         state<TodoState.Idle> {
             action<TodoAction.LoadTodos> {
-                state.update(TodoState.Loading)
+                state(TodoState.Loading)
             }
         }
 
@@ -299,7 +299,7 @@ private fun createTodoStore(
         state<TodoState.Loading> {
             enter {
                 val todos = repository.loadTodos()
-                state.update(TodoState.Loaded(todos))
+                state(TodoState.Loaded(todos))
             }
         }
 
@@ -312,64 +312,68 @@ private fun createTodoStore(
                     completed = false,
                 )
                 val savedTodo = repository.addTodo(newTodo)
-                state.update(state.copy(todos = state.todos + savedTodo))
+                state(state.copy(todos = state.todos + savedTodo))
             }
 
             action<TodoAction.ToggleCompletion> {
                 val todoToUpdate = state.todos.first { it.id == action.todoId }
                 val updatedTodo = todoToUpdate.copy(completed = !todoToUpdate.completed)
                 val savedTodo = repository.updateTodo(updatedTodo)
-                state.update(state.copy(
-                    todos = state.todos.map {
-                        if (it.id == action.todoId) savedTodo else it
-                    },
-                ))
+                state(
+                    state.copy(
+                        todos = state.todos.map {
+                            if (it.id == action.todoId) savedTodo else it
+                        },
+                    ),
+                )
             }
 
             action<TodoAction.DeleteTodo> {
                 val success = repository.deleteTodo(action.todoId)
                 if (success) {
-                    state.update(state.copy(todos = state.todos.filter { it.id != action.todoId }))
+                    state(state.copy(todos = state.todos.filter { it.id != action.todoId }))
                 }
             }
 
             action<TodoAction.StartEditing> {
                 val todoToEdit = state.todos.first { it.id == action.todoId }
-                state.update(TodoState.Editing(todoToEdit, state.todos))
+                state(TodoState.Editing(todoToEdit, state.todos))
             }
         }
 
         // Editing state handling
         state<TodoState.Editing> {
             action<TodoAction.UpdateEditingTitle> {
-                state.update(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
+                state(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
             }
 
             action<TodoAction.SaveEdit> {
                 val updatedTodo = repository.updateTodo(state.editingTodo)
-                state.update(TodoState.Loaded(
-                    state.allTodos.map {
-                        if (it.id == updatedTodo.id) updatedTodo else it
-                    },
-                ))
+                state(
+                    TodoState.Loaded(
+                        state.allTodos.map {
+                            if (it.id == updatedTodo.id) updatedTodo else it
+                        },
+                    ),
+                )
             }
 
             action<TodoAction.CancelEdit> {
-                state.update(TodoState.Loaded(state.allTodos))
+                state(TodoState.Loaded(state.allTodos))
             }
         }
 
         // Error state handling
         state<TodoState.Error> {
             action<TodoAction.RetryFromError> {
-                state.update(TodoState.Idle)
+                state(TodoState.Idle)
             }
         }
 
         // Global error handling
         state<TodoState> {
             error {
-                state.update(TodoState.Error(error.message ?: "Unknown error"))
+                state(TodoState.Error(error.message ?: "Unknown error"))
             }
         }
     }
