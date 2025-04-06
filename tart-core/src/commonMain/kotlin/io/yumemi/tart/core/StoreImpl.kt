@@ -103,7 +103,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 processMiddleware {
                     onInit(
                         object : MiddlewareContext<S, A, E> {
-                            override val dispatch: (A) -> Unit = ::dispatch
+                            override fun dispatch(action: A) {
+                                this@StoreImpl.dispatch(action)
+                            }
+
                             override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext + Job()
                         },
                     )

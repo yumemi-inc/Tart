@@ -140,9 +140,12 @@ interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
  */
 interface MiddlewareContext<S : State, A : Action, E : Event> : StoreContext {
     /**
-     * Function to dispatch actions from middleware
+     * Dispatches an action from middleware.
+     * Use this to trigger new state transitions from within middleware.
+     *
+     * @param action The action to dispatch
      */
-    val dispatch: (A) -> Unit
+    fun dispatch(action: A)
 
     /**
      * The coroutine context for executing middleware operations
