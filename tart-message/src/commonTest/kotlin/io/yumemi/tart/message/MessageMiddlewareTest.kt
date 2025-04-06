@@ -47,8 +47,7 @@ private fun createTestStore(
         middleware(middleware)
         state<CounterState> {
             enter {
-                send(message)
-                state
+                message(message)
             }
         }
     }
