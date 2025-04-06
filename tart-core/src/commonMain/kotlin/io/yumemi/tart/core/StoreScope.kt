@@ -3,16 +3,16 @@ package io.yumemi.tart.core
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Base interface for all store context types.
- * Provides a common type for different contexts in the state management flow.
+ * Base interface for all store scope types.
+ * Provides a common type for different scopes in the state management flow.
  */
-sealed interface StoreContext
+sealed interface StoreScope
 
 /**
- * Context available when a state is being entered.
+ * Scope available when a state is being entered.
  * Used in enter handlers to manage state transitions and side effects.
  */
-interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
+interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state that's being entered
      */
@@ -52,10 +52,10 @@ interface EnterContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
 }
 
 /**
- * Context available when a state is being exited.
+ * Scope available when a state is being exited.
  * Used in exit handlers to perform cleanup or side effects when leaving a state.
  */
-interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
+interface ExitScope<S : State, A : Action, E : Event> : StoreScope {
     /**
      * The current state that's being exited
      */
@@ -71,10 +71,10 @@ interface ExitContext<S : State, A : Action, E : Event> : StoreContext {
 }
 
 /**
- * Context available when an action is being processed.
+ * Scope available when an action is being processed.
  * Used in action handlers to update state based on an action.
  */
-interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
+interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the action is being processed
      */
@@ -103,10 +103,10 @@ interface ActionContext<S : State, A : Action, E : Event, S0 : State> : StoreCon
 }
 
 /**
- * Context available when an error occurs in a state handler.
+ * Scope available when an error occurs in a state handler.
  * Used in error handlers to recover from errors or update state accordingly.
  */
-interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreContext {
+interface ErrorScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the error occurred
      */
@@ -135,10 +135,10 @@ interface ErrorContext<S : State, A : Action, E : Event, S0 : State> : StoreCont
 }
 
 /**
- * Context available in middleware components.
+ * Scope available in middleware components.
  * Provides access to dispatch and coroutine context for middleware operations.
  */
-interface MiddlewareContext<S : State, A : Action, E : Event> : StoreContext {
+interface MiddlewareScope<S : State, A : Action, E : Event> : StoreScope {
     /**
      * Dispatches an action from middleware.
      * Use this to trigger new state transitions from within middleware.

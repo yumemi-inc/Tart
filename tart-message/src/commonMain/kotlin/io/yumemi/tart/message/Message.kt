@@ -1,6 +1,6 @@
 package io.yumemi.tart.message
 
-import io.yumemi.tart.core.StoreContext
+import io.yumemi.tart.core.StoreScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -25,5 +25,5 @@ internal object MessageHub {
  *
  * @return A suspend function that takes a Message and sends it to the MessageHub
  */
-val StoreContext.send: suspend (Message) -> Unit
+val StoreScope.send: suspend (Message) -> Unit
     get() = { MessageHub.send(it) }
