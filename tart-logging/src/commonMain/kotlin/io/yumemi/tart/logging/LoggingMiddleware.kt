@@ -3,7 +3,7 @@ package io.yumemi.tart.logging
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
-import io.yumemi.tart.core.MiddlewareScope
+import io.yumemi.tart.core.MiddlewareContext
 import io.yumemi.tart.core.State
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -30,8 +30,8 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
 ) : Middleware<S, A, E> {
     private lateinit var coroutineScope: CoroutineScope
 
-    override suspend fun onInit(middlewareScope: MiddlewareScope<S, A, E>) {
-        this.coroutineScope = CoroutineScope(middlewareScope.coroutineContext + SupervisorJob() + coroutineDispatcher)
+    override suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {
+        this.coroutineScope = CoroutineScope(middlewareContext.coroutineContext + SupervisorJob() + coroutineDispatcher)
     }
 
     override suspend fun beforeActionDispatch(state: S, action: A) {

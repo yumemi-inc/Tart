@@ -1,7 +1,5 @@
 package io.yumemi.tart.core
 
-import kotlin.coroutines.CoroutineContext
-
 /**
  * Base interface for all store scope types.
  * Provides a common type for different scopes in the state management flow.
@@ -132,23 +130,4 @@ interface ErrorScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      * @param state The new state value to update to
      */
     fun state(state: S0)
-}
-
-/**
- * Scope available in middleware components.
- * Provides access to dispatch and coroutine context for middleware operations.
- */
-interface MiddlewareScope<S : State, A : Action, E : Event> : StoreScope {
-    /**
-     * Dispatches an action from middleware.
-     * Use this to trigger new state transitions from within middleware.
-     *
-     * @param action The action to dispatch
-     */
-    fun dispatch(action: A)
-
-    /**
-     * The coroutine context for executing middleware operations
-     */
-    val coroutineContext: CoroutineContext
 }

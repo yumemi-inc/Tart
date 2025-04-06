@@ -102,7 +102,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             mutex.withLock {
                 processMiddleware {
                     onInit(
-                        object : MiddlewareScope<S, A, E> {
+                        object : MiddlewareContext<S, A, E> {
                             override fun dispatch(action: A) {
                                 this@StoreImpl.dispatch(action)
                             }

@@ -3,7 +3,7 @@ package io.yumemi.tart.message
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.Middleware
-import io.yumemi.tart.core.MiddlewareScope
+import io.yumemi.tart.core.MiddlewareContext
 import io.yumemi.tart.core.State
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -16,12 +16,12 @@ import kotlinx.coroutines.launch
  */
 @Suppress("unused")
 class MessageMiddleware<S : State, A : Action, E : Event>(
-    private val receive: suspend MiddlewareScope<S, A, E>.(Message) -> Unit,
+    private val receive: suspend MiddlewareContext<S, A, E>.(Message) -> Unit,
 ) : Middleware<S, A, E> {
-    override suspend fun onInit(middlewareScope: MiddlewareScope<S, A, E>) {
-        CoroutineScope(middlewareScope.coroutineContext).launch {
+    override suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {
+        CoroutineScope(middlewareContext.coroutineContext).launch {
             MessageHub.messages.collect {
-                receive.invoke(middlewareScope, it)
+                receive.invoke(middlewareContext, it)
             }
         }
     }
