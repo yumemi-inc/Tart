@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -226,12 +227,27 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(block: suspend () -> Unit) {
-                    stateScope.launch { block() }
-                }
-
-                override fun dispatch(action: A) {
-                    this@StoreImpl.dispatch(action)
+                override fun launch(block: suspend EnterScope.LaunchScope<A>.() -> Unit) {
+                    stateScope.launch {
+                        try {
+                            val launchScope = object : EnterScope.LaunchScope<A> {
+                                override fun dispatch(action: A) {
+                                    if (stateScope.isActive) {
+                                        this@StoreImpl.dispatch(action)
+                                    }
+                                }
+                            }
+                            block(launchScope)
+                        } catch (t: Throwable) {
+                            coroutineScope.launch {
+                                mutex.withLock {
+                                    if (stateScope.isActive) {
+                                        onErrorOccurred(currentState, t)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 override fun state(state: S) {

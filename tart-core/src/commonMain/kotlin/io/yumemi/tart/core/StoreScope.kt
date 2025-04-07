@@ -27,18 +27,11 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
     /**
      * Launches a coroutine within the context of this state.
      * The coroutine will be automatically cancelled when the state is exited.
+     * Within the block, you can use dispatch() method to send actions to the store.
      *
      * @param block The suspending block of code to execute
      */
-    fun launch(block: suspend () -> Unit)
-
-    /**
-     * Dispatches an action to the store.
-     * Use this to trigger new state transitions from within a state.
-     *
-     * @param action The action to dispatch
-     */
-    fun dispatch(action: A)
+    fun launch(block: suspend LaunchScope<A>.() -> Unit)
 
     /**
      * Updates the current state with a new state value.
@@ -47,6 +40,19 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      * @param state The new state value to update to
      */
     fun state(state: S0)
+
+    /**
+     * Scope available inside launch blocks.
+     * Provides the ability to dispatch actions within a coroutine.
+     */
+
+    interface LaunchScope<A : Action> : StoreScope {
+        /**
+         * Dispatches an action to the store.
+         * @param action The action to dispatch
+         */
+        fun dispatch(action: A)
+    }
 }
 
 /**
