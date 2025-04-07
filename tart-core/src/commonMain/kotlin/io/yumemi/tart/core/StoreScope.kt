@@ -10,6 +10,7 @@ sealed interface StoreScope
  * Scope available when a state is being entered.
  * Used in enter handlers to manage state transitions and side effects.
  */
+@TartStoreDsl
 interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state that's being entered
@@ -31,7 +32,7 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      *
      * @param block The suspending block of code to execute
      */
-    fun launch(block: suspend LaunchScope<A>.() -> Unit)
+    fun launch(block: suspend LaunchScope<A, E>.() -> Unit)
 
     /**
      * Updates the current state with a new state value.
@@ -46,12 +47,21 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      * Provides the ability to dispatch actions within a coroutine.
      */
 
-    interface LaunchScope<A : Action> : StoreScope {
+    @TartStoreDsl
+    interface LaunchScope<A : Action, E : Event> : StoreScope {
         /**
          * Dispatches an action to the store.
          * @param action The action to dispatch
          */
         fun dispatch(action: A)
+
+        /**
+         * Emits an event from the launch block.
+         * Use this to communicate with the outside world about important occurrences.
+         *
+         * @param event The event to emit
+         */
+        suspend fun event(event: E)
     }
 }
 
@@ -59,6 +69,7 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
  * Scope available when a state is being exited.
  * Used in exit handlers to perform cleanup or side effects when leaving a state.
  */
+@TartStoreDsl
 interface ExitScope<S : State, A : Action, E : Event> : StoreScope {
     /**
      * The current state that's being exited
@@ -78,6 +89,7 @@ interface ExitScope<S : State, A : Action, E : Event> : StoreScope {
  * Scope available when an action is being processed.
  * Used in action handlers to update state based on an action.
  */
+@TartStoreDsl
 interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the action is being processed
@@ -110,6 +122,7 @@ interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope
  * Scope available when an error occurs in a state handler.
  * Used in error handlers to recover from errors or update state accordingly.
  */
+@TartStoreDsl
 interface ErrorScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the error occurred

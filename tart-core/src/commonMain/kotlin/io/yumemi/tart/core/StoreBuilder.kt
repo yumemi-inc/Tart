@@ -93,22 +93,22 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     val errorStateHandlers = mutableListOf<ErrorStateHandler<S, A, E>>()
 
     private val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = {
-        val matchingHandler = enterStateHandlers.firstOrNull { it.predicate(state) }
+        val matchingHandler = this@StoreBuilder.enterStateHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this) ?: state
     }
 
     private val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = {
-        val matchingHandler = actionStateHandlers.firstOrNull { it.predicate(state, action) }
+        val matchingHandler = this@StoreBuilder.actionStateHandlers.firstOrNull { it.predicate(state, action) }
         matchingHandler?.handler?.invoke(this) ?: state
     }
 
     private val onExit: suspend ExitScope<S, A, E>.() -> Unit = {
-        val matchingHandler = exitStateHandlers.firstOrNull { it.predicate(state) }
+        val matchingHandler = this@StoreBuilder.exitStateHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this)
     }
 
     private val onError: suspend ErrorScope<S, A, E, S>.() -> Unit = {
-        val matchingHandler = errorStateHandlers.firstOrNull { it.predicate(state) }
+        val matchingHandler = this@StoreBuilder.errorStateHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this) ?: throw error
     }
 

@@ -227,13 +227,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(block: suspend EnterScope.LaunchScope<A>.() -> Unit) {
+                override fun launch(block: suspend EnterScope.LaunchScope<A, E>.() -> Unit) {
                     stateScope.launch {
                         try {
-                            val launchScope = object : EnterScope.LaunchScope<A> {
+                            val launchScope = object : EnterScope.LaunchScope<A, E> {
                                 override fun dispatch(action: A) {
                                     if (stateScope.isActive) {
                                         this@StoreImpl.dispatch(action)
+                                    }
+                                }
+                                
+                                override suspend fun event(event: E) {
+                                    if (stateScope.isActive) {
+                                        emit(event)
                                     }
                                 }
                             }
