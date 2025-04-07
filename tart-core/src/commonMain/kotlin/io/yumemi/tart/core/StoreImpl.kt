@@ -55,9 +55,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onAction: suspend ActionScope<S, A, E, S>.() -> Unit
 
-    protected abstract val onExit: suspend ExitScope<S, A, E>.() -> Unit
+    protected abstract val onExit: suspend ExitScope<S, E>.() -> Unit
 
-    protected abstract val onError: suspend ErrorScope<S, A, E, S>.() -> Unit
+    protected abstract val onError: suspend ErrorScope<S, E, S>.() -> Unit
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -103,7 +103,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             mutex.withLock {
                 processMiddleware {
                     onInit(
-                        object : MiddlewareContext<S, A, E> {
+                        object : MiddlewareContext<A> {
                             override fun dispatch(action: A) {
                                 this@StoreImpl.dispatch(action)
                             }
@@ -270,7 +270,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             processMiddleware { beforeStateExit(state) }
             onExit.invoke(
-                object : ExitScope<S, A, E> {
+                object : ExitScope<S, E> {
                     override val state = state
                     override suspend fun event(event: E) {
                         emit(event)
@@ -299,7 +299,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         processMiddleware { beforeError(state, throwable) }
         var newState: S? = null
         onError.invoke(
-            object : ErrorScope<S, A, E, S> {
+            object : ErrorScope<S, E, S> {
                 override val state = state
                 override val error = throwable
                 override suspend fun event(event: E) {

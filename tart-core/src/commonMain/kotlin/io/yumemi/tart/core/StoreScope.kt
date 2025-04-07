@@ -70,7 +70,7 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
  * Used in exit handlers to perform cleanup or side effects when leaving a state.
  */
 @TartStoreDsl
-interface ExitScope<S : State, A : Action, E : Event> : StoreScope {
+interface ExitScope<S : State, E : Event> : StoreScope {
     /**
      * The current state that's being exited
      */
@@ -123,7 +123,7 @@ interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope
  * Used in error handlers to recover from errors or update state accordingly.
  */
 @TartStoreDsl
-interface ErrorScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
+interface ErrorScope<S : State, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the error occurred
      */

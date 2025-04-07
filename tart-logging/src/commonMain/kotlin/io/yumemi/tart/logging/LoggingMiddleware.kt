@@ -30,7 +30,7 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
 ) : Middleware<S, A, E> {
     private lateinit var coroutineScope: CoroutineScope
 
-    override suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {
+    override suspend fun onInit(middlewareContext: MiddlewareContext<A>) {
         this.coroutineScope = CoroutineScope(middlewareContext.coroutineContext + SupervisorJob() + coroutineDispatcher)
     }
 
