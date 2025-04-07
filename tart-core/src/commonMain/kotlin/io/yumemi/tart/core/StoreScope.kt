@@ -1,5 +1,8 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+
 /**
  * Base interface for all store scope types.
  * Provides a common type for different scopes in the state management flow.
@@ -30,9 +33,10 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      * The coroutine will be automatically cancelled when the state is exited.
      * Within the block, you can use dispatch() method to send actions to the store.
      *
+     * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param block The suspending block of code to execute
      */
-    fun launch(block: suspend LaunchScope<A, E>.() -> Unit)
+    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<A, E>.() -> Unit)
 
     /**
      * Updates the current state with a new state value.
