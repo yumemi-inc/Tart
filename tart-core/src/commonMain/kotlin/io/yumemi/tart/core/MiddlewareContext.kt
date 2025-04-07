@@ -6,7 +6,7 @@ import kotlin.coroutines.CoroutineContext
  * Context available in middleware components.
  * Provides access to action dispatch and coroutine context for middleware operations.
  */
-interface MiddlewareContext<S : State, A : Action, E : Event> {
+interface MiddlewareContext<A : Action> {
     /**
      * Dispatches an action from middleware.
      * Use this to trigger new state transitions from within middleware.

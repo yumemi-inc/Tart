@@ -16,9 +16,9 @@ import kotlinx.coroutines.launch
  */
 @Suppress("unused")
 class MessageMiddleware<S : State, A : Action, E : Event>(
-    private val receive: suspend MiddlewareContext<S, A, E>.(Message) -> Unit,
+    private val receive: suspend MiddlewareContext<A>.(Message) -> Unit,
 ) : Middleware<S, A, E> {
-    override suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {
+    override suspend fun onInit(middlewareContext: MiddlewareContext<A>) {
         CoroutineScope(middlewareContext.coroutineContext).launch {
             MessageHub.messages.collect {
                 receive.invoke(middlewareContext, it)

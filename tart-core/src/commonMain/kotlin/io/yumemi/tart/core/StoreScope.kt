@@ -59,7 +59,7 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
  * Scope available when a state is being exited.
  * Used in exit handlers to perform cleanup or side effects when leaving a state.
  */
-interface ExitScope<S : State, A : Action, E : Event> : StoreScope {
+interface ExitScope<S : State, E : Event> : StoreScope {
     /**
      * The current state that's being exited
      */
@@ -110,7 +110,7 @@ interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope
  * Scope available when an error occurs in a state handler.
  * Used in error handlers to recover from errors or update state accordingly.
  */
-interface ErrorScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
+interface ErrorScope<S : State, E : Event, S0 : State> : StoreScope {
     /**
      * The current state when the error occurred
      */

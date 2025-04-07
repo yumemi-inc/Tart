@@ -11,7 +11,7 @@ interface Middleware<S : State, A : Action, E : Event> {
      *
      * @param middlewareContext The context providing access to store functionality
      */
-    suspend fun onInit(middlewareContext: MiddlewareContext<S, A, E>) {}
+    suspend fun onInit(middlewareContext: MiddlewareContext<A>) {}
 
     /**
      * Called before an action is dispatched.
