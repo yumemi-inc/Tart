@@ -353,6 +353,44 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 If you do not specify a context that is automatically disposed like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.dispose()` method explicitly when the *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
+#### Specifying CoroutineDispatchers
+
+You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `error{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
+
+```kt
+enter(Dispatchers.Default) {
+    // work on CPU thread..
+
+    launch(Dispatchers.IO) {
+        // This code runs on IO thread
+        val updates = dataRepository.observeUpdates()
+        updates.collect { newData ->
+            // ...
+        }
+    }
+}
+```
+
+Alternatively, you can use Coroutines' `withContext()`.
+
+```kt
+enter {
+    withContext(Dispatchers.Default) {
+        // work on CPU thread..
+
+        withContext(Dispatchers.IO) {
+            // This code runs on IO thread
+            launch {
+                val updates = dataRepository.observeUpdates()
+                updates.collect { newData ->
+                    // ...
+                }
+            }
+        }
+    }
+}
+```
+
 ### State Persistence
 
 You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) to automatically handle *State* persistence:
