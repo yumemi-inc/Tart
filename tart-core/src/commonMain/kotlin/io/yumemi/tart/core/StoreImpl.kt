@@ -227,10 +227,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(block: suspend () -> Unit) {
+                override fun launch(block: suspend EnterScope.LaunchScope<A>.() -> Unit) {
                     stateScope.launch {
                         try {
-                            block()
+                            val launchScope = object : EnterScope.LaunchScope<A> {
+                                override fun dispatch(action: A) {
+                                    if (stateScope.isActive) {
+                                        this@StoreImpl.dispatch(action)
+                                    }
+                                }
+                            }
+                            block(launchScope)
                         } catch (t: Throwable) {
                             coroutineScope.launch {
                                 mutex.withLock {
@@ -240,12 +247,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                 }
                             }
                         }
-                    }
-                }
-
-                override fun dispatch(action: A) {
-                    if (stateScope.isActive) {
-                        this@StoreImpl.dispatch(action)
                     }
                 }
 
