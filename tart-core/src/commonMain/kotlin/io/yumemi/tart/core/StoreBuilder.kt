@@ -1,6 +1,8 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -112,36 +114,81 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         matchingHandler?.handler?.invoke(this) ?: throw error
     }
 
+    class ContextualEnterHandler<S : State, A : Action, E : Event, S0 : State> internal constructor(
+        private val coroutineDispatcher: CoroutineDispatcher,
+        private val handler: suspend EnterScope<S, A, E, S0>.() -> Unit,
+    ) {
+        suspend operator fun invoke(scope: EnterScope<S, A, E, S0>) {
+            withContext(coroutineDispatcher) {
+                handler(scope)
+            }
+        }
+    }
+
+    class ContextualActionHandler<S : State, A : Action, E : Event, S0 : State>(
+        private val coroutineDispatcher: CoroutineDispatcher,
+        val predicate: (A) -> Boolean,
+        private val handler: suspend ActionScope<S, A, E, S0>.() -> Unit,
+    ) {
+        suspend operator fun invoke(scope: ActionScope<S, A, E, S0>) {
+            withContext(coroutineDispatcher) {
+                handler(scope)
+            }
+        }
+    }
+
+    class ContextualExitHandler<S : State, E : Event> internal constructor(
+        private val coroutineDispatcher: CoroutineDispatcher,
+        private val handler: suspend ExitScope<S, E>.() -> Unit,
+    ) {
+        suspend operator fun invoke(scope: ExitScope<S, E>) {
+            withContext(coroutineDispatcher) {
+                handler(scope)
+            }
+        }
+    }
+
+    class ContextualErrorHandler<S : State, E : Event, S0 : State> internal constructor(
+        private val coroutineDispatcher: CoroutineDispatcher,
+        private val handler: suspend ErrorScope<S, E, S0>.() -> Unit,
+    ) {
+        suspend operator fun invoke(scope: ErrorScope<S, E, S0>) {
+            withContext(coroutineDispatcher) {
+                handler(scope)
+            }
+        }
+    }
+
     @TartStoreDsl
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
-        class ActionHandler<S : State, A : Action, E : Event>(
-            val isTypeOf: (A) -> Boolean,
-            val handler: suspend ActionScope<S, A, E, S>.() -> Unit,
-        )
-
-        val enterHandlers = mutableListOf<(suspend EnterScope<S2, A, E, S>.() -> Unit)>()
-        val actionHandlers = mutableListOf<ActionHandler<S, A, E>>()
-        val exitHandlers = mutableListOf<(suspend ExitScope<S2, E>.() -> Unit)>()
-        val errorHandlers = mutableListOf<(suspend ErrorScope<S2, E, S>.() -> Unit)>()
+        val enterHandlers = mutableListOf<ContextualEnterHandler<S2, A, E, S>>()
+        val actionHandlers = mutableListOf<ContextualActionHandler<S, A, E, S>>()
+        val exitHandlers = mutableListOf<ContextualExitHandler<S2, E>>()
+        val errorHandlers = mutableListOf<ContextualErrorHandler<S2, E, S>>()
 
         /**
-         * Registers a handler to be invoked when entering this state.
+         * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
+         * If no coroutineDispatcher is provided, Dispatchers.Unconfined is used as default.
          *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the enter handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when entering this state
          */
-        fun enter(block: suspend EnterScope<S2, A, E, S>.() -> Unit) {
-            enterHandlers.add(block)
+        fun enter(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope<S2, A, E, S>.() -> Unit) {
+            enterHandlers.add(ContextualEnterHandler(coroutineDispatcher, block))
         }
 
         /**
-         * Registers a handler for a specific action type in the current state configuration.
+         * Registers a handler for a specific action type in the current state configuration
+         * with an optional CoroutineDispatcher.
          *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the action handler, defaults to Dispatchers.Unconfined
          * @param block The handler function that processes the action and updates the state
          */
-        inline fun <reified A2 : A> action(noinline block: suspend ActionScope<S2, A2, E, S>.() -> Unit) {
+        inline fun <reified A2 : A> action(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope<S2, A2, E, S>.() -> Unit) {
             actionHandlers.add(
-                ActionHandler(
-                    isTypeOf = { it is A2 },
+                ContextualActionHandler(
+                    coroutineDispatcher = coroutineDispatcher,
+                    predicate = { it is A2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
                         block(this as ActionScope<S2, A2, E, S>)
@@ -151,21 +198,25 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
 
         /**
-         * Registers a handler to be invoked when exiting this state.
+         * Registers a handler to be invoked when exiting this state with the specified CoroutineDispatcher.
+         * If no coroutineDispatcher is provided, Dispatchers.Unconfined is used as default.
          *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the exit handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when exiting this state
          */
-        fun exit(block: suspend ExitScope<S2, E>.() -> Unit) {
-            exitHandlers.add(block)
+        fun exit(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ExitScope<S2, E>.() -> Unit) {
+            exitHandlers.add(ContextualExitHandler(coroutineDispatcher, block))
         }
 
         /**
-         * Registers a handler for errors that occur when in this state.
+         * Registers a handler for errors that occur when in this state with the specified CoroutineDispatcher.
+         * If no coroutineDispatcher is provided, Dispatchers.Unconfined is used as default.
          *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the error handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when an error occurs in this state
          */
-        fun error(block: suspend ErrorScope<S2, E, S>.() -> Unit) {
-            errorHandlers.add(block)
+        fun error(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ErrorScope<S2, E, S>.() -> Unit) {
+            errorHandlers.add(ContextualErrorHandler(coroutineDispatcher, block))
         }
     }
 
@@ -184,7 +235,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        enterHandler(this as EnterScope<S2, A, E, S>)
+                        enterHandler.invoke(this as EnterScope<S2, A, E, S>)
                     },
                 ),
             )
@@ -193,10 +244,10 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         for (actionHandler in config.actionHandlers) {
             actionStateHandlers.add(
                 ActionStateHandler(
-                    predicate = { state, action ->
-                        state is S2 && actionHandler.isTypeOf(action)
+                    predicate = { state, action -> state is S2 && actionHandler.predicate(action) },
+                    handler = {
+                        actionHandler.invoke(this)
                     },
-                    handler = actionHandler.handler,
                 ),
             )
         }
@@ -207,7 +258,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        exitHandler(this as ExitScope<S2, E>)
+                        exitHandler.invoke(this as ExitScope<S2, E>)
                     },
                 ),
             )
@@ -219,7 +270,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        errorHandler(this as ErrorScope<S2, E, S>)
+                        errorHandler.invoke(this as ErrorScope<S2, E, S>)
                     },
                 ),
             )

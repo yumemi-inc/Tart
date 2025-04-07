@@ -1,5 +1,6 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -227,8 +228,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(block: suspend EnterScope.LaunchScope<A, E>.() -> Unit) {
-                    stateScope.launch {
+                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<A, E>.() -> Unit) {
+                    stateScope.launch(coroutineDispatcher) {
                         try {
                             val launchScope = object : EnterScope.LaunchScope<A, E> {
                                 override fun dispatch(action: A) {
@@ -236,7 +237,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                         this@StoreImpl.dispatch(action)
                                     }
                                 }
-                                
+
                                 override suspend fun event(event: E) {
                                     if (stateScope.isActive) {
                                         emit(event)
