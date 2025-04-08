@@ -54,6 +54,14 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
     @TartStoreDsl
     interface LaunchScope<A : Action, E : Event> : StoreScope {
         /**
+         * Checks if the coroutine scope is still active.
+         * Use this to verify if the state is still active before performing operations.
+         *
+         * @return True if the scope is still active, false otherwise
+         */
+        val isActive: Boolean
+
+        /**
          * Dispatches an action to the store.
          * @param action The action to dispatch
          */
