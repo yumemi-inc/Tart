@@ -372,7 +372,7 @@ private fun createTodoStore(
 
         // Global error handling
         state<TodoState> {
-            error {
+            error<Exception> {
                 state(TodoState.Error(error.message ?: "Unknown error"))
             }
         }
