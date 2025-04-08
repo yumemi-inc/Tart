@@ -58,7 +58,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onExit: suspend ExitScope<S, E>.() -> Unit
 
-    protected abstract val onError: suspend ErrorScope<S, E, S>.() -> Unit
+    protected abstract val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -301,7 +301,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         processMiddleware { beforeError(state, throwable) }
         var newState: S? = null
         onError.invoke(
-            object : ErrorScope<S, E, S> {
+            object : ErrorScope<S, E, S, Throwable> {
                 override val state = state
                 override val error = throwable
                 override suspend fun event(event: E) {

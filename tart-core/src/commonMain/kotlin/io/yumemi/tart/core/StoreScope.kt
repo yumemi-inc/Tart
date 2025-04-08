@@ -14,11 +14,11 @@ sealed interface StoreScope
  * Used in enter handlers to manage state transitions and side effects.
  */
 @TartStoreDsl
-interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
+interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
      * The current state that's being entered
      */
-    val state: S
+    val state: S2
 
     /**
      * Emits an event from the enter handler.
@@ -44,7 +44,7 @@ interface EnterScope<S : State, A : Action, E : Event, S0 : State> : StoreScope 
      *
      * @param state The new state value to update to
      */
-    fun state(state: S0)
+    fun state(state: S)
 
     /**
      * Scope available inside launch blocks.
@@ -102,11 +102,11 @@ interface ExitScope<S : State, E : Event> : StoreScope {
  * Used in action handlers to update state based on an action.
  */
 @TartStoreDsl
-interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope {
+interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
      * The current state when the action is being processed
      */
-    val state: S
+    val state: S2
 
     /**
      * The action being processed
@@ -127,7 +127,7 @@ interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope
      *
      * @param state The new state value to update to
      */
-    fun state(state: S0)
+    fun state(state: S)
 }
 
 /**
@@ -135,16 +135,16 @@ interface ActionScope<S : State, A : Action, E : Event, S0 : State> : StoreScope
  * Used in error handlers to recover from errors or update state accordingly.
  */
 @TartStoreDsl
-interface ErrorScope<S : State, E : Event, S0 : State> : StoreScope {
+interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     /**
      * The current state when the error occurred
      */
-    val state: S
+    val state: S2
 
     /**
      * The error that occurred
      */
-    val error: Throwable
+    val error: T
 
     /**
      * Emits an event from the error handler.
@@ -160,5 +160,5 @@ interface ErrorScope<S : State, E : Event, S0 : State> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S0)
+    fun state(state: S)
 }

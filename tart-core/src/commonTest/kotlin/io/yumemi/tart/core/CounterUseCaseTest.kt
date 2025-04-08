@@ -232,7 +232,7 @@ private fun createCounterStore(
             action<CounterAction.ForceError> {
                 throw RuntimeException(action.message)
             }
-            error {
+            error<Exception> {
                 event(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
                 state(CounterState.Error(error.message ?: "Unknown error"))
             }

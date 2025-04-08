@@ -253,7 +253,7 @@ If you prepare a *State* for error display and handle the error in the `enter{}`
 ```kt
 sealed interface CounterState : State {
     // ...
-    data class Error(val error: Throwable) : CounterState
+    data class Error(val error: Exception) : CounterState
 }
 ```
 
@@ -288,7 +288,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
             state(CounterState.Main(count = count))
         }
 
-        error {
+        error<Exception> { // specify the type of error you want to catch
             // you can also branch using the error type if necessary
             state(CounterState.Error(error = error))
         }
