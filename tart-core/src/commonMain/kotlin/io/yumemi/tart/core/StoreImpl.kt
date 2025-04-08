@@ -232,6 +232,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     stateScope.launch(coroutineDispatcher) {
                         try {
                             val launchScope = object : EnterScope.LaunchScope<A, E> {
+                                override val isActive: Boolean get() = stateScope.isActive
                                 override fun dispatch(action: A) {
                                     if (stateScope.isActive) {
                                         this@StoreImpl.dispatch(action)
