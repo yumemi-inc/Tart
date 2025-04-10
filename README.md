@@ -60,6 +60,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 Define how the *State* is changed by *Action* by using the `state{}` and `action{}` blocks.
 Specify the resulting *State* using the `newState()` specification.
 If no `newState()` is specified, the current state remains unchanged.
+For complex state updates with conditional logic, you can use `newStateBy{}` with a block that computes and returns the new state.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
