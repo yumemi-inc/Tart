@@ -208,6 +208,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override fun newState(state: S) {
                     newState = state
                 }
+                
+                override fun newStateBy(block: () -> S) {
+                    newState = block()
+                }
             },
         )
         val nextState = newState ?: state
@@ -261,6 +265,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override fun newState(state: S) {
                     newState = state
                 }
+                
+                override fun newStateBy(block: () -> S) {
+                    newState = block()
+                }
             },
         )
         val nextState = newState ?: state
@@ -310,6 +318,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
                 override fun newState(state: S) {
                     newState = state
+                }
+                
+                override fun newStateBy(block: () -> S) {
+                    newState = block()
                 }
             },
         )

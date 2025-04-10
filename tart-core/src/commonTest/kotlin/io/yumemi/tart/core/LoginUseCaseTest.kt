@@ -140,11 +140,17 @@ private fun createLoginStore(
         // Processing for Initial state
         state<LoginState.Initial> {
             action<LoginAction.Login> {
-                // Validation check
-                if (action.username.isNotBlank() && action.password.isNotBlank()) {
-                    newState(LoginState.Loading(action.username, action.password))
-                } else {
-                    newState(LoginState.Error("Username and password must not be empty"))
+                // Validate input values
+                val isValidInput = action.username.isNotBlank() && action.password.isNotBlank()
+
+                newStateBy {
+                    if (isValidInput) {
+                        // For valid input, transition to loading state
+                        LoginState.Loading(action.username, action.password)
+                    } else {
+                        // For invalid input, transition to error state
+                        LoginState.Error("Username and password must not be empty")
+                    }
                 }
             }
         }
@@ -152,12 +158,22 @@ private fun createLoginStore(
         state<LoginState.Loading> {
             enter {
                 // Execute login process in repository
-                val success = repository.login(state.username, state.password)
-                if (success) {
+                val loginSuccessful = repository.login(state.username, state.password)
+
+                if (loginSuccessful) {
+                    // Process for successful login
                     event(LoginEvent.NavigateToHome(state.username))
-                    newState(LoginState.Success(state.username))
+
+                    newStateBy {
+                        // Transition to success state
+                        LoginState.Success(state.username)
+                    }
                 } else {
-                    newState(LoginState.Error("Authentication failed"))
+                    // Process for failed login
+                    newStateBy {
+                        // Transition to error state
+                        LoginState.Error("Authentication failed")
+                    }
                 }
             }
         }
