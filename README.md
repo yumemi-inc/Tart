@@ -58,7 +58,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 ```
 
 Define how the *State* is changed by *Action* by using the `state{}` and `action{}` blocks.
-Specify the resulting *State* using the `state()` specification.
+Specify the resulting *State* using the `newState()` specification.
+If no `newState()` is specified, the current state remains unchanged.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
@@ -66,12 +67,12 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState
     state<CounterState> {
 
         action<CounterAction.Increment> {
-            state(state.copy(count = state.count + 1))
+            newState(state.copy(count = state.count + 1))
         }
         
         action<CounterAction.Decrement> {
             if (0 < state.count) {
-                state(state.copy(count = state.count - 1))
+                newState(state.copy(count = state.count - 1))
             } else {
                 // do not change State
             }
@@ -112,7 +113,7 @@ In a `action{}` block, specify that Event using the `event()` specification.
 ```kt
 action<CounterAction.Decrement> {
     if (0 < state.count) {
-        state(state.copy(count = state.count - 1))
+        newState(state.copy(count = state.count - 1))
     } else {
         event(CounterEvent.ShowToast("Can not Decrement.")) // issue event
     }
@@ -135,13 +136,13 @@ class CounterStoreContainer( // instantiate with DI library etc.
 
             action<CounterAction.Load> {
                 val count = counterRepository.get() // load
-                state(state.copy(count = count))
+                newState(state.copy(count = count))
             }
 
             action<CounterAction.Increment> {
                 val count = state.count + 1
                 counterRepository.set(count) // save
-                state(state.copy(count = count))
+                newState(state.copy(count = count))
             }
 
             // ...
@@ -176,7 +177,7 @@ class CounterStoreContainer(
         state<CounterState> {
 
             action<CounterAction.Load> {
-                state(state.copy(count = loadCount())) // call the function
+                newState(state.copy(count = loadCount())) // call the function
             }
 
             // ...
@@ -206,7 +207,7 @@ class CounterStoreContainer(
         state<CounterState.Loading> { // for Loading state
             action<CounterAction.Load> {
                 val count = counterRepository.get()
-                state(CounterState.Main(count = count)) // transition to Main state
+                newState(CounterState.Main(count = count)) // transition to Main state
             }
         }
 
@@ -227,7 +228,7 @@ class CounterStoreContainer(
         state<CounterState.Loading> {
             enter {
                 val count = counterRepository.get()
-                state(CounterState.Main(count = count)) // transition to Main state
+                newState(CounterState.Main(count = count)) // transition to Main state
             }
         }
 
@@ -265,9 +266,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             try {
                 val count = counterRepository.get()
-                state(CounterState.Main(count = count))
+                newState(CounterState.Main(count = count))
             } catch (t: Throwable) {
-                state(CounterState.Error(error = t))
+                newState(CounterState.Error(error = t))
             }
         }
     }
@@ -285,12 +286,20 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             // no error handling code
             val count = counterRepository.get()
-            state(CounterState.Main(count = count))
+            newState(CounterState.Main(count = count))
         }
 
-        error<Exception> { // specify the type of error you want to catch
-            // you can also branch using the error type if necessary
-            state(CounterState.Error(error = error))
+        // more specific exceptions should be placed first
+        error<IllegalStateException> {
+            // ...
+            newState(CounterState.Error(error = error))
+        }
+        
+        // more general exception handlers should come last
+        // you can also catch just 'Exception' and branch based on the type of the error property inside the block
+        error<Exception> { // catches any remaining exceptions
+            // ...
+            newState(CounterState.Error(error = error))
         }
     }
 }
@@ -329,7 +338,7 @@ state<MyState.Active> {
 
     // handle actions dispatched from the flow collection
     action<MyAction.UpdateData> {
-        state(state.copy(data = action.data))
+        newState(state.copy(data = action.data))
     }
 }
 ```

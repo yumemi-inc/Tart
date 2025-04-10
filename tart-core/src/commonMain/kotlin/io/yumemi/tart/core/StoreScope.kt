@@ -44,7 +44,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
 
     /**
      * Scope available inside launch blocks.
@@ -127,7 +127,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
 }
 
 /**
@@ -160,5 +160,5 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
 }

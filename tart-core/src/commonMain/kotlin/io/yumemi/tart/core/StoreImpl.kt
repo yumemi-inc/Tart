@@ -205,7 +205,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun state(state: S) {
+                override fun newState(state: S) {
                     newState = state
                 }
             },
@@ -258,7 +258,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     }
                 }
 
-                override fun state(state: S) {
+                override fun newState(state: S) {
                     newState = state
                 }
             },
@@ -308,7 +308,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun state(state: S) {
+                override fun newState(state: S) {
                     newState = state
                 }
             },

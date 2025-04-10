@@ -45,7 +45,7 @@ private fun createTestStore(
         stateSaver(stateSaver)
         state<SaverState> {
             action<SaverAction.Update> {
-                state(state.copy(value = action.value))
+                newState(state.copy(value = action.value))
             }
         }
     }

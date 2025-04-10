@@ -55,10 +55,10 @@ private fun createTestStore(
         middleware(middleware)
         state<CounterState> {
             action<CounterAction.Increment> {
-                state(state.copy(count = state.count + 1))
+                newState(state.copy(count = state.count + 1))
             }
             action<CounterAction.Decrement> {
-                state(state.copy(count = state.count - 1))
+                newState(state.copy(count = state.count - 1))
             }
         }
     }
