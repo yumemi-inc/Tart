@@ -44,7 +44,15 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
+    
+    /**
+     * Updates the current state with a new state value computed from the given block.
+     * Used within enter handlers to modify the state with computed values.
+     *
+     * @param block A function that computes and returns the new state
+     */
+    fun newStateBy(block: () -> S)
 
     /**
      * Scope available inside launch blocks.
@@ -127,7 +135,15 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
+    
+    /**
+     * Updates the current state with a new state value computed from the given block.
+     * Used within action handlers to modify the state with computed values.
+     *
+     * @param block A function that computes and returns the new state
+     */
+    fun newStateBy(block: () -> S)
 }
 
 /**
@@ -160,5 +176,13 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun state(state: S)
+    fun newState(state: S)
+    
+    /**
+     * Updates the current state with a new state value computed from the given block.
+     * Used within error handlers to modify the state with computed values.
+     *
+     * @param block A function that computes and returns the new state
+     */
+    fun newStateBy(block: () -> S)
 }

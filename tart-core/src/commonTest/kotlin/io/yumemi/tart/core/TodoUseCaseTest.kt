@@ -291,7 +291,7 @@ private fun createTodoStore(
         // Idle state handling
         state<TodoState.Idle> {
             action<TodoAction.LoadTodos> {
-                state(TodoState.Loading)
+                newState(TodoState.Loading)
             }
         }
 
@@ -299,7 +299,7 @@ private fun createTodoStore(
         state<TodoState.Loading> {
             enter {
                 val todos = repository.loadTodos()
-                state(TodoState.Loaded(todos))
+                newState(TodoState.Loaded(todos))
             }
         }
 
@@ -312,68 +312,74 @@ private fun createTodoStore(
                     completed = false,
                 )
                 val savedTodo = repository.addTodo(newTodo)
-                state(state.copy(todos = state.todos + savedTodo))
+                newState(state.copy(todos = state.todos + savedTodo))
             }
 
             action<TodoAction.ToggleCompletion> {
                 val todoToUpdate = state.todos.first { it.id == action.todoId }
                 val updatedTodo = todoToUpdate.copy(completed = !todoToUpdate.completed)
                 val savedTodo = repository.updateTodo(updatedTodo)
-                state(
-                    state.copy(
-                        todos = state.todos.map {
-                            if (it.id == action.todoId) savedTodo else it
-                        },
-                    ),
-                )
+                
+                newStateBy {
+                    // Create updated todo list
+                    val updatedTodoList = state.todos.map {
+                        if (it.id == action.todoId) savedTodo else it
+                    }
+                    
+                    state.copy(todos = updatedTodoList)
+                }
             }
 
             action<TodoAction.DeleteTodo> {
                 val success = repository.deleteTodo(action.todoId)
                 if (success) {
-                    state(state.copy(todos = state.todos.filter { it.id != action.todoId }))
+                    newState(state.copy(todos = state.todos.filter { it.id != action.todoId }))
                 }
             }
 
             action<TodoAction.StartEditing> {
                 val todoToEdit = state.todos.first { it.id == action.todoId }
-                state(TodoState.Editing(todoToEdit, state.todos))
+                newState(TodoState.Editing(todoToEdit, state.todos))
             }
         }
 
         // Editing state handling
         state<TodoState.Editing> {
             action<TodoAction.UpdateEditingTitle> {
-                state(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
+                newState(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
             }
 
             action<TodoAction.SaveEdit> {
-                val updatedTodo = repository.updateTodo(state.editingTodo)
-                state(
-                    TodoState.Loaded(
-                        state.allTodos.map {
-                            if (it.id == updatedTodo.id) updatedTodo else it
-                        },
-                    ),
-                )
+                // Save edited content to repository
+                val savedTodo = repository.updateTodo(state.editingTodo)
+                
+                newStateBy {
+                    // Create updated todo list with the edited task
+                    val updatedTodoList = state.allTodos.map {
+                        if (it.id == savedTodo.id) savedTodo else it
+                    }
+                    
+                    // Transition from editing state to loaded state
+                    TodoState.Loaded(updatedTodoList)
+                }
             }
 
             action<TodoAction.CancelEdit> {
-                state(TodoState.Loaded(state.allTodos))
+                newState(TodoState.Loaded(state.allTodos))
             }
         }
 
         // Error state handling
         state<TodoState.Error> {
             action<TodoAction.RetryFromError> {
-                state(TodoState.Idle)
+                newState(TodoState.Idle)
             }
         }
 
         // Global error handling
         state<TodoState> {
             error<Exception> {
-                state(TodoState.Error(error.message ?: "Unknown error"))
+                newState(TodoState.Error(error.message ?: "Unknown error"))
             }
         }
     }
