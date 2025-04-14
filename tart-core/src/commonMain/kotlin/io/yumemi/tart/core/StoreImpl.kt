@@ -205,11 +205,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun newState(state: S) {
+                override fun nextState(state: S) {
                     newState = state
                 }
                 
-                override fun newStateBy(block: () -> S) {
+                override fun nextStateBy(block: () -> S) {
                     newState = block()
                 }
             },
@@ -262,11 +262,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     }
                 }
 
-                override fun newState(state: S) {
+                override fun nextState(state: S) {
                     newState = state
                 }
                 
-                override fun newStateBy(block: () -> S) {
+                override fun nextStateBy(block: () -> S) {
                     newState = block()
                 }
             },
@@ -316,11 +316,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun newState(state: S) {
+                override fun nextState(state: S) {
                     newState = state
                 }
                 
-                override fun newStateBy(block: () -> S) {
+                override fun nextStateBy(block: () -> S) {
                     newState = block()
                 }
             },

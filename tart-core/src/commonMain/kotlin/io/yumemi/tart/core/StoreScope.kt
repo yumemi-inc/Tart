@@ -44,7 +44,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun newState(state: S)
+    fun nextState(state: S)
     
     /**
      * Updates the current state with a new state value computed from the given block.
@@ -52,7 +52,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param block A function that computes and returns the new state
      */
-    fun newStateBy(block: () -> S)
+    fun nextStateBy(block: () -> S)
 
     /**
      * Scope available inside launch blocks.
@@ -135,7 +135,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun newState(state: S)
+    fun nextState(state: S)
     
     /**
      * Updates the current state with a new state value computed from the given block.
@@ -143,7 +143,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param block A function that computes and returns the new state
      */
-    fun newStateBy(block: () -> S)
+    fun nextStateBy(block: () -> S)
 }
 
 /**
@@ -176,7 +176,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      *
      * @param state The new state value to update to
      */
-    fun newState(state: S)
+    fun nextState(state: S)
     
     /**
      * Updates the current state with a new state value computed from the given block.
@@ -184,5 +184,5 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      *
      * @param block A function that computes and returns the new state
      */
-    fun newStateBy(block: () -> S)
+    fun nextStateBy(block: () -> S)
 }

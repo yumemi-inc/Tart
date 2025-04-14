@@ -143,7 +143,7 @@ private fun createLoginStore(
                 // Validate input values
                 val isValidInput = action.username.isNotBlank() && action.password.isNotBlank()
 
-                newStateBy {
+                nextStateBy {
                     if (isValidInput) {
                         // For valid input, transition to loading state
                         LoginState.Loading(action.username, action.password)
@@ -164,13 +164,13 @@ private fun createLoginStore(
                     // Process for successful login
                     event(LoginEvent.NavigateToHome(state.username))
 
-                    newStateBy {
+                    nextStateBy {
                         // Transition to success state
                         LoginState.Success(state.username)
                     }
                 } else {
                     // Process for failed login
-                    newStateBy {
+                    nextStateBy {
                         // Transition to error state
                         LoginState.Error("Authentication failed")
                     }
@@ -180,13 +180,13 @@ private fun createLoginStore(
         // Processing for Error state
         state<LoginState.Error> {
             action<LoginAction.RetryFromError> {
-                newState(LoginState.Initial)
+                nextState(LoginState.Initial)
             }
         }
         // Error handling for all states
         state<LoginState> {
             error<Exception> {
-                newState(LoginState.Error(error.message ?: "Unknown error"))
+                nextState(LoginState.Error(error.message ?: "Unknown error"))
             }
         }
     }

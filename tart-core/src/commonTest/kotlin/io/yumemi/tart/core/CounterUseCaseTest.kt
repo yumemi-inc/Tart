@@ -181,7 +181,7 @@ private fun createCounterStore(
         // Initial state handling
         state<CounterState.Initial> {
             action<CounterAction.Start> {
-                newState(CounterState.Active(0))
+                nextState(CounterState.Active(0))
             }
         }
 
@@ -201,29 +201,29 @@ private fun createCounterStore(
                     event(CounterEvent.ThresholdReached(10))
                 }
 
-                newState(state.copy(count = newCount))
+                nextState(state.copy(count = newCount))
             }
 
             action<CounterAction.Decrement> {
                 val newCount = state.count - 1
                 event(CounterEvent.CountChanged(newCount))
-                newState(state.copy(count = newCount))
+                nextState(state.copy(count = newCount))
             }
 
             action<CounterAction.Reset> {
                 event(CounterEvent.CountChanged(0))
-                newState(state.copy(count = 0))
+                nextState(state.copy(count = 0))
             }
 
             action<CounterAction.Pause> {
-                newState(CounterState.Paused(state.count))
+                nextState(CounterState.Paused(state.count))
             }
         }
 
         // Paused state handling
         state<CounterState.Paused> {
             action<CounterAction.Resume> {
-                newState(CounterState.Active(state.count))
+                nextState(CounterState.Active(state.count))
             }
         }
 
@@ -234,7 +234,7 @@ private fun createCounterStore(
             }
             error<Exception> {
                 event(CounterEvent.ErrorOccurred(error.message ?: "Unknown error"))
-                newState(CounterState.Error(error.message ?: "Unknown error"))
+                nextState(CounterState.Error(error.message ?: "Unknown error"))
             }
         }
     }
