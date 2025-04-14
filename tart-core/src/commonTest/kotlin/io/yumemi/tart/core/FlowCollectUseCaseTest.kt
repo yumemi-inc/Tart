@@ -125,7 +125,7 @@ private fun createFlowCollectStore(
         // Initial state handling
         state<FlowState.Initial> {
             action<FlowAction.StartCollecting> {
-                newState(FlowState.Active(0)) // Start with a default value before flow collection
+                nextState(FlowState.Active(0)) // Start with a default value before flow collection
             }
         }
 
@@ -143,11 +143,11 @@ private fun createFlowCollectStore(
 
             action<FlowAction.UpdateValue> {
                 // Update state with the latest value from flow
-                newState(state.copy(value = action.value))
+                nextState(state.copy(value = action.value))
             }
 
             action<FlowAction.Complete> {
-                newState(FlowState.Completed)
+                nextState(FlowState.Completed)
             }
         }
 

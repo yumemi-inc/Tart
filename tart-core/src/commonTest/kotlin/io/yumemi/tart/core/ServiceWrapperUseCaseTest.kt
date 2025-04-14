@@ -127,7 +127,7 @@ private fun createTestStore(
 
         state<CounterServiceState.Idle> {
             action<CounterServiceAction.Start> {
-                newState(CounterServiceState.Running(count = 0))
+                nextState(CounterServiceState.Running(count = 0))
             }
         }
 
@@ -141,11 +141,11 @@ private fun createTestStore(
             }
 
             action<CounterServiceAction.UpdateCount> {
-                newState(CounterServiceState.Running(count = action.count))
+                nextState(CounterServiceState.Running(count = action.count))
             }
 
             action<CounterServiceAction.Stop> {
-                newState(CounterServiceState.Idle)
+                nextState(CounterServiceState.Idle)
             }
         }
     }

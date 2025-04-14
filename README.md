@@ -58,9 +58,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 ```
 
 Define how the *State* is changed by *Action* by using the `state{}` and `action{}` blocks.
-Specify the resulting *State* using the `newState()` specification.
-If no `newState()` is specified, the current state remains unchanged.
-For complex state updates with conditional logic, you can use `newStateBy{}` with a block that computes and returns the new state.
+Specify the resulting *State* using the `nextState()` specification.
+If no `nextState()` is specified, the current state remains unchanged.
+For complex state updates with conditional logic, you can use `nextStateBy{}` with a block that computes and returns the new state.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
@@ -68,12 +68,12 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState
     state<CounterState> {
 
         action<CounterAction.Increment> {
-            newState(state.copy(count = state.count + 1))
+            nextState(state.copy(count = state.count + 1))
         }
         
         action<CounterAction.Decrement> {
             if (0 < state.count) {
-                newState(state.copy(count = state.count - 1))
+                nextState(state.copy(count = state.count - 1))
             } else {
                 // do not change State
             }
@@ -267,9 +267,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             try {
                 val count = counterRepository.get()
-                newState(CounterState.Main(count = count))
+                nextState(CounterState.Main(count = count))
             } catch (t: Throwable) {
-                newState(CounterState.Error(error = t))
+                nextState(CounterState.Error(error = t))
             }
         }
     }
@@ -287,20 +287,20 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             // no error handling code
             val count = counterRepository.get()
-            newState(CounterState.Main(count = count))
+            nextState(CounterState.Main(count = count))
         }
 
         // more specific exceptions should be placed first
         error<IllegalStateException> {
             // ...
-            newState(CounterState.Error(error = error))
+            nextState(CounterState.Error(error = error))
         }
         
         // more general exception handlers should come last
         // you can also catch just 'Exception' and branch based on the type of the error property inside the block
         error<Exception> { // catches any remaining exceptions
             // ...
-            newState(CounterState.Error(error = error))
+            nextState(CounterState.Error(error = error))
         }
     }
 }

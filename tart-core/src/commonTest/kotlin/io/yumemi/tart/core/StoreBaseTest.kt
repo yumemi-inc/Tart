@@ -62,15 +62,15 @@ private fun createTestStore(
         coroutineContext(Dispatchers.Unconfined)
         state<BaseState.Loading> {
             enter {
-                newState(BaseState.Main(count = 0))
+                nextState(BaseState.Main(count = 0))
             }
         }
         state<BaseState.Main> {
             action<BaseAction.Increment> {
-                newState(state.copy(count = state.count + 1))
+                nextState(state.copy(count = state.count + 1))
             }
             action<BaseAction.Decrement> {
-                newState(state.copy(count = state.count - 1))
+                nextState(state.copy(count = state.count - 1))
             }
             action<BaseAction.EmitEvent> {
                 event(BaseEvent.CountUpdated(state.count))
