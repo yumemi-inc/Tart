@@ -128,7 +128,7 @@ Subscribe to the Store's `.event` (Flow) property on the UI, and process it.
 Keep Repository, UseCase, etc. accessible from your store creation scope and use them in the `action{}` block.
 
 ```kt
-class CounterStoreContainer( // instantiate with DI library etc.
+class CounterStoreBuilder( // instantiate with DI library etc.
     private val counterRepository: CounterRepository,
 ) {
     fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
@@ -165,7 +165,7 @@ fun createCounterStore(
 Processing other than changing the *State* may be defined as functions, as they tend to become complex and lengthy.
 
 ```kt
-class CounterStoreContainer(
+class CounterStoreBuilder(
     private val counterRepository: CounterRepository,
 ) {
     fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
@@ -200,7 +200,7 @@ sealed interface CounterState : State {
 ```
 
 ```kt
-class CounterStoreContainer(
+class CounterStoreBuilder(
     private val counterRepository: CounterRepository,
 ) {
     fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
@@ -221,7 +221,7 @@ In this example, the `CounterAction.Load` action needs to be issued from the UI 
 Otherwise, if you want to do something at the start of the *State*, use the `enter{}` block (similarly, you can use the `exit{}` block if necessary).
 
 ```kt
-class CounterStoreContainer(
+class CounterStoreBuilder(
     private val counterRepository: CounterRepository,
 ) {
     fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
@@ -445,10 +445,10 @@ class CounterStoreContainer(
 ```kt
 @HiltViewModel
 class CounterViewModel @Inject constructor(
-    counterStoreContainer: CounterStoreContainer,
+    counterStoreBuilder: CounterStoreBuilder,
 ) : ViewModel() {
 
-    val store = counterStoreContainer.build()
+    val store = counterStoreBuilder.build()
 
     override fun onCleared() {
         store.dispose()
@@ -483,7 +483,7 @@ class CounterActivity : ComponentActivity() {
 You can create a `ViewStore` instance without using ViewModel as shown below:
 
 ```kt
-class CounterStoreContainer(
+class CounterStoreBuilder(
     private val counterRepository: CounterRepository,
 ) {
     fun build(stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -499,14 +499,14 @@ class CounterStoreContainer(
 class CounterActivity : ComponentActivity() {
 
     @Inject
-    lateinit var counterStoreContainer: CounterStoreContainer
+    lateinit var counterStoreBuilder: CounterStoreBuilder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             val viewStore = rememberViewStore(
-                counterStoreContainer.build(
+                counterStoreBuilder.build(
                     stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
                 )
             )
