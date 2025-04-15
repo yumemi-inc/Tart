@@ -100,7 +100,6 @@ private sealed interface StateScopeState : State {
 private sealed interface StateScopeAction : Action {
     data object Start : StateScopeAction
     data object Stop : StateScopeAction
-    data class Update(val newValue: Int) : StateScopeAction
 }
 
 // Event definitions
@@ -127,17 +126,13 @@ private fun createBasicStore(): Store<StateScopeState, StateScopeAction, StateSc
             enter {
                 // Launch background task with launch function
                 launch {
-                    // Update state via action
-                    dispatch(StateScopeAction.Update(5))
+                    transaction {
+                        nextState(state.copy(value = 5))
+                    }
 
                     // Emit event
                     event(StateScopeEvent.ValueChanged(5))
                 }
-            }
-
-            // Update action handling
-            action<StateScopeAction.Update> {
-                nextState(StateScopeState.Running(action.newValue))
             }
 
             // Stop action transitions to Final

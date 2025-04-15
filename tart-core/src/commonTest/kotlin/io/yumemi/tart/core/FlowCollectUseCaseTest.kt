@@ -108,7 +108,6 @@ private sealed interface FlowState : State {
 // Action definitions
 private sealed interface FlowAction : Action {
     data object StartCollecting : FlowAction
-    data class UpdateValue(val value: Int) : FlowAction
     data object Complete : FlowAction
 }
 
@@ -135,15 +134,11 @@ private fun createFlowCollectStore(
                 // Use launch to collect the flow
                 launch {
                     dataFlow.collect { value ->
-                        // Dispatch action to update state with the new value
-                        dispatch(FlowAction.UpdateValue(value))
+                        transaction {
+                            nextStateBy { state.copy(value = value) }
+                        }
                     }
                 }
-            }
-
-            action<FlowAction.UpdateValue> {
-                // Update state with the latest value from flow
-                nextState(state.copy(value = action.value))
             }
 
             action<FlowAction.Complete> {
