@@ -21,6 +21,22 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     val state: S2
 
     /**
+     * Updates the current state with a new state value.
+     * Used within enter handlers to modify the state.
+     *
+     * @param state The new state value to update to
+     */
+    fun nextState(state: S)
+
+    /**
+     * Updates the current state with a new state value computed from the given block.
+     * Used within enter handlers to modify the state with computed values.
+     *
+     * @param block A function that computes and returns the new state
+     */
+    fun nextStateBy(block: () -> S)
+
+    /**
      * Emits an event from the enter handler.
      * Use this to communicate with the outside world about important occurrences.
      *
@@ -31,36 +47,18 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
      * Launches a coroutine within the context of this state.
      * The coroutine will be automatically cancelled when the state is exited.
-     * Within the block, you can use dispatch() method to send actions to the store.
      *
      * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param block The suspending block of code to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<A, E>.() -> Unit)
+    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, E, S2>.() -> Unit)
 
     /**
-     * Updates the current state with a new state value.
-     * Used within enter handlers to modify the state.
-     *
-     * @param state The new state value to update to
+     * Scope available within a launched coroutine.
+     * Used for long-running operations or side effects within a state.
      */
-    fun nextState(state: S)
-    
-    /**
-     * Updates the current state with a new state value computed from the given block.
-     * Used within enter handlers to modify the state with computed values.
-     *
-     * @param block A function that computes and returns the new state
-     */
-    fun nextStateBy(block: () -> S)
-
-    /**
-     * Scope available inside launch blocks.
-     * Provides the ability to dispatch actions within a coroutine.
-     */
-
     @TartStoreDsl
-    interface LaunchScope<A : Action, E : Event> : StoreScope {
+    interface LaunchScope<S : State, E : Event, S2 : S> : StoreScope {
         /**
          * Checks if the coroutine scope is still active.
          * Use this to verify if the state is still active before performing operations.
@@ -70,18 +68,57 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         val isActive: Boolean
 
         /**
-         * Dispatches an action to the store.
-         * @param action The action to dispatch
-         */
-        fun dispatch(action: A)
-
-        /**
-         * Emits an event from the launch block.
+         * Emits an event from the launched coroutine.
          * Use this to communicate with the outside world about important occurrences.
          *
          * @param event The event to emit
          */
         suspend fun event(event: E)
+
+        /**
+         * Executes a transactional operation within the launch scope.
+         * This allows state updates to be performed in an atomic, consistent manner.
+         *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param block The suspending block of code to execute as a transaction
+         */
+        fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
+
+        /**
+         * Scope available within a transaction operation.
+         * Used for atomic state updates with consistency guarantees.
+         */
+        @TartStoreDsl
+        interface TransactionScope<S : State, E : Event, S2 : S> : StoreScope {
+            /**
+             * The current state when the transaction is being executed
+             */
+            val state: S2
+
+            /**
+             * Updates the current state with a new state value.
+             * Used within transaction blocks to modify the state.
+             *
+             * @param state The new state value to update to
+             */
+            fun nextState(state: S)
+
+            /**
+             * Updates the current state with a new state value computed from the given block.
+             * Used within transaction blocks to modify the state with computed values.
+             *
+             * @param block A function that computes and returns the new state
+             */
+            fun nextStateBy(block: () -> S)
+
+            /**
+             * Emits an event from the transaction.
+             * Use this to communicate with the outside world about important occurrences.
+             *
+             * @param event The event to emit
+             */
+            suspend fun event(event: E)
+        }
     }
 }
 
@@ -122,21 +159,13 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     val action: A
 
     /**
-     * Emits an event from the action handler.
-     * Use this to communicate with the outside world about important occurrences.
-     *
-     * @param event The event to emit
-     */
-    suspend fun event(event: E)
-
-    /**
      * Updates the current state with a new state value.
      * Used within action handlers to modify the state.
      *
      * @param state The new state value to update to
      */
     fun nextState(state: S)
-    
+
     /**
      * Updates the current state with a new state value computed from the given block.
      * Used within action handlers to modify the state with computed values.
@@ -144,6 +173,14 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * @param block A function that computes and returns the new state
      */
     fun nextStateBy(block: () -> S)
+
+    /**
+     * Emits an event from the action handler.
+     * Use this to communicate with the outside world about important occurrences.
+     *
+     * @param event The event to emit
+     */
+    suspend fun event(event: E)
 }
 
 /**
@@ -163,21 +200,13 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     val error: T
 
     /**
-     * Emits an event from the error handler.
-     * Use this to communicate with the outside world about important occurrences.
-     *
-     * @param event The event to emit
-     */
-    suspend fun event(event: E)
-
-    /**
      * Updates the current state with a new state value.
      * Used within error handlers to modify the state.
      *
      * @param state The new state value to update to
      */
     fun nextState(state: S)
-    
+
     /**
      * Updates the current state with a new state value computed from the given block.
      * Used within error handlers to modify the state with computed values.
@@ -185,4 +214,12 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      * @param block A function that computes and returns the new state
      */
     fun nextStateBy(block: () -> S)
+
+    /**
+     * Emits an event from the error handler.
+     * Use this to communicate with the outside world about important occurrences.
+     *
+     * @param event The event to emit
+     */
+    suspend fun event(event: E)
 }
