@@ -145,6 +145,27 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
+    private suspend fun onStateChanged(state: S, nextState: S) {
+        try {
+            if (state::class != nextState::class) {
+                processStateExit(state)
+            }
+
+            if (state != nextState) {
+                processStateChange(state, nextState)
+            }
+
+            if (state::class != nextState::class) {
+                onStateEntered(nextState)
+            }
+        } catch (t: Throwable) {
+            if (t is InternalError) {
+                throw t
+            }
+            onErrorOccurred(currentState, t)
+        }
+    }
+
     private suspend fun onStateEntered(state: S, inErrorHandling: Boolean = false) {
         try {
             val nextState = processStateEnter(state)
@@ -201,16 +222,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ActionScope<S, A, E, S> {
                 override val state = state
                 override val action = action
-                override suspend fun event(event: E) {
-                    emit(event)
-                }
-
                 override fun nextState(state: S) {
                     newState = state
                 }
-                
+
                 override fun nextStateBy(block: () -> S) {
                     newState = block()
+                }
+
+                override suspend fun event(event: E) {
+                    emit(event)
                 }
             },
         )
@@ -228,30 +249,64 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         onEnter.invoke(
             object : EnterScope<S, A, E, S> {
                 override val state = state
+                override fun nextState(state: S) {
+                    newState = state
+                }
+
+                override fun nextStateBy(block: () -> S) {
+                    newState = block()
+                }
+
                 override suspend fun event(event: E) {
                     emit(event)
                 }
 
-                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<A, E>.() -> Unit) {
+                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
                     stateScope.launch(coroutineDispatcher) {
-                        try {
-                            val launchScope = object : EnterScope.LaunchScope<A, E> {
-                                override val isActive: Boolean get() = stateScope.isActive
-                                override fun dispatch(action: A) {
-                                    if (stateScope.isActive) {
-                                        this@StoreImpl.dispatch(action)
-                                    }
-                                }
+                        val launchScope = object : EnterScope.LaunchScope<S, E, S> {
+                            override val isActive: Boolean get() = stateScope.isActive
+                            override suspend fun event(event: E) {
+                                emit(event)
+                            }
 
-                                override suspend fun event(event: E) {
-                                    if (stateScope.isActive) {
-                                        emit(event)
+                            override fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+                                coroutineScope.launch(coroutineDispatcher) {
+                                    mutex.withLock {
+                                        if (stateScope.isActive) {
+                                            var newStateInBlock: S? = null
+                                            val transactionScope = object : EnterScope.LaunchScope.TransactionScope<S, E, S> {
+                                                override val state: S = currentState
+                                                override fun nextState(state: S) {
+                                                    newStateInBlock = state
+                                                }
+
+                                                override fun nextStateBy(block: () -> S) {
+                                                    newStateInBlock = block()
+                                                }
+
+                                                override suspend fun event(event: E) {
+                                                    emit(event)
+                                                }
+                                            }
+                                            try {
+                                                block(transactionScope)
+                                            } catch (t: Throwable) {
+                                                onErrorOccurred(currentState, t)
+                                                return@withLock
+                                            }
+                                            val nextState = newStateInBlock ?: currentState
+                                            if (nextState != currentState) {
+                                                onStateChanged(currentState, nextState)
+                                            }
+                                        }
                                     }
                                 }
                             }
+                        }
+                        try {
                             block(launchScope)
                         } catch (t: Throwable) {
-                            coroutineScope.launch {
+                            coroutineScope.launch(coroutineDispatcher) {
                                 mutex.withLock {
                                     if (stateScope.isActive) {
                                         onErrorOccurred(currentState, t)
@@ -260,14 +315,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             }
                         }
                     }
-                }
-
-                override fun nextState(state: S) {
-                    newState = state
-                }
-                
-                override fun nextStateBy(block: () -> S) {
-                    newState = block()
                 }
             },
         )
@@ -312,16 +359,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ErrorScope<S, E, S, Throwable> {
                 override val state = state
                 override val error = throwable
-                override suspend fun event(event: E) {
-                    emit(event)
-                }
-
                 override fun nextState(state: S) {
                     newState = state
                 }
-                
+
                 override fun nextStateBy(block: () -> S) {
                     newState = block()
+                }
+
+                override suspend fun event(event: E) {
+                    emit(event)
                 }
             },
         )

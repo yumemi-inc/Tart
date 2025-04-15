@@ -114,7 +114,6 @@ private sealed interface CounterServiceState : State {
 
 private sealed interface CounterServiceAction : Action {
     data object Start : CounterServiceAction
-    data class UpdateCount(val count: Int) : CounterServiceAction
     data object Stop : CounterServiceAction
 }
 
@@ -135,13 +134,11 @@ private fun createTestStore(
             enter {
                 launch {
                     myServiceMonitor.count.collect {
-                        dispatch(CounterServiceAction.UpdateCount(it))
+                        transaction {
+                            nextState(state.copy(count = it))
+                        }
                     }
                 }
-            }
-
-            action<CounterServiceAction.UpdateCount> {
-                nextState(CounterServiceState.Running(count = action.count))
             }
 
             action<CounterServiceAction.Stop> {

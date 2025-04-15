@@ -114,7 +114,7 @@ In a `action{}` block, specify that Event using the `event()` specification.
 ```kt
 action<CounterAction.Decrement> {
     if (0 < state.count) {
-        newState(state.copy(count = state.count - 1))
+        nextState(state.copy(count = state.count - 1))
     } else {
         event(CounterEvent.ShowToast("Can not Decrement.")) // issue event
     }
@@ -137,13 +137,13 @@ class CounterStoreBuilder( // instantiate with DI library etc.
 
             action<CounterAction.Load> {
                 val count = counterRepository.get() // load
-                newState(state.copy(count = count))
+                nextState(state.copy(count = count))
             }
 
             action<CounterAction.Increment> {
                 val count = state.count + 1
                 counterRepository.set(count) // save
-                newState(state.copy(count = count))
+                nextState(state.copy(count = count))
             }
 
             // ...
@@ -178,7 +178,7 @@ class CounterStoreBuilder(
         state<CounterState> {
 
             action<CounterAction.Load> {
-                newState(state.copy(count = loadCount())) // call the function
+                nextState(state.copy(count = loadCount())) // call the function
             }
 
             // ...
@@ -208,7 +208,7 @@ class CounterStoreBuilder(
         state<CounterState.Loading> { // for Loading state
             action<CounterAction.Load> {
                 val count = counterRepository.get()
-                newState(CounterState.Main(count = count)) // transition to Main state
+                nextState(CounterState.Main(count = count)) // transition to Main state
             }
         }
 
@@ -229,7 +229,7 @@ class CounterStoreBuilder(
         state<CounterState.Loading> {
             enter {
                 val count = counterRepository.get()
-                newState(CounterState.Main(count = count)) // transition to Main state
+                nextState(CounterState.Main(count = count)) // transition to Main state
             }
         }
 
@@ -331,15 +331,12 @@ state<MyState.Active> {
         launch {
             // collect from an external data source
             dataRepository.observeData().collect { newData ->
-                // dispatch actions to update state with the new data
-                dispatch(MyAction.UpdateData(newData))
+                // update state with the new data in a transaction
+                transaction {
+                    nextState(state.copy(data = newData))
+                }
             }
         }
-    }
-
-    // handle actions dispatched from the flow collection
-    action<MyAction.UpdateData> {
-        newState(state.copy(data = action.data))
     }
 }
 ```
