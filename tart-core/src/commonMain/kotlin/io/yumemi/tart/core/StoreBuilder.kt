@@ -69,30 +69,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         storeMiddlewares.addAll(middleware)
     }
 
-    class StateEnterHandler<S : State, A : Action, E : Event>(
-        val predicate: (S) -> Boolean,
-        val handler: suspend EnterScope<S, A, E, S>.() -> Unit,
+    class StateHandler<P, SS : StoreScope>(
+        val predicate: P,
+        val handler: suspend SS.() -> Unit,
     )
 
-    class StateActionHandler<S : State, A : Action, E : Event>(
-        val predicate: (S, A) -> Boolean,
-        val handler: suspend ActionScope<S, A, E, S>.() -> Unit,
-    )
-
-    class StateExitHandler<S : State, E : Event>(
-        val predicate: (S) -> Boolean,
-        val handler: suspend ExitScope<S, E>.() -> Unit,
-    )
-
-    class StateErrorHandler<S : State, E : Event>(
-        val predicate: (S, Throwable) -> Boolean,
-        val handler: suspend ErrorScope<S, E, S, Throwable>.() -> Unit,
-    )
-
-    val registeredEnterHandlers = mutableListOf<StateEnterHandler<S, A, E>>()
-    val registeredActionHandlers = mutableListOf<StateActionHandler<S, A, E>>()
-    val registeredExitHandlers = mutableListOf<StateExitHandler<S, E>>()
-    val registeredErrorHandlers = mutableListOf<StateErrorHandler<S, E>>()
+    val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, A, E, S>>>()
+    val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
+    val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E>>>()
+    val registeredErrorHandlers = mutableListOf<StateHandler<(S, Throwable) -> Boolean, ErrorScope<S, E, S, Throwable>>>()
 
     private val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredEnterHandlers.firstOrNull { it.predicate(state) }
@@ -241,7 +226,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         for (enterHandler in config.stateEnterHandlers) {
             registeredEnterHandlers.add(
-                StateEnterHandler(
+                StateHandler(
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
@@ -253,7 +238,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         for (actionHandler in config.stateActionHandlers) {
             registeredActionHandlers.add(
-                StateActionHandler(
+                StateHandler(
                     predicate = { state, action -> state is S2 && actionHandler.predicate(action) },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
@@ -265,7 +250,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         for (exitHandler in config.stateExitHandlers) {
             registeredExitHandlers.add(
-                StateExitHandler(
+                StateHandler(
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
@@ -277,7 +262,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         for (errorHandler in config.stateErrorHandlers) {
             registeredErrorHandlers.add(
-                StateErrorHandler(
+                StateHandler(
                     predicate = { state, throwable -> state is S2 && errorHandler.predicate(throwable) },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
