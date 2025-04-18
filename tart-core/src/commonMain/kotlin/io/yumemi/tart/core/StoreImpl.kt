@@ -56,7 +56,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onAction: suspend ActionScope<S, A, E, S>.() -> Unit
 
-    protected abstract val onExit: suspend ExitScope<S, E>.() -> Unit
+    protected abstract val onExit: suspend ExitScope<S, E, S>.() -> Unit
 
     protected abstract val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit
 
@@ -327,7 +327,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             processMiddleware { beforeStateExit(state) }
             onExit.invoke(
-                object : ExitScope<S, E> {
+                object : ExitScope<S, E, S> {
                     override val state = state
                     override suspend fun event(event: E) {
                         emit(event)
