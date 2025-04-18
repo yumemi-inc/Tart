@@ -69,14 +69,14 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         storeMiddlewares.addAll(middleware)
     }
 
-    class StateHandler<P, SS : StoreScope>(
+    class StateHandler<P, SC : StoreScope>(
         val predicate: P,
-        val handler: suspend SS.() -> Unit,
+        val handler: suspend SC.() -> Unit,
     )
 
     val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, A, E, S>>>()
     val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
-    val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E>>>()
+    val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E, S>>>()
     val registeredErrorHandlers = mutableListOf<StateHandler<(S, Throwable) -> Boolean, ErrorScope<S, E, S, Throwable>>>()
 
     private val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = {
@@ -89,7 +89,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         matchingHandler?.handler?.invoke(this) ?: state
     }
 
-    private val onExit: suspend ExitScope<S, E>.() -> Unit = {
+    private val onExit: suspend ExitScope<S, E, S>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredExitHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this)
     }
@@ -101,56 +101,23 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
     @TartStoreDsl
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
-        class ThreadedEnterHandler<S : State, A : Action, E : Event, S2 : S> internal constructor(
+
+        class ThreadedHandler<P, SC : StoreScope>(
             private val coroutineDispatcher: CoroutineDispatcher,
-            private val handler: suspend EnterScope<S, A, E, S2>.() -> Unit,
+            val predicate: P,
+            private val handler: suspend SC.() -> Unit,
         ) {
-            suspend operator fun invoke(scope: EnterScope<S, A, E, S2>) {
+            suspend operator fun invoke(scope: SC) {
                 withContext(coroutineDispatcher) {
                     handler(scope)
                 }
             }
         }
 
-        class ThreadedActionHandler<S : State, A : Action, E : Event, S2 : S>(
-            private val coroutineDispatcher: CoroutineDispatcher,
-            val predicate: (A) -> Boolean,
-            private val handler: suspend ActionScope<S, A, E, S2>.() -> Unit,
-        ) {
-            suspend operator fun invoke(scope: ActionScope<S, A, E, S2>) {
-                withContext(coroutineDispatcher) {
-                    handler(scope)
-                }
-            }
-        }
-
-        class ThreadedExitHandler<S : State, E : Event> internal constructor(
-            private val coroutineDispatcher: CoroutineDispatcher,
-            private val handler: suspend ExitScope<S, E>.() -> Unit,
-        ) {
-            suspend operator fun invoke(scope: ExitScope<S, E>) {
-                withContext(coroutineDispatcher) {
-                    handler(scope)
-                }
-            }
-        }
-
-        class ThreadedErrorHandler<S : State, E : Event, S2 : S>(
-            private val coroutineDispatcher: CoroutineDispatcher,
-            val predicate: (Throwable) -> Boolean,
-            private val handler: suspend ErrorScope<S, E, S2, Throwable>.() -> Unit,
-        ) {
-            suspend operator fun invoke(scope: ErrorScope<S, E, S2, Throwable>) {
-                withContext(coroutineDispatcher) {
-                    handler(scope)
-                }
-            }
-        }
-
-        val stateEnterHandlers = mutableListOf<ThreadedEnterHandler<S, A, E, S2>>()
-        val stateActionHandlers = mutableListOf<ThreadedActionHandler<S, A, E, S2>>()
-        val stateExitHandlers = mutableListOf<ThreadedExitHandler<S2, E>>()
-        val stateErrorHandlers = mutableListOf<ThreadedErrorHandler<S, E, S2>>()
+        val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, A, E, S2>>>()
+        val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
+        val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
+        val stateErrorHandlers = mutableListOf<ThreadedHandler<(Throwable) -> Boolean, ErrorScope<S, E, S2, Throwable>>>()
 
         /**
          * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
@@ -160,7 +127,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param block The handler function that will be executed when entering this state
          */
         fun enter(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope<S, A, E, S2>.() -> Unit) {
-            stateEnterHandlers.add(ThreadedEnterHandler(coroutineDispatcher, block))
+            stateEnterHandlers.add(ThreadedHandler(coroutineDispatcher, null, block))
         }
 
         /**
@@ -172,7 +139,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          */
         inline fun <reified A2 : A> action(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope<S, A2, E, S2>.() -> Unit) {
             stateActionHandlers.add(
-                ThreadedActionHandler(
+                ThreadedHandler(
                     coroutineDispatcher = coroutineDispatcher,
                     predicate = { it is A2 },
                     handler = {
@@ -190,8 +157,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param coroutineDispatcher The CoroutineDispatcher to use for executing the exit handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when exiting this state
          */
-        fun exit(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ExitScope<S2, E>.() -> Unit) {
-            stateExitHandlers.add(ThreadedExitHandler(coroutineDispatcher, block))
+        fun exit(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ExitScope<S, E, S2>.() -> Unit) {
+            stateExitHandlers.add(ThreadedHandler(coroutineDispatcher, null, block))
         }
 
         /**
@@ -203,7 +170,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          */
         inline fun <reified T : Throwable> error(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
             stateErrorHandlers.add(
-                ThreadedErrorHandler(
+                ThreadedHandler(
                     coroutineDispatcher = coroutineDispatcher,
                     predicate = { it is T },
                     handler = {
@@ -254,7 +221,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        exitHandler.invoke(this as ExitScope<S2, E>)
+                        exitHandler.invoke(this as ExitScope<S, E, S2>)
                     },
                 ),
             )
@@ -284,7 +251,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
             override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
-            override val onExit: suspend ExitScope<S, E>.() -> Unit = this@StoreBuilder.onExit
+            override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit = this@StoreBuilder.onError
         }
     }

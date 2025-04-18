@@ -127,11 +127,11 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
  * Used in exit handlers to perform cleanup or side effects when leaving a state.
  */
 @TartStoreDsl
-interface ExitScope<S : State, E : Event> : StoreScope {
+interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
     /**
      * The current state that's being exited
      */
-    val state: S
+    val state: S2
 
     /**
      * Emits an event from the exit handler.
