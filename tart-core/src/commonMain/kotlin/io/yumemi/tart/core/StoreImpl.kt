@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
@@ -104,12 +103,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             mutex.withLock {
                 processMiddleware {
                     onInit(
-                        object : MiddlewareContext<A> {
+                        object : MiddlewareScope<A> {
                             override fun dispatch(action: A) {
                                 this@StoreImpl.dispatch(action)
                             }
 
-                            override val coroutineContext: CoroutineContext = coroutineScope.coroutineContext + Job()
+                            override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend CoroutineScope.() -> Unit) {
+                                coroutineScope.launch(coroutineDispatcher) {
+                                    block(this)
+                                }
+                            }
                         },
                     )
                 }

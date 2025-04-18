@@ -27,14 +27,19 @@ interface Logger {
     enum class Severity {
         /** Very detailed debug information */
         Verbose,
+
         /** Debug information */
         Debug,
+
         /** General information */
         Info,
+
         /** Warning information */
         Warn,
+
         /** Error information */
         Error,
+
         /** Critical error information */
         Assert,
     }
