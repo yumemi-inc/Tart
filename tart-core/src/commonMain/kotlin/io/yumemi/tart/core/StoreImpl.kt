@@ -124,7 +124,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun onActionDispatched(state: S, action: A) {
         try {
-            val nextState = processActonDispatch(state, action)
+            val nextState = processActionDispatch(state, action)
 
             if (state::class != nextState::class) {
                 processStateExit(state)
@@ -215,7 +215,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private suspend fun processActonDispatch(state: S, action: A): S {
+    private suspend fun processActionDispatch(state: S, action: A): S {
         processMiddleware { beforeActionDispatch(state, action) }
         var newState: S? = null
         onAction.invoke(
