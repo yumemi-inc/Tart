@@ -272,8 +272,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                 emit(event)
                             }
 
-                            override fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
-                                coroutineScope.launch(coroutineDispatcher) {
+                            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+                                val job = coroutineScope.launch(coroutineDispatcher) {
                                     mutex.withLock {
                                         if (stateScope.isActive) {
                                             var newStateInBlock: S? = null
@@ -304,6 +304,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                         }
                                     }
                                 }
+                                job.join()
                             }
                         }
                         try {

@@ -82,7 +82,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * @param coroutineDispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
          * @param block The suspending block of code to execute as a transaction
          */
-        fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
+        suspend fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
