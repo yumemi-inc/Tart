@@ -102,18 +102,23 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         coroutineScope.launch {
             mutex.withLock {
                 processMiddleware {
-                    onInit(
-                        object : MiddlewareScope<A> {
+                    onStart(
+                        object : MiddlewareScope<A, E> {
                             override fun dispatch(action: A) {
                                 this@StoreImpl.dispatch(action)
                             }
 
+                            override suspend fun event(event: E) {
+                                emit(event)
+                            }
+
                             override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend CoroutineScope.() -> Unit) {
                                 coroutineScope.launch(coroutineDispatcher) {
-                                    block(this)
+                                    block()
                                 }
                             }
                         },
+                        currentState,
                     )
                 }
                 onStateEntered(currentState)

@@ -1,5 +1,8 @@
 package io.yumemi.tart.message
 
+import io.yumemi.tart.core.Action
+import io.yumemi.tart.core.Event
+import io.yumemi.tart.core.MiddlewareScope
 import io.yumemi.tart.core.StoreScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,5 +29,15 @@ internal object MessageHub {
  * @param message The message to send
  */
 suspend fun StoreScope.message(message: Message) {
+    MessageHub.send(message)
+}
+
+/**
+ * Extension function for sending messages to the MessageHub.
+ * This allows any StoreScope to easily send messages to other components.
+ *
+ * @param message The message to send
+ */
+suspend fun <A : Action, E : Event> MiddlewareScope<A, E>.message(message: Message) {
     MessageHub.send(message)
 }

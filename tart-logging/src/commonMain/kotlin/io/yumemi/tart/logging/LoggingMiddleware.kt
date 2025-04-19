@@ -25,9 +25,9 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val severity: Logger.Severity = Logger.Severity.Debug,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Middleware<S, A, E> {
-    private lateinit var middlewareScope: MiddlewareScope<A>
+    private lateinit var middlewareScope: MiddlewareScope<A, E>
 
-    override suspend fun onInit(middlewareScope: MiddlewareScope<A>) {
+    override suspend fun onStart(middlewareScope: MiddlewareScope<A, E>, state: S) {
         this.middlewareScope = middlewareScope
     }
 
