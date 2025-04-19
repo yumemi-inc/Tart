@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -15,6 +16,9 @@ class StoreBaseTest {
     @Test
     fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
         val store = createTestStore(BaseState.Loading)
+
+        // Store is not started
+        assertIs<BaseState.Loading>(store.currentState)
 
         store.dispatch(BaseAction.Increment)
         store.dispatch(BaseAction.Increment)
