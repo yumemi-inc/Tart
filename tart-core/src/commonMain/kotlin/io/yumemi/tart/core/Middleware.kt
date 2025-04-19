@@ -7,11 +7,11 @@ package io.yumemi.tart.core
  */
 interface Middleware<S : State, A : Action, E : Event> {
     /**
-     * Called when the Store is initialized.
+     * Lifecycle method called when the middleware is initialized.
      *
-     * @param middlewareContext The context providing access to store functionality
+     * @param middlewareScope The scope that provides access to store functionality
      */
-    suspend fun onInit(middlewareContext: MiddlewareContext<A>) {}
+    suspend fun onInit(middlewareScope: MiddlewareScope<A>) {}
 
     /**
      * Called before an action is dispatched.
