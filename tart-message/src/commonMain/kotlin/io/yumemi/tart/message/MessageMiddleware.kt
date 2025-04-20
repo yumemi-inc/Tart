@@ -16,7 +16,7 @@ import io.yumemi.tart.core.State
 class MessageMiddleware<S : State, A : Action, E : Event>(
     private val receive: suspend MiddlewareScope<A>.(Message) -> Unit,
 ) : Middleware<S, A, E> {
-    override suspend fun onInit(middlewareScope: MiddlewareScope<A>) {
+    override suspend fun onStart(middlewareScope: MiddlewareScope<A>, state: S) {
         middlewareScope.launch {
             MessageHub.messages.collect {
                 receive.invoke(middlewareScope, it)

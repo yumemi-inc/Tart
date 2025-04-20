@@ -27,7 +27,7 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
 ) : Middleware<S, A, E> {
     private lateinit var middlewareScope: MiddlewareScope<A>
 
-    override suspend fun onInit(middlewareScope: MiddlewareScope<A>) {
+    override suspend fun onStart(middlewareScope: MiddlewareScope<A>, state: S) {
         this.middlewareScope = middlewareScope
     }
 
