@@ -11,18 +11,12 @@ import kotlinx.coroutines.IO
 
 /**
  * Middleware that logs Store operations.
- * Logs action dispatches, state changes, event emissions, error occurrences, etc.
  *
  * @param logger Logger to use
- * @param tag Tag for the logs
- * @param severity Severity of the logs
  * @param coroutineDispatcher Coroutine dispatcher to use for log processing
  */
-@Suppress("unused")
-open class LoggingMiddleware<S : State, A : Action, E : Event>(
+abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val logger: Logger = DefaultLogger,
-    private val tag: String = "Tart",
-    private val severity: Logger.Severity = Logger.Severity.Debug,
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Middleware<S, A, E> {
     private lateinit var middlewareScope: MiddlewareScope<A>
@@ -31,26 +25,48 @@ open class LoggingMiddleware<S : State, A : Action, E : Event>(
         this.middlewareScope = middlewareScope
     }
 
-    override suspend fun beforeActionDispatch(state: S, action: A) {
-        log { "Action: $action" }
-    }
-
-    override suspend fun beforeEventEmit(state: S, event: E) {
-        log { "Event: $event" }
-    }
-
-    override suspend fun beforeStateChange(state: S, nextState: S) {
-        log { "State: $nextState <- $state" }
-    }
-
-    override suspend fun beforeError(state: S, error: Throwable) {
-        log(throwable = error) { "Error: $error" }
-    }
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    protected fun log(severity: Logger.Severity = this.severity, tag: String = this.tag, throwable: Throwable? = null, message: () -> String) {
+    protected fun log(severity: Logger.Severity, tag: String, throwable: Throwable? = null, message: () -> String) {
         middlewareScope.launch(coroutineDispatcher) { // launch Coroutines to avoid blocking Store processing in case of heavy logging
             logger.log(severity = severity, tag = tag, throwable = throwable, message = message())
+        }
+    }
+}
+
+/**
+ * Creates a simple logging middleware that logs Store operations.
+ * This middleware logs all action dispatches, state changes, event emissions, and errors
+ * with the specified severity level.
+ *
+ * @param tag The tag to use for logging
+ * @param severity The severity level for log messages
+ * @param logger The logger implementation to use
+ * @param coroutineDispatcher The dispatcher for logging operations
+ * @return A middleware that performs logging for all store operations
+ */
+fun <S : State, A : Action, E : Event> simpleLogging(
+    tag: String = "Tart",
+    severity: Logger.Severity = Logger.Severity.Debug,
+    logger: Logger = DefaultLogger,
+    coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO,
+): Middleware<S, A, E> {
+    return object : LoggingMiddleware<S, A, E>(
+        logger = logger,
+        coroutineDispatcher = coroutineDispatcher,
+    ) {
+        override suspend fun beforeActionDispatch(state: S, action: A) {
+            log(severity, tag) { "Action: $action" }
+        }
+
+        override suspend fun beforeEventEmit(state: S, event: E) {
+            log(severity, tag) { "Event: $event" }
+        }
+
+        override suspend fun beforeStateChange(state: S, nextState: S) {
+            log(severity, tag) { "State: $nextState <- $state" }
+        }
+
+        override suspend fun beforeError(state: S, error: Throwable) {
+            log(severity, tag, error) { "Error: $error" }
         }
     }
 }

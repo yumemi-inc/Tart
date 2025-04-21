@@ -674,32 +674,32 @@ The source code is the `:tart-logging` and `:tart-message` modules in this repos
 
 ### Logging
 
-Middleware that outputs logs for debugging and analysis.
+Middleware for logging Store operations.
 
 ```kt
 implementation("io.yumemi.tart:tart-logging:<latest-release>")
 ```
 
+Apply the `simpleLogging()` middleware factory function to your *Store* to log all actions, events, state changes, and errors.
+
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    middleware(LoggingMiddleware())
+    middleware(simpleLogging())
 }
 ```
 
-The implementation of the `LoggingMiddleware` is [here](tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt), change the arguments or override
-methods as necessary.
-If you want to change the logger, prepare a class that implements the `Logger` interface.
+You can create custom logging middleware by extending the [LoggingMiddleware](tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt) class if you need more control over the logging behavior.
 
 ```kt
 middleware(
     object : LoggingMiddleware<CounterState, CounterAction, CounterEvent>(
-        logger = YourLogger() // change logger
+        logger = YourLogger() // specify your logger
     ) {
-        // override other methods
+        // override methods
         override suspend fun beforeStateEnter(state: CounterState) {
-            // ...
+            log(...)
         }
     },
 )
@@ -722,17 +722,21 @@ sealed interface MainMessage : Message {
 }
 ```
 
-Apply the `MessageMiddleware` to the *Store* that receives messages.
+Apply the `receiveMessages()` middleware factory function to the *Store* that receives messages.
 
 ```kt
 val myPageStore: Store<MyPageState, MyPageAction, MyPageEvent> = Store {
     // ...
 
     middleware(
-        MessageMiddleware { message ->
+        receiveMessages { message ->
             when (message) {
                 MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
                 // ...
+            }
+        }
+    )
+}
 ```
 
 Define the `message()` specification at any point in the *Store* that sends messages.
