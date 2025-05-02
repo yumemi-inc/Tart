@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
@@ -61,7 +62,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val coroutineScope by lazy {
         CoroutineScope(
-            coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, exception ->
+            coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { _, exception ->
                 val t = if (exception is InternalError) exception.original else exception
                 exceptionHandler.handle(t)
             },
@@ -247,7 +248,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
         stateScopes[state::class]?.cancel()
-        val stateScope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob())
+        val stateScope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job]))
         stateScopes[state::class] = stateScope
         var newState: S? = null
         onEnter.invoke(
