@@ -11,42 +11,42 @@ class StoreSaverTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    data class AppState(val value: Int) : State
+
+    sealed interface AppAction : Action {
+        data class Update(val value: Int) : AppAction
+    }
+
+    private fun createTestStore(
+        initialState: AppState,
+        stateSaver: StateSaver<AppState>,
+    ): Store<AppState, AppAction, Nothing> {
+        return Store(initialState) {
+            coroutineContext(Dispatchers.Unconfined)
+            stateSaver(stateSaver)
+            state<AppState> {
+                action<AppAction.Update> {
+                    nextState(state.copy(value = action.value))
+                }
+            }
+        }
+    }
+
     @Test
     fun store_shouldUseStateSaverToRestoreState() = runTest(testDispatcher) {
-        var savedState = SaverState(10)
+        var savedState = AppState(10)
 
         val stateSaver = StateSaver(
             save = { state -> savedState = state },
             restore = { savedState },
         )
 
-        val store = createTestStore(SaverState(0), stateSaver)
+        val store = createTestStore(AppState(0), stateSaver)
 
-        assertEquals(SaverState(10), store.currentState)
+        assertEquals(AppState(10), store.currentState)
 
-        store.dispatch(SaverAction.Update(20))
+        store.dispatch(AppAction.Update(20))
 
-        assertEquals(SaverState(20), savedState)
-    }
-}
-
-private data class SaverState(val value: Int) : State
-
-private sealed interface SaverAction : Action {
-    data class Update(val value: Int) : SaverAction
-}
-
-private fun createTestStore(
-    initialState: SaverState,
-    stateSaver: StateSaver<SaverState>,
-): Store<SaverState, SaverAction, Nothing> {
-    return Store(initialState) {
-        coroutineContext(Dispatchers.Unconfined)
-        stateSaver(stateSaver)
-        state<SaverState> {
-            action<SaverAction.Update> {
-                nextState(state.copy(value = action.value))
-            }
-        }
+        assertEquals(AppState(20), savedState)
     }
 }

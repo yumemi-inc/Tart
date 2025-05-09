@@ -11,12 +11,29 @@ class StoreExceptionTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    data class AppState(val value: Int) : State
+
+    private fun createTestStore(
+        initialState: AppState,
+        exceptionHandler: ExceptionHandler,
+    ): Store<AppState, Nothing, Nothing> {
+        return Store(initialState) {
+            this.coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(exceptionHandler)
+            state<AppState> {
+                enter {
+                    throw RuntimeException("error")
+                }
+            }
+        }
+    }
+
     @Test
     fun store_shouldUseExceptionHandlerOnError() = runTest(testDispatcher) {
         var handledException: Throwable? = null
 
         val store = createTestStore(
-            initialState = ExceptionState(0),
+            initialState = AppState(0),
             exceptionHandler = ExceptionHandler { error ->
                 handledException = error
             },
@@ -25,22 +42,5 @@ class StoreExceptionTest {
         store.state // access state to initialize the store
 
         assertNotNull(handledException)
-    }
-}
-
-private data class ExceptionState(val value: Int) : State
-
-private fun createTestStore(
-    initialState: ExceptionState,
-    exceptionHandler: ExceptionHandler,
-): Store<ExceptionState, Nothing, Nothing> {
-    return Store(initialState) {
-        this.coroutineContext(Dispatchers.Unconfined)
-        exceptionHandler(exceptionHandler)
-        state<ExceptionState> {
-            enter {
-                throw RuntimeException("error")
-            }
-        }
     }
 }

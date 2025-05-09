@@ -39,46 +39,236 @@ class TodoUseCaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    // Todo item data class
+    data class Todo(
+        val id: String,
+        val title: String,
+        val completed: Boolean = false,
+    )
+
+    // Simple ID counter for tests
+    private var idCounter = 0
+
+    // Helper function to generate IDs in a platform-independent way
+    private fun generateId(): String {
+        val random = Random.nextInt(10000, 99999)
+        idCounter++
+        return "${abs(random)}_${idCounter}"
+    }
+
+    // Repository interface
+    interface TodoRepository {
+        suspend fun loadTodos(): List<Todo>
+        suspend fun addTodo(todo: Todo): Todo
+        suspend fun updateTodo(todo: Todo): Todo
+        suspend fun deleteTodo(todoId: String): Boolean
+    }
+
+    // Mock repository implementation
+    class MockTodoRepository(var shouldSucceed: Boolean) : TodoRepository {
+        val initialTodos = listOf(
+            Todo("1", "Complete project", false),
+            Todo("2", "Write tests", true),
+            Todo("3", "Review code", false),
+        )
+
+        private val _todos = initialTodos.toMutableList()
+
+        override suspend fun loadTodos(): List<Todo> {
+            if (!shouldSucceed) throw Exception("Failed to load todos")
+            return _todos.toList()
+        }
+
+        override suspend fun addTodo(todo: Todo): Todo {
+            if (!shouldSucceed) throw Exception("Failed to add todo")
+            _todos.add(todo)
+            return todo
+        }
+
+        override suspend fun updateTodo(todo: Todo): Todo {
+            if (!shouldSucceed) throw Exception("Failed to update todo")
+            val index = _todos.indexOfFirst { it.id == todo.id }
+            if (index >= 0) {
+                _todos[index] = todo
+            }
+            return todo
+        }
+
+        override suspend fun deleteTodo(todoId: String): Boolean {
+            if (!shouldSucceed) throw Exception("Failed to delete todo")
+            val initialSize = _todos.size
+            _todos.removeAll { it.id == todoId }
+            return _todos.size < initialSize
+        }
+    }
+
+    // State definitions
+    sealed interface AppState : State {
+        data object Idle : AppState
+        data object Loading : AppState
+        data class Loaded(val todos: List<Todo>) : AppState
+        data class Editing(val editingTodo: Todo, val allTodos: List<Todo>) : AppState
+        data class Error(val message: String) : AppState
+    }
+
+    // Action definitions
+    sealed interface AppAction : Action {
+        data object LoadTodos : AppAction
+        data class AddTodo(val title: String) : AppAction
+        data class ToggleCompletion(val todoId: String) : AppAction
+        data class DeleteTodo(val todoId: String) : AppAction
+        data class StartEditing(val todoId: String) : AppAction
+        data class UpdateEditingTitle(val newTitle: String) : AppAction
+        data object SaveEdit : AppAction
+        data object CancelEdit : AppAction
+        data object RetryFromError : AppAction
+    }
+
+    // Store factory
+    private fun createTestStore(
+        repository: TodoRepository = MockTodoRepository(true),
+        initialState: AppState = AppState.Idle,
+    ): Store<AppState, AppAction, Nothing> {
+        return Store(initialState) {
+            coroutineContext(Dispatchers.Unconfined)
+
+            // Idle state handling
+            state<AppState.Idle> {
+                action<AppAction.LoadTodos> {
+                    nextState(AppState.Loading)
+                }
+            }
+
+            // Loading state handling
+            state<AppState.Loading> {
+                enter {
+                    val todos = repository.loadTodos()
+                    nextState(AppState.Loaded(todos))
+                }
+            }
+
+            // Loaded state handling
+            state<AppState.Loaded> {
+                action<AppAction.AddTodo> {
+                    val newTodo = Todo(
+                        id = generateId(),
+                        title = action.title,
+                        completed = false,
+                    )
+                    val savedTodo = repository.addTodo(newTodo)
+                    nextState(state.copy(todos = state.todos + savedTodo))
+                }
+
+                action<AppAction.ToggleCompletion> {
+                    val todoToUpdate = state.todos.first { it.id == action.todoId }
+                    val updatedTodo = todoToUpdate.copy(completed = !todoToUpdate.completed)
+                    val savedTodo = repository.updateTodo(updatedTodo)
+
+                    nextStateBy {
+                        // Create updated todo list
+                        val updatedTodoList = state.todos.map {
+                            if (it.id == action.todoId) savedTodo else it
+                        }
+
+                        state.copy(todos = updatedTodoList)
+                    }
+                }
+
+                action<AppAction.DeleteTodo> {
+                    val success = repository.deleteTodo(action.todoId)
+                    if (success) {
+                        nextState(state.copy(todos = state.todos.filter { it.id != action.todoId }))
+                    }
+                }
+
+                action<AppAction.StartEditing> {
+                    val todoToEdit = state.todos.first { it.id == action.todoId }
+                    nextState(AppState.Editing(todoToEdit, state.todos))
+                }
+            }
+
+            // Editing state handling
+            state<AppState.Editing> {
+                action<AppAction.UpdateEditingTitle> {
+                    nextState(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
+                }
+
+                action<AppAction.SaveEdit> {
+                    // Save edited content to repository
+                    val savedTodo = repository.updateTodo(state.editingTodo)
+
+                    nextStateBy {
+                        // Create updated todo list with the edited task
+                        val updatedTodoList = state.allTodos.map {
+                            if (it.id == savedTodo.id) savedTodo else it
+                        }
+
+                        // Transition from editing state to loaded state
+                        AppState.Loaded(updatedTodoList)
+                    }
+                }
+
+                action<AppAction.CancelEdit> {
+                    nextState(AppState.Loaded(state.allTodos))
+                }
+            }
+
+            // Error state handling
+            state<AppState.Error> {
+                action<AppAction.RetryFromError> {
+                    nextState(AppState.Idle)
+                }
+            }
+
+            // Global error handling
+            state<AppState> {
+                error<Exception> {
+                    nextState(AppState.Error(error.message ?: "Unknown error"))
+                }
+            }
+        }
+    }
+
     @Test
     fun todoApp_initialState() = runTest(testDispatcher) {
-        val store = createTodoStore()
-        assertIs<TodoState.Idle>(store.currentState)
+        val store = createTestStore()
+        assertIs<AppState.Idle>(store.currentState)
     }
 
     @Test
     fun todoApp_loadTodosSuccess() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = true)
-        val store = createTodoStore(repository)
+        val store = createTestStore(repository)
 
-        store.dispatch(TodoAction.LoadTodos)
+        store.dispatch(AppAction.LoadTodos)
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         assertEquals(3, loadedState.todos.size)
     }
 
     @Test
     fun todoApp_loadTodosFailure() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = false)
-        val store = createTodoStore(repository)
+        val store = createTestStore(repository)
 
-        store.dispatch(TodoAction.LoadTodos)
+        store.dispatch(AppAction.LoadTodos)
 
-        assertIs<TodoState.Error>(store.currentState)
-        val errorState = store.currentState as TodoState.Error
+        assertIs<AppState.Error>(store.currentState)
+        val errorState = store.currentState as AppState.Error
         assertEquals("Failed to load todos", errorState.message)
     }
 
     @Test
     fun todoApp_addTodo() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = true)
-        val store = createTodoStore(repository, TodoState.Loaded(repository.initialTodos))
+        val store = createTestStore(repository, AppState.Loaded(repository.initialTodos))
 
-        val initialCount = (store.currentState as TodoState.Loaded).todos.size
-        store.dispatch(TodoAction.AddTodo("Buy groceries"))
+        val initialCount = (store.currentState as AppState.Loaded).todos.size
+        store.dispatch(AppAction.AddTodo("Buy groceries"))
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         assertEquals(initialCount + 1, loadedState.todos.size)
         assertEquals("Buy groceries", loadedState.todos.last().title)
         assertFalse(loadedState.todos.last().completed)
@@ -87,15 +277,15 @@ class TodoUseCaseTest {
     @Test
     fun todoApp_toggleTodoCompletion() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = true)
-        val store = createTodoStore(repository, TodoState.Loaded(repository.initialTodos))
+        val store = createTestStore(repository, AppState.Loaded(repository.initialTodos))
 
-        val todoToToggle = (store.currentState as TodoState.Loaded).todos.first()
+        val todoToToggle = (store.currentState as AppState.Loaded).todos.first()
         val initialCompletionStatus = todoToToggle.completed
 
-        store.dispatch(TodoAction.ToggleCompletion(todoToToggle.id))
+        store.dispatch(AppAction.ToggleCompletion(todoToToggle.id))
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         val updatedTodo = loadedState.todos.first { it.id == todoToToggle.id }
         assertEquals(!initialCompletionStatus, updatedTodo.completed)
     }
@@ -103,15 +293,15 @@ class TodoUseCaseTest {
     @Test
     fun todoApp_deleteTodo() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = true)
-        val store = createTodoStore(repository, TodoState.Loaded(repository.initialTodos))
+        val store = createTestStore(repository, AppState.Loaded(repository.initialTodos))
 
-        val todoToDelete = (store.currentState as TodoState.Loaded).todos.first()
-        val initialCount = (store.currentState as TodoState.Loaded).todos.size
+        val todoToDelete = (store.currentState as AppState.Loaded).todos.first()
+        val initialCount = (store.currentState as AppState.Loaded).todos.size
 
-        store.dispatch(TodoAction.DeleteTodo(todoToDelete.id))
+        store.dispatch(AppAction.DeleteTodo(todoToDelete.id))
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         assertEquals(initialCount - 1, loadedState.todos.size)
         assertFalse(loadedState.todos.any { it.id == todoToDelete.id })
     }
@@ -119,14 +309,14 @@ class TodoUseCaseTest {
     @Test
     fun todoApp_startEditingTodo() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = true)
-        val store = createTodoStore(repository, TodoState.Loaded(repository.initialTodos))
+        val store = createTestStore(repository, AppState.Loaded(repository.initialTodos))
 
-        val todoToEdit = (store.currentState as TodoState.Loaded).todos.first()
+        val todoToEdit = (store.currentState as AppState.Loaded).todos.first()
 
-        store.dispatch(TodoAction.StartEditing(todoToEdit.id))
+        store.dispatch(AppAction.StartEditing(todoToEdit.id))
 
-        assertIs<TodoState.Editing>(store.currentState)
-        val editingState = store.currentState as TodoState.Editing
+        assertIs<AppState.Editing>(store.currentState)
+        val editingState = store.currentState as AppState.Editing
         assertEquals(todoToEdit.id, editingState.editingTodo.id)
         assertEquals(todoToEdit.title, editingState.editingTodo.title)
     }
@@ -136,12 +326,12 @@ class TodoUseCaseTest {
         val repository = MockTodoRepository(shouldSucceed = true)
         val todoToEdit = repository.initialTodos.first()
         val editedTodo = todoToEdit.copy(title = "Updated task")
-        val store = createTodoStore(repository, TodoState.Editing(editedTodo, repository.initialTodos))
+        val store = createTestStore(repository, AppState.Editing(editedTodo, repository.initialTodos))
 
-        store.dispatch(TodoAction.SaveEdit)
+        store.dispatch(AppAction.SaveEdit)
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         val updatedTodo = loadedState.todos.first { it.id == todoToEdit.id }
         assertEquals("Updated task", updatedTodo.title)
     }
@@ -151,12 +341,12 @@ class TodoUseCaseTest {
         val repository = MockTodoRepository(shouldSucceed = true)
         val todoToEdit = repository.initialTodos.first()
         val editedTodo = todoToEdit.copy(title = "This edit will be discarded")
-        val store = createTodoStore(repository, TodoState.Editing(editedTodo, repository.initialTodos))
+        val store = createTestStore(repository, AppState.Editing(editedTodo, repository.initialTodos))
 
-        store.dispatch(TodoAction.CancelEdit)
+        store.dispatch(AppAction.CancelEdit)
 
-        assertIs<TodoState.Loaded>(store.currentState)
-        val loadedState = store.currentState as TodoState.Loaded
+        assertIs<AppState.Loaded>(store.currentState)
+        val loadedState = store.currentState as AppState.Loaded
         val unchangedTodo = loadedState.todos.first { it.id == todoToEdit.id }
         assertEquals(todoToEdit.title, unchangedTodo.title)
     }
@@ -164,223 +354,33 @@ class TodoUseCaseTest {
     @Test
     fun todoApp_errorRetry() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = false)
-        val store = createTodoStore(repository, TodoState.Error("Test error"))
+        val store = createTestStore(repository, AppState.Error("Test error"))
 
         // Change repository to succeed on retry
         repository.shouldSucceed = true
 
-        store.dispatch(TodoAction.RetryFromError)
+        store.dispatch(AppAction.RetryFromError)
 
         // Should be back to idle, ready to load
-        assertIs<TodoState.Idle>(store.currentState)
+        assertIs<AppState.Idle>(store.currentState)
 
         // Try loading again
-        store.dispatch(TodoAction.LoadTodos)
+        store.dispatch(AppAction.LoadTodos)
 
         // Should succeed this time
-        assertIs<TodoState.Loaded>(store.currentState)
+        assertIs<AppState.Loaded>(store.currentState)
     }
 
     @Test
     fun todoApp_errorHandling() = runTest(testDispatcher) {
         val repository = MockTodoRepository(shouldSucceed = false)
-        val store = createTodoStore(repository, TodoState.Loaded(repository.initialTodos))
+        val store = createTestStore(repository, AppState.Loaded(repository.initialTodos))
 
         // Force an error by trying to add a todo when repository is set to fail
-        store.dispatch(TodoAction.AddTodo("This will fail"))
+        store.dispatch(AppAction.AddTodo("This will fail"))
 
-        assertIs<TodoState.Error>(store.currentState)
-        val errorState = store.currentState as TodoState.Error
+        assertIs<AppState.Error>(store.currentState)
+        val errorState = store.currentState as AppState.Error
         assertEquals("Failed to add todo", errorState.message)
-    }
-}
-
-// Todo item data class
-private data class Todo(
-    val id: String,
-    val title: String,
-    val completed: Boolean = false,
-)
-
-// State definitions
-private sealed interface TodoState : State {
-    data object Idle : TodoState
-    data object Loading : TodoState
-    data class Loaded(val todos: List<Todo>) : TodoState
-    data class Editing(val editingTodo: Todo, val allTodos: List<Todo>) : TodoState
-    data class Error(val message: String) : TodoState
-}
-
-// Action definitions
-private sealed interface TodoAction : Action {
-    data object LoadTodos : TodoAction
-    data class AddTodo(val title: String) : TodoAction
-    data class ToggleCompletion(val todoId: String) : TodoAction
-    data class DeleteTodo(val todoId: String) : TodoAction
-    data class StartEditing(val todoId: String) : TodoAction
-    data class UpdateEditingTitle(val newTitle: String) : TodoAction
-    data object SaveEdit : TodoAction
-    data object CancelEdit : TodoAction
-    data object RetryFromError : TodoAction
-}
-
-// Simple ID counter for tests
-private var idCounter = 0
-
-// Helper function to generate IDs in a platform-independent way
-private fun generateId(): String {
-    val random = Random.nextInt(10000, 99999)
-    idCounter++
-    return "${abs(random)}_${idCounter}"
-}
-
-// Repository interface
-private interface TodoRepository {
-    suspend fun loadTodos(): List<Todo>
-    suspend fun addTodo(todo: Todo): Todo
-    suspend fun updateTodo(todo: Todo): Todo
-    suspend fun deleteTodo(todoId: String): Boolean
-}
-
-// Mock repository implementation
-private class MockTodoRepository(var shouldSucceed: Boolean) : TodoRepository {
-    val initialTodos = listOf(
-        Todo("1", "Complete project", false),
-        Todo("2", "Write tests", true),
-        Todo("3", "Review code", false),
-    )
-
-    private val _todos = initialTodos.toMutableList()
-
-    override suspend fun loadTodos(): List<Todo> {
-        if (!shouldSucceed) throw Exception("Failed to load todos")
-        return _todos.toList()
-    }
-
-    override suspend fun addTodo(todo: Todo): Todo {
-        if (!shouldSucceed) throw Exception("Failed to add todo")
-        _todos.add(todo)
-        return todo
-    }
-
-    override suspend fun updateTodo(todo: Todo): Todo {
-        if (!shouldSucceed) throw Exception("Failed to update todo")
-        val index = _todos.indexOfFirst { it.id == todo.id }
-        if (index >= 0) {
-            _todos[index] = todo
-        }
-        return todo
-    }
-
-    override suspend fun deleteTodo(todoId: String): Boolean {
-        if (!shouldSucceed) throw Exception("Failed to delete todo")
-        val initialSize = _todos.size
-        _todos.removeAll { it.id == todoId }
-        return _todos.size < initialSize
-    }
-}
-
-// Store factory
-private fun createTodoStore(
-    repository: TodoRepository = MockTodoRepository(true),
-    initialState: TodoState = TodoState.Idle,
-): Store<TodoState, TodoAction, Nothing> {
-    return Store(initialState) {
-        coroutineContext(Dispatchers.Unconfined)
-
-        // Idle state handling
-        state<TodoState.Idle> {
-            action<TodoAction.LoadTodos> {
-                nextState(TodoState.Loading)
-            }
-        }
-
-        // Loading state handling
-        state<TodoState.Loading> {
-            enter {
-                val todos = repository.loadTodos()
-                nextState(TodoState.Loaded(todos))
-            }
-        }
-
-        // Loaded state handling
-        state<TodoState.Loaded> {
-            action<TodoAction.AddTodo> {
-                val newTodo = Todo(
-                    id = generateId(),
-                    title = action.title,
-                    completed = false,
-                )
-                val savedTodo = repository.addTodo(newTodo)
-                nextState(state.copy(todos = state.todos + savedTodo))
-            }
-
-            action<TodoAction.ToggleCompletion> {
-                val todoToUpdate = state.todos.first { it.id == action.todoId }
-                val updatedTodo = todoToUpdate.copy(completed = !todoToUpdate.completed)
-                val savedTodo = repository.updateTodo(updatedTodo)
-                
-                nextStateBy {
-                    // Create updated todo list
-                    val updatedTodoList = state.todos.map {
-                        if (it.id == action.todoId) savedTodo else it
-                    }
-                    
-                    state.copy(todos = updatedTodoList)
-                }
-            }
-
-            action<TodoAction.DeleteTodo> {
-                val success = repository.deleteTodo(action.todoId)
-                if (success) {
-                    nextState(state.copy(todos = state.todos.filter { it.id != action.todoId }))
-                }
-            }
-
-            action<TodoAction.StartEditing> {
-                val todoToEdit = state.todos.first { it.id == action.todoId }
-                nextState(TodoState.Editing(todoToEdit, state.todos))
-            }
-        }
-
-        // Editing state handling
-        state<TodoState.Editing> {
-            action<TodoAction.UpdateEditingTitle> {
-                nextState(state.copy(editingTodo = state.editingTodo.copy(title = action.newTitle)))
-            }
-
-            action<TodoAction.SaveEdit> {
-                // Save edited content to repository
-                val savedTodo = repository.updateTodo(state.editingTodo)
-                
-                nextStateBy {
-                    // Create updated todo list with the edited task
-                    val updatedTodoList = state.allTodos.map {
-                        if (it.id == savedTodo.id) savedTodo else it
-                    }
-                    
-                    // Transition from editing state to loaded state
-                    TodoState.Loaded(updatedTodoList)
-                }
-            }
-
-            action<TodoAction.CancelEdit> {
-                nextState(TodoState.Loaded(state.allTodos))
-            }
-        }
-
-        // Error state handling
-        state<TodoState.Error> {
-            action<TodoAction.RetryFromError> {
-                nextState(TodoState.Idle)
-            }
-        }
-
-        // Global error handling
-        state<TodoState> {
-            error<Exception> {
-                nextState(TodoState.Error(error.message ?: "Unknown error"))
-            }
-        }
     }
 }

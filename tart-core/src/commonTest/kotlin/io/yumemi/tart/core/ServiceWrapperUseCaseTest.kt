@@ -33,6 +33,88 @@ class ServiceWrapperUseCaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    interface MyService {
+        fun register(listener: Listener)
+        fun unRegister(listener: Listener)
+        interface Listener {
+            fun onCountUpdated(count: Int)
+        }
+    }
+
+    // Mock implementation for testing
+    class MockMyService : MyService {
+        private val listeners = mutableListOf<MyService.Listener>()
+
+        override fun register(listener: MyService.Listener) {
+            listeners.add(listener)
+        }
+
+        override fun unRegister(listener: MyService.Listener) {
+            listeners.remove(listener)
+        }
+
+        fun triggerCallbackForTest(count: Int) {
+            listeners.forEach { it.onCountUpdated(count) }
+        }
+    }
+
+    class MyServiceMonitor(private val myService: MyService) {
+        val count: Flow<Int> = callbackFlow {
+            val listener = object : MyService.Listener {
+                override fun onCountUpdated(count: Int) {
+                    trySend(count)
+                }
+            }
+
+            myService.register(listener)
+
+            awaitClose {
+                myService.unRegister(listener)
+            }
+        }
+    }
+
+    sealed interface AppState : State {
+        data object Idle : AppState
+        data class Running(val count: Int) : AppState
+    }
+
+    sealed interface AppAction : Action {
+        data object Start : AppAction
+        data object Stop : AppAction
+    }
+
+    private fun createTestStore(
+        myServiceMonitor: MyServiceMonitor,
+    ): Store<AppState, AppAction, Nothing> {
+        return Store {
+            initialState(AppState.Idle)
+            coroutineContext(Dispatchers.Unconfined)
+
+            state<AppState.Idle> {
+                action<AppAction.Start> {
+                    nextState(AppState.Running(count = 0))
+                }
+            }
+
+            state<AppState.Running> {
+                enter {
+                    launch {
+                        myServiceMonitor.count.collect {
+                            transaction {
+                                nextState(state.copy(count = it))
+                            }
+                        }
+                    }
+                }
+
+                action<AppAction.Stop> {
+                    nextState(AppState.Idle)
+                }
+            }
+        }
+    }
+
     @Test
     fun serviceWrapper_shouldStartAndHandleCallbacks() = runTest(testDispatcher) {
         // Mock implementation of MyService
@@ -43,107 +125,25 @@ class ServiceWrapperUseCaseTest {
         val store = createTestStore(serviceWrapper)
 
         // Initial state should be Idle
-        assertIs<CounterServiceState.Idle>(store.currentState)
+        assertIs<AppState.Idle>(store.currentState)
 
         // Start the service
-        store.dispatch(CounterServiceAction.Start)
+        store.dispatch(AppAction.Start)
 
         // State should change to Running with count 0
-        assertIs<CounterServiceState.Running>(store.currentState)
-        assertEquals(0, (store.currentState as CounterServiceState.Running).count)
+        assertIs<AppState.Running>(store.currentState)
+        assertEquals(0, (store.currentState as AppState.Running).count)
 
         // Trigger callback from service with count update
         mockService.triggerCallbackForTest(5)
 
         // State should update with new count
-        assertEquals(5, (store.currentState as CounterServiceState.Running).count)
+        assertEquals(5, (store.currentState as AppState.Running).count)
 
         // Stop the service
-        store.dispatch(CounterServiceAction.Stop)
+        store.dispatch(AppAction.Stop)
 
         // State should return to Idle
-        assertIs<CounterServiceState.Idle>(store.currentState)
-    }
-}
-
-private interface MyService {
-    fun register(listener: Listener)
-    fun unRegister(listener: Listener)
-    interface Listener {
-        fun onCountUpdated(count: Int)
-    }
-}
-
-// Mock implementation for testing
-private class MockMyService : MyService {
-    private val listeners = mutableListOf<MyService.Listener>()
-
-    override fun register(listener: MyService.Listener) {
-        listeners.add(listener)
-    }
-
-    override fun unRegister(listener: MyService.Listener) {
-        listeners.remove(listener)
-    }
-
-    fun triggerCallbackForTest(count: Int) {
-        listeners.forEach { it.onCountUpdated(count) }
-    }
-}
-
-private class MyServiceMonitor(private val myService: MyService) {
-    val count: Flow<Int> = callbackFlow {
-        val listener = object : MyService.Listener {
-            override fun onCountUpdated(count: Int) {
-                trySend(count)
-            }
-        }
-
-        myService.register(listener)
-
-        awaitClose {
-            myService.unRegister(listener)
-        }
-    }
-}
-
-private sealed interface CounterServiceState : State {
-    data object Idle : CounterServiceState
-    data class Running(val count: Int) : CounterServiceState
-}
-
-private sealed interface CounterServiceAction : Action {
-    data object Start : CounterServiceAction
-    data object Stop : CounterServiceAction
-}
-
-private fun createTestStore(
-    myServiceMonitor: MyServiceMonitor,
-): Store<CounterServiceState, CounterServiceAction, Nothing> {
-    return Store {
-        initialState(CounterServiceState.Idle)
-        coroutineContext(Dispatchers.Unconfined)
-
-        state<CounterServiceState.Idle> {
-            action<CounterServiceAction.Start> {
-                nextState(CounterServiceState.Running(count = 0))
-            }
-        }
-
-        state<CounterServiceState.Running> {
-            enter {
-                launch {
-                    myServiceMonitor.count.collect {
-                        transaction {
-                            nextState(state.copy(count = it))
-                        }
-                    }
-                }
-            }
-
-            action<CounterServiceAction.Stop> {
-                nextState(CounterServiceState.Idle)
-            }
-        }
+        assertIs<AppState.Idle>(store.currentState)
     }
 }

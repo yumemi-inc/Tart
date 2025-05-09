@@ -13,72 +13,72 @@ class StoreBaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    sealed interface AppState : State {
+        data object Loading : AppState
+        data class Main(val count: Int) : AppState
+    }
+
+    sealed interface AppAction : Action {
+        data object Increment : AppAction
+        data object Decrement : AppAction
+        data object EmitEvent : AppAction
+    }
+
+    sealed interface AppEvent : Event {
+        data class CountUpdated(val count: Int) : AppEvent
+    }
+
+    private fun createTestStore(
+        initialState: AppState,
+    ): Store<AppState, AppAction, AppEvent> {
+        return Store(initialState) {
+            coroutineContext(Dispatchers.Unconfined)
+            state<AppState.Loading> {
+                enter {
+                    nextState(AppState.Main(count = 0))
+                }
+            }
+            state<AppState.Main> {
+                action<AppAction.Increment> {
+                    nextState(state.copy(count = state.count + 1))
+                }
+                action<AppAction.Decrement> {
+                    nextState(state.copy(count = state.count - 1))
+                }
+                action<AppAction.EmitEvent> {
+                    event(AppEvent.CountUpdated(state.count))
+                }
+            }
+        }
+    }
+
     @Test
     fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
-        val store = createTestStore(BaseState.Loading)
+        val store = createTestStore(AppState.Loading)
 
         // Store is not started
-        assertIs<BaseState.Loading>(store.currentState)
+        assertIs<AppState.Loading>(store.currentState)
 
-        store.dispatch(BaseAction.Increment)
-        store.dispatch(BaseAction.Increment)
-        store.dispatch(BaseAction.Decrement)
+        store.dispatch(AppAction.Increment)
+        store.dispatch(AppAction.Increment)
+        store.dispatch(AppAction.Decrement)
 
-        assertEquals(BaseState.Main(1), store.currentState)
+        assertEquals(AppState.Main(1), store.currentState)
     }
 
     @Test
     fun tartStore_shouldEmitEvents() = runTest(testDispatcher) {
-        val store = createTestStore(BaseState.Loading)
+        val store = createTestStore(AppState.Loading)
 
-        var emittedEvent: BaseEvent? = null
+        var emittedEvent: AppEvent? = null
         store.collectEvent { event ->
             emittedEvent = event
         }
 
-        store.dispatch(BaseAction.Increment)
-        store.dispatch(BaseAction.EmitEvent)
+        store.dispatch(AppAction.Increment)
+        store.dispatch(AppAction.EmitEvent)
 
         assertNotNull(emittedEvent)
-        assertEquals(BaseEvent.CountUpdated(1), emittedEvent)
-    }
-}
-
-private sealed interface BaseState : State {
-    data object Loading : BaseState
-    data class Main(val count: Int) : BaseState
-}
-
-private sealed interface BaseAction : Action {
-    data object Increment : BaseAction
-    data object Decrement : BaseAction
-    data object EmitEvent : BaseAction
-}
-
-private sealed interface BaseEvent : Event {
-    data class CountUpdated(val count: Int) : BaseEvent
-}
-
-private fun createTestStore(
-    initialState: BaseState,
-): Store<BaseState, BaseAction, BaseEvent> {
-    return Store(initialState) {
-        coroutineContext(Dispatchers.Unconfined)
-        state<BaseState.Loading> {
-            enter {
-                nextState(BaseState.Main(count = 0))
-            }
-        }
-        state<BaseState.Main> {
-            action<BaseAction.Increment> {
-                nextState(state.copy(count = state.count + 1))
-            }
-            action<BaseAction.Decrement> {
-                nextState(state.copy(count = state.count - 1))
-            }
-            action<BaseAction.EmitEvent> {
-                event(BaseEvent.CountUpdated(state.count))
-            }
-        }
+        assertEquals(AppEvent.CountUpdated(1), emittedEvent)
     }
 }
