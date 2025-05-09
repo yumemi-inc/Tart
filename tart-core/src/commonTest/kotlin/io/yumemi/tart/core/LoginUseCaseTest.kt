@@ -34,21 +34,113 @@ class LoginUseCaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    // Login repository interface
+    interface LoginRepository {
+        suspend fun login(username: String, password: String): Boolean
+    }
+
+    // Mock repository implementation
+    class MockLoginRepository(var shouldSucceed: Boolean) : LoginRepository {
+        override suspend fun login(username: String, password: String): Boolean {
+            return shouldSucceed
+        }
+    }
+
+    // State definitions
+    sealed interface AppState : State {
+        data object Initial : AppState
+        data class Loading(val username: String, val password: String) : AppState
+        data class Success(val username: String) : AppState
+        data class Error(val message: String) : AppState
+    }
+
+    // Action definitions
+    sealed interface AppAction : Action {
+        data class Login(val username: String, val password: String) : AppAction
+        data object RetryFromError : AppAction
+    }
+
+    // Event definitions
+    sealed interface AppEvent : Event {
+        data class NavigateToHome(val username: String) : AppEvent
+    }
+
+    // Create a Store using the standard Store factory function
+    private fun createTestStore(
+        repository: LoginRepository,
+    ): Store<AppState, AppAction, AppEvent> {
+        return Store(AppState.Initial) {
+            coroutineContext(Dispatchers.Unconfined)
+            // Processing for Initial state
+            state<AppState.Initial> {
+                action<AppAction.Login> {
+                    // Validate input values
+                    val isValidInput = action.username.isNotBlank() && action.password.isNotBlank()
+
+                    nextStateBy {
+                        if (isValidInput) {
+                            // For valid input, transition to loading state
+                            AppState.Loading(action.username, action.password)
+                        } else {
+                            // For invalid input, transition to error state
+                            AppState.Error("Username and password must not be empty")
+                        }
+                    }
+                }
+            }
+            // Processing for Loading state
+            state<AppState.Loading> {
+                enter {
+                    // Execute login process in repository
+                    val loginSuccessful = repository.login(state.username, state.password)
+
+                    if (loginSuccessful) {
+                        // Process for successful login
+                        event(AppEvent.NavigateToHome(state.username))
+
+                        nextStateBy {
+                            // Transition to success state
+                            AppState.Success(state.username)
+                        }
+                    } else {
+                        // Process for failed login
+                        nextStateBy {
+                            // Transition to error state
+                            AppState.Error("Authentication failed")
+                        }
+                    }
+                }
+            }
+            // Processing for Error state
+            state<AppState.Error> {
+                action<AppAction.RetryFromError> {
+                    nextState(AppState.Initial)
+                }
+            }
+            // Error handling for all states
+            state<AppState> {
+                error<Exception> {
+                    nextState(AppState.Error(error.message ?: "Unknown error"))
+                }
+            }
+        }
+    }
+
     @Test
     fun loginFlow_successCase() = runTest(testDispatcher) {
         // Create Store with a repository that will succeed
         val repository = MockLoginRepository(shouldSucceed = true)
-        val store = createLoginStore(repository)
+        val store = createTestStore(repository)
 
         // Verify initial state
-        assertIs<LoginState.Initial>(store.currentState)
+        assertIs<AppState.Initial>(store.currentState)
 
         // Start login process
-        store.dispatch(LoginAction.Login("user123", "password123"))
+        store.dispatch(AppAction.Login("user123", "password123"))
 
         // Login successful, should be in Success state
-        assertIs<LoginState.Success>(store.currentState)
-        val successState = store.currentState as LoginState.Success
+        assertIs<AppState.Success>(store.currentState)
+        val successState = store.currentState as AppState.Success
         assertEquals("user123", successState.username)
     }
 
@@ -56,17 +148,17 @@ class LoginUseCaseTest {
     fun loginFlow_failureCase() = runTest(testDispatcher) {
         // Create Store with a repository that will fail
         val repository = MockLoginRepository(shouldSucceed = false)
-        val store = createLoginStore(repository)
+        val store = createTestStore(repository)
 
         // Verify initial state
-        assertIs<LoginState.Initial>(store.currentState)
+        assertIs<AppState.Initial>(store.currentState)
 
         // Start login process
-        store.dispatch(LoginAction.Login("user123", "wrong_password"))
+        store.dispatch(AppAction.Login("user123", "wrong_password"))
 
         // Login fails, should be in Error state
-        assertIs<LoginState.Error>(store.currentState)
-        val errorState = store.currentState as LoginState.Error
+        assertIs<AppState.Error>(store.currentState)
+        val errorState = store.currentState as AppState.Error
         assertEquals("Authentication failed", errorState.message)
     }
 
@@ -74,120 +166,28 @@ class LoginUseCaseTest {
     fun errorState_canRetryLogin() = runTest(testDispatcher) {
         // Create Store with a repository that will initially fail
         val repository = MockLoginRepository(shouldSucceed = false)
-        val store = createLoginStore(repository)
+        val store = createTestStore(repository)
 
         // Verify initial state
-        assertIs<LoginState.Initial>(store.currentState)
+        assertIs<AppState.Initial>(store.currentState)
 
         // First login attempt (will fail)
-        store.dispatch(LoginAction.Login("user123", "wrong_password"))
+        store.dispatch(AppAction.Login("user123", "wrong_password"))
 
         // Login fails, should be in Error state
-        assertIs<LoginState.Error>(store.currentState)
+        assertIs<AppState.Error>(store.currentState)
 
         // Change repository to succeed on next attempt
         repository.shouldSucceed = true
 
         // Send retry action
-        store.dispatch(LoginAction.RetryFromError)
-        assertIs<LoginState.Initial>(store.currentState)
+        store.dispatch(AppAction.RetryFromError)
+        assertIs<AppState.Initial>(store.currentState)
 
         // Try logging in again
-        store.dispatch(LoginAction.Login("user123", "correct_password"))
+        store.dispatch(AppAction.Login("user123", "correct_password"))
 
         // Login process is automatically handled by the enter block
-        assertIs<LoginState.Success>(store.currentState)
-    }
-}
-
-// State definitions
-private sealed interface LoginState : State {
-    data object Initial : LoginState
-    data class Loading(val username: String, val password: String) : LoginState
-    data class Success(val username: String) : LoginState
-    data class Error(val message: String) : LoginState
-}
-
-// Action definitions
-private sealed interface LoginAction : Action {
-    data class Login(val username: String, val password: String) : LoginAction
-    data object RetryFromError : LoginAction
-}
-
-// Event definitions
-private sealed interface LoginEvent : Event {
-    data class NavigateToHome(val username: String) : LoginEvent
-}
-
-// Login repository interface
-private interface LoginRepository {
-    suspend fun login(username: String, password: String): Boolean
-}
-
-// Mock repository implementation
-private class MockLoginRepository(var shouldSucceed: Boolean) : LoginRepository {
-    override suspend fun login(username: String, password: String): Boolean {
-        return shouldSucceed
-    }
-}
-
-// Create a Store using the standard Store factory function
-private fun createLoginStore(
-    repository: LoginRepository,
-): Store<LoginState, LoginAction, LoginEvent> {
-    return Store(LoginState.Initial) {
-        coroutineContext(Dispatchers.Unconfined)
-        // Processing for Initial state
-        state<LoginState.Initial> {
-            action<LoginAction.Login> {
-                // Validate input values
-                val isValidInput = action.username.isNotBlank() && action.password.isNotBlank()
-
-                nextStateBy {
-                    if (isValidInput) {
-                        // For valid input, transition to loading state
-                        LoginState.Loading(action.username, action.password)
-                    } else {
-                        // For invalid input, transition to error state
-                        LoginState.Error("Username and password must not be empty")
-                    }
-                }
-            }
-        }
-        // Processing for Loading state
-        state<LoginState.Loading> {
-            enter {
-                // Execute login process in repository
-                val loginSuccessful = repository.login(state.username, state.password)
-
-                if (loginSuccessful) {
-                    // Process for successful login
-                    event(LoginEvent.NavigateToHome(state.username))
-
-                    nextStateBy {
-                        // Transition to success state
-                        LoginState.Success(state.username)
-                    }
-                } else {
-                    // Process for failed login
-                    nextStateBy {
-                        // Transition to error state
-                        LoginState.Error("Authentication failed")
-                    }
-                }
-            }
-        }
-        // Processing for Error state
-        state<LoginState.Error> {
-            action<LoginAction.RetryFromError> {
-                nextState(LoginState.Initial)
-            }
-        }
-        // Error handling for all states
-        state<LoginState> {
-            error<Exception> {
-                nextState(LoginState.Error(error.message ?: "Unknown error"))
-            }
-        }
+        assertIs<AppState.Success>(store.currentState)
     }
 }

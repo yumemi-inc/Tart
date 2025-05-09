@@ -46,6 +46,145 @@ class EventStreamUseCaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    // Domain models
+    data class DataEvent(
+        val data: String,
+        val timestamp: Long,
+    )
+
+    // Event provider interfaces
+    interface EventProvider {
+        fun registerCallback(
+            onEvent: (DataEvent) -> Unit,
+            onError: (Throwable) -> Unit,
+        ): RegistrationHandle
+
+        interface RegistrationHandle {
+            fun unregister()
+        }
+    }
+
+    // Mock implementation for testing
+    class MockEventProvider : EventProvider {
+        private var onEvent: ((DataEvent) -> Unit)? = null
+        private var onError: ((Throwable) -> Unit)? = null
+        private var isRegistered = false
+
+        private val registrationHandle = object : EventProvider.RegistrationHandle {
+            override fun unregister() {
+                isRegistered = false
+                onEvent = null
+                onError = null
+            }
+        }
+
+        override fun registerCallback(
+            onEvent: (DataEvent) -> Unit,
+            onError: (Throwable) -> Unit,
+        ): EventProvider.RegistrationHandle {
+            this.onEvent = onEvent
+            this.onError = onError
+            isRegistered = true
+            return registrationHandle
+        }
+
+        fun emitEvent(event: DataEvent) {
+            if (isRegistered) {
+                onEvent?.invoke(event)
+            }
+        }
+
+        fun emitError(error: Throwable) {
+            if (isRegistered) {
+                onError?.invoke(error)
+            }
+        }
+    }
+
+    // Monitor class that wraps callback-based API with Flow
+    class EventStreamMonitor(private val eventProvider: EventProvider) {
+        val eventStream: Flow<Result<DataEvent>> = callbackFlow {
+            val handle = eventProvider.registerCallback(
+                onEvent = { event ->
+                    trySend(Result.success(event))
+                },
+                onError = { error ->
+                    trySend(Result.failure(error))
+                },
+            )
+
+            awaitClose {
+                handle.unregister()
+            }
+        }
+    }
+
+    // Tart State definitions
+    sealed interface AppState : State {
+        data object Idle : AppState
+        data class Active(val lastProcessedData: String? = null) : AppState
+        data class Error(val error: Throwable) : AppState
+    }
+
+    // Tart Action definitions
+    sealed interface AppAction : Action {
+        data object Subscribe : AppAction
+        data object Unsubscribe : AppAction
+    }
+
+    private fun createTestStore(
+        eventStreamMonitor: EventStreamMonitor,
+    ): Store<AppState, AppAction, Nothing> {
+        return Store {
+            initialState(AppState.Idle)
+            coroutineContext(Dispatchers.Unconfined)
+
+            state<AppState.Idle> {
+                action<AppAction.Subscribe> {
+                    // Direct transition to Active state
+                    nextState(AppState.Active())
+                }
+            }
+
+            state<AppState.Active> {
+                enter {
+                    // Collect events from the stream
+                    launch {
+                        eventStreamMonitor.eventStream.collect { result ->
+                            result.fold(
+                                onSuccess = { event ->
+                                    transaction {
+                                        // Update state with new data while staying in Active state
+                                        nextState(AppState.Active(lastProcessedData = event.data))
+                                    }
+                                },
+                                onFailure = { error ->
+                                    transaction {
+                                        nextState(AppState.Error(error))
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
+                action<AppAction.Unsubscribe> {
+                    nextState(AppState.Idle)
+                }
+            }
+
+            state<AppState.Error> {
+                action<AppAction.Subscribe> {
+                    nextState(AppState.Active())
+                }
+
+                action<AppAction.Unsubscribe> {
+                    nextState(AppState.Idle)
+                }
+            }
+        }
+    }
+
     @Test
     fun eventStream_shouldSubscribeAndProcessEvents() = runTest(testDispatcher) {
         // Mock implementation of event provider
@@ -56,13 +195,13 @@ class EventStreamUseCaseTest {
         val store = createTestStore(eventStreamMonitor)
 
         // Initial state should be Idle
-        assertIs<EventStreamState.Idle>(store.currentState)
+        assertIs<AppState.Idle>(store.currentState)
 
         // Start subscription - goes directly to Active state
-        store.dispatch(EventStreamAction.Subscribe)
+        store.dispatch(AppAction.Subscribe)
 
         // State should change directly to Active
-        assertIs<EventStreamState.Active>(store.currentState)
+        assertIs<AppState.Active>(store.currentState)
 
         // Simulate receiving first event
         val firstEvent = DataEvent("first-data", 1234567890L) // Fixed timestamp for test
@@ -70,7 +209,7 @@ class EventStreamUseCaseTest {
 
         // State should update with the processed data
         val stateAfterFirstEvent = store.currentState
-        assertIs<EventStreamState.Active>(stateAfterFirstEvent)
+        assertIs<AppState.Active>(stateAfterFirstEvent)
         assertEquals(firstEvent.data, stateAfterFirstEvent.lastProcessedData)
 
         // Simulate receiving second event - should continue to process in Active state
@@ -79,14 +218,14 @@ class EventStreamUseCaseTest {
 
         // State should update again with the new data
         val stateAfterSecondEvent = store.currentState
-        assertIs<EventStreamState.Active>(stateAfterSecondEvent)
+        assertIs<AppState.Active>(stateAfterSecondEvent)
         assertEquals(secondEvent.data, stateAfterSecondEvent.lastProcessedData)
 
         // Unsubscribe
-        store.dispatch(EventStreamAction.Unsubscribe)
+        store.dispatch(AppAction.Unsubscribe)
 
         // State should return to Idle
-        assertIs<EventStreamState.Idle>(store.currentState)
+        assertIs<AppState.Idle>(store.currentState)
     }
 
     @Test
@@ -99,10 +238,10 @@ class EventStreamUseCaseTest {
         val store = createTestStore(eventStreamMonitor)
 
         // Start subscription - goes directly to Active state
-        store.dispatch(EventStreamAction.Subscribe)
+        store.dispatch(AppAction.Subscribe)
 
         // State should change directly to Active
-        assertIs<EventStreamState.Active>(store.currentState)
+        assertIs<AppState.Active>(store.currentState)
 
         // Simulate error event
         val error = Exception("Processing error")
@@ -110,147 +249,7 @@ class EventStreamUseCaseTest {
 
         // State should change to Error
         val currentState = store.currentState
-        assertIs<EventStreamState.Error>(currentState)
+        assertIs<AppState.Error>(currentState)
         assertEquals(error, currentState.error)
-    }
-}
-
-// Domain models
-private data class DataEvent(
-    val data: String,
-    val timestamp: Long,
-)
-
-// Event provider interfaces
-private interface EventProvider {
-    fun registerCallback(
-        onEvent: (DataEvent) -> Unit,
-        onError: (Throwable) -> Unit,
-    ): RegistrationHandle
-
-    interface RegistrationHandle {
-        fun unregister()
-    }
-}
-
-// Mock implementation for testing
-private class MockEventProvider : EventProvider {
-    private var onEvent: ((DataEvent) -> Unit)? = null
-    private var onError: ((Throwable) -> Unit)? = null
-    private var isRegistered = false
-
-    private val registrationHandle = object : EventProvider.RegistrationHandle {
-        override fun unregister() {
-            isRegistered = false
-            onEvent = null
-            onError = null
-        }
-    }
-
-    override fun registerCallback(
-        onEvent: (DataEvent) -> Unit,
-        onError: (Throwable) -> Unit,
-    ): EventProvider.RegistrationHandle {
-        this.onEvent = onEvent
-        this.onError = onError
-        isRegistered = true
-        return registrationHandle
-    }
-
-    fun emitEvent(event: DataEvent) {
-        if (isRegistered) {
-            onEvent?.invoke(event)
-        }
-    }
-
-    fun emitError(error: Throwable) {
-        if (isRegistered) {
-            onError?.invoke(error)
-        }
-    }
-}
-
-// Monitor class that wraps callback-based API with Flow
-private class EventStreamMonitor(private val eventProvider: EventProvider) {
-
-    val eventStream: Flow<Result<DataEvent>> = callbackFlow {
-        val handle = eventProvider.registerCallback(
-            onEvent = { event ->
-                trySend(Result.success(event))
-            },
-            onError = { error ->
-                trySend(Result.failure(error))
-            },
-        )
-
-        awaitClose {
-            handle.unregister()
-        }
-    }
-}
-
-// Tart State definitions
-private sealed interface EventStreamState : State {
-    data object Idle : EventStreamState
-    data class Active(val lastProcessedData: String? = null) : EventStreamState
-    data class Error(val error: Throwable) : EventStreamState
-}
-
-// Tart Action definitions
-private sealed interface EventStreamAction : Action {
-    data object Subscribe : EventStreamAction
-    data object Unsubscribe : EventStreamAction
-}
-
-private fun createTestStore(
-    eventStreamMonitor: EventStreamMonitor,
-): Store<EventStreamState, EventStreamAction, Nothing> {
-    return Store {
-        initialState(EventStreamState.Idle)
-        coroutineContext(Dispatchers.Unconfined)
-
-        state<EventStreamState.Idle> {
-            action<EventStreamAction.Subscribe> {
-                // Direct transition to Active state
-                nextState(EventStreamState.Active())
-            }
-        }
-
-        state<EventStreamState.Active> {
-            enter {
-                // Collect events from the stream
-                launch {
-                    eventStreamMonitor.eventStream.collect { result ->
-                        result.fold(
-                            onSuccess = { event ->
-                                transaction {
-                                    // Update state with new data while staying in Active state
-                                    nextState(EventStreamState.Active(lastProcessedData = event.data))
-                                }
-                            },
-                            onFailure = { error ->
-                                transaction {
-                                    nextState(EventStreamState.Error(error))
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            action<EventStreamAction.Unsubscribe> {
-                nextState(EventStreamState.Idle)
-            }
-        }
-
-        state<EventStreamState.Error> {
-            action<EventStreamAction.Subscribe> {
-                nextState(EventStreamState.Active())
-            }
-
-            action<EventStreamAction.Unsubscribe> {
-                nextState(EventStreamState.Idle)
-            }
-        }
     }
 }
