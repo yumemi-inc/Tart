@@ -28,6 +28,10 @@ jobs:
             os: ubuntu-latest
           - target: testReleaseUnitTest
             os: ubuntu-latest
+          - target: jvmTest
+            os: ubuntu-latest
+          - target: jsBrowserTest
+            os: ubuntu-latest
     runs-on: ${{ matrix.os }}
 
     steps:
