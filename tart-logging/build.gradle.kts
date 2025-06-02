@@ -39,6 +39,28 @@ kotlin {
                 implementation(libs.coroutines.test)
             }
         }
+
+        val mobileAndDesktop by creating {
+            dependsOn(commonMain)
+        }
+        listOf(
+            androidMain,
+            iosX64Main,
+            iosArm64Main,
+            iosSimulatorArm64Main,
+            jvmMain,
+        ).forEach {
+            it.get().dependsOn(mobileAndDesktop)
+        }
+
+        val web by creating {
+            dependsOn(commonMain)
+        }
+        listOf(
+            jsMain,
+        ).forEach {
+            it.get().dependsOn(web)
+        }
     }
 }
 
