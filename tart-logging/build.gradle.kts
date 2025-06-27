@@ -19,6 +19,11 @@ kotlin {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    jvm()
+    js(IR) {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -33,6 +38,28 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(libs.coroutines.test)
             }
+        }
+
+        val mobileAndDesktop by creating {
+            dependsOn(commonMain)
+        }
+        listOf(
+            androidMain,
+            iosX64Main,
+            iosArm64Main,
+            iosSimulatorArm64Main,
+            jvmMain,
+        ).forEach {
+            it.get().dependsOn(mobileAndDesktop)
+        }
+
+        val web by creating {
+            dependsOn(commonMain)
+        }
+        listOf(
+            jsMain,
+        ).forEach {
+            it.get().dependsOn(web)
         }
     }
 }
