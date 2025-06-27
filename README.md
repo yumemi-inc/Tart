@@ -10,7 +10,7 @@ Tart is a state management framework for Kotlin Multiplatform.
 - Since the state remains unchanged during processing, there is no need to worry about side effects.
 - Code becomes declarative.
 - Writing test code is straightforward and easy.
-- Works on multiple platforms (currently on Android and iOS).
+- Works on multiple platforms.
   - Enables code sharing and consistent logic implementation across platforms.
 
 The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
