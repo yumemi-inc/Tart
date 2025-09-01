@@ -299,3 +299,15 @@ fun <S : State, A : Action, E : Event> Store(
 fun <S : State, A : Action> Store(
     block: StoreBuilder<S, A, Nothing>.() -> Unit,
 ): Store<S, A, Nothing> = Store<S, A, Nothing>(block)
+
+/**
+ * Creates a Store instance with configuration provided in the block.
+ * The initial state must be set within the block using initialState().
+ *
+ * @param block Configuration block to customize the store
+ * @return A configured Store instance
+ * @throws IllegalArgumentException if the initial state is not set in the block
+ */
+fun <S : State> Store(
+    block: StoreBuilder<S, Nothing, Nothing>.() -> Unit,
+): Store<S, Nothing, Nothing> = Store<S, Nothing, Nothing>(block)
