@@ -10,6 +10,8 @@ androidTools = "31.7.3"
 compose-multiplatform = "1.7.3"
 vanniktech-maven-publish = "0.29.0"
 rin = "0.3.0"
+kotlinx-serialization = "1.9.0"
+androidx-lifecycle-viewmodel-compose = "2.9.3"
 
 [libraries]
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -17,6 +19,8 @@ logger-kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit"
 rin = { group = "io.github.takahirom.rin", name = "rin", version.ref = "rin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization"}
+androidx-lifecycle-viewmodel-compose = {module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref="androidx-lifecycle-viewmodel-compose"}
 
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 android-tools-common = { group = "com.android.tools", name = "common", version.ref = "androidTools" }
