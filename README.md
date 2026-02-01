@@ -70,7 +70,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState
         action<CounterAction.Increment> {
             nextState(state.copy(count = state.count + 1))
         }
-        
+
         action<CounterAction.Decrement> {
             if (0 < state.count) {
                 nextState(state.copy(count = state.count - 1))
@@ -194,8 +194,8 @@ However, if there are multiple *States*, for example a UI during data loading, p
 
 ```kt
 sealed interface CounterState : State {
-    data object Loading: CounterState 
-    data class Main(val count: Int): CounterState
+    data object Loading : CounterState 
+    data class Main(val count: Int) : CounterState
 }
 ```
 
@@ -295,7 +295,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
             // ...
             nextState(CounterState.Error(error = error))
         }
-        
+
         // more general exception handlers should come last
         // you can also catch just 'Exception' and branch based on the type of the error property inside the block
         error<Exception> { // catches any remaining exceptions
@@ -464,7 +464,7 @@ class CounterActivity : ComponentActivity() {
 
         setContent {
             // create an instance of ViewStore
-            val viewStore = rememberViewStore(counterViewModel.store)
+            val viewStore = rememberViewStore { counterViewModel.store }
 
             MyApplicationTheme {
                 Surface(
@@ -502,11 +502,11 @@ class CounterActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val viewStore = rememberViewStore(
+            val viewStore = rememberViewStore(autoDispose = true) {
                 counterStoreBuilder.build(
                     stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
                 )
-            )
+            }
 
             // ... 
 ```
@@ -614,9 +614,9 @@ Create an instance of `ViewStore` directly with the target *State*.
 fun LoadingPreview() {
     MyApplicationTheme {
         YourComposable(
-            viewStore = ViewStore(
-                state = CounterState.Loading,
-            ),
+            viewStore = ViewStore {
+                CounterState.Loading
+            },
         )
     }
 }
