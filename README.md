@@ -41,17 +41,15 @@ sealed interface CounterAction : Action {
     data object Increment : CounterAction
     data object Decrement : CounterAction
 }
-
-sealed interface CounterEvent : Event {} // currently empty
 ```
 
 Create a *Store* instance using the `Store{}` DSL with an initial *State*.
 
 ```kt
-val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {}
+val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {}
 
 // or, use initialState specification
-val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+val store: Store<CounterState, CounterAction, Nothing> = Store {
 
     initialState(CounterState(count = 0))
 }
@@ -63,7 +61,7 @@ If no `nextState()` is specified, the current state remains unchanged.
 For complex state updates with conditional logic, you can use `nextStateBy{}` with a block that computes and returns the new state.
 
 ```kt
-val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {
 
     state<CounterState> {
 
@@ -100,12 +98,18 @@ The new *State* will be reflected in the Store's `.state` (StateFlow) property, 
 
 ### Notify event to UI
 
-Prepare classes for *Event*.
+Prepare classes for *Event*, and specify it as the third type parameter of *Store*.
 
 ```kt
 sealed interface CounterEvent : Event {
     data class ShowToast(val message: String) : CounterEvent
     data object NavigateToNextScreen : CounterEvent
+}
+```
+
+```kt
+val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+    // ...
 }
 ```
 
@@ -128,35 +132,24 @@ Subscribe to the Store's `.event` (Flow) property on the UI, and process it.
 Keep Repository, UseCase, etc. accessible from your store creation scope and use them in the `action{}` block.
 
 ```kt
-class CounterStoreBuilder( // instantiate with DI library etc.
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-
-        state<CounterState> {
-
-            action<CounterAction.Load> {
-                val count = counterRepository.get() // load
-                nextState(state.copy(count = count))
-            }
-
-            action<CounterAction.Increment> {
-                val count = state.count + 1
-                counterRepository.set(count) // save
-                nextState(state.copy(count = count))
-            }
-
-            // ...
-```
-
-Or, create a *Store* simply like this with a function:
-
-```kt
-fun createCounterStore(
-    counterRepository: CounterRepository
+fun CounterStore(
+    counterRepository: CounterRepository,
 ): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-    // ...
-}
+
+    state<CounterState> {
+
+        action<CounterAction.Load> {
+            val count = counterRepository.get() // load
+            nextState(state.copy(count = count))
+        }
+
+        action<CounterAction.Increment> {
+            val count = state.count + 1
+            counterRepository.set(count) // save
+            nextState(state.copy(count = count))
+        }
+
+        // ...
 ```
 
 <details>
@@ -165,23 +158,23 @@ fun createCounterStore(
 Processing other than changing the *State* may be defined as functions, as they tend to become complex and lengthy.
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
 
-        // define as a function
-        suspend fun loadCount(): Int {
-            return counterRepository.get()
+    // define as a function
+    suspend fun loadCount(): Int {
+        return counterRepository.get()
+    }
+
+    state<CounterState> {
+
+        action<CounterAction.Load> {
+            val count = counterRepository.get()
+            nextState(state.copy(count = loadCount())) // call the function
         }
 
-        state<CounterState> {
-
-            action<CounterAction.Load> {
-                nextState(state.copy(count = loadCount())) // call the function
-            }
-
-            // ...
+        // ...
 ```
 
 You may also define them as extension functions of *State* or *Action*.
@@ -200,42 +193,40 @@ sealed interface CounterState : State {
 ```
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
 
-        state<CounterState.Loading> { // for Loading state
-            action<CounterAction.Load> {
-                val count = counterRepository.get()
-                nextState(CounterState.Main(count = count)) // transition to Main state
-            }
+    state<CounterState.Loading> { // for Loading state
+        action<CounterAction.Load> {
+            val count = counterRepository.get()
+            nextState(CounterState.Main(count = count)) // transition to Main state
         }
+    }
 
-        state<CounterState.Main> { // for Main state
-            action<CounterAction.Increment> {
-                // ...
+    state<CounterState.Main> { // for Main state
+        action<CounterAction.Increment> {
+            // ...
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
 Otherwise, if you want to do something at the start of the *State*, use the `enter{}` block (similarly, you can use the `exit{}` block if necessary).
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
 
-        state<CounterState.Loading> {
-            enter {
-                val count = counterRepository.get()
-                nextState(CounterState.Main(count = count)) // transition to Main state
-            }
+    state<CounterState.Loading> {
+        enter {
+            val count = counterRepository.get()
+            nextState(CounterState.Main(count = count)) // transition to Main state
         }
+    }
 
-        state<CounterState.Main> {
-            action<CounterAction.Increment> {
-                // ...
+    state<CounterState.Main> {
+        action<CounterAction.Increment> {
+            // ...
 ```
 
 The state diagram is as follows:
@@ -426,89 +417,109 @@ You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` dir
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
-Create an instance of the `ViewStore` from a *Store* instance using the `rememberViewStore()` function.
+Create an instance of the `ViewStore` from a *Store* using the `rememberViewStore()` function.
 For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
-class CounterStoreContainer(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store {
-        // ...
-    }
+fun CounterStore(
+    coroutineContext: CoroutineContext,
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
+
+    coroutineContext(coroutineContext)
 }
 ```
 
 ```kt
 @HiltViewModel
 class CounterViewModel @Inject constructor(
-    counterStoreBuilder: CounterStoreBuilder,
+    counterRepository: CounterRepository,
 ) : ViewModel() {
 
-    val store = counterStoreBuilder.build()
-
-    override fun onCleared() {
-        store.dispose()
-    }
+    val store = CounterStore(
+        coroutineContext = viewModelScope.coroutineContext,
+        counterRepository = counterRepository,
+    )
 }
 ```
 
 ```kt
-@AndroidEntryPoint
-class CounterActivity : ComponentActivity() {
+@Composable
+fun CounterScreen(
+    // create an instance of ViewStore
+    viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
+        hiltViewModel<CounterViewModel>().store
+    },
+) {
+    // ...
 
-    private val counterViewModel: CounterViewModel by viewModels()
+    // pass the ViewStore instance to lower components if necessary
+    YourComposable(
+        viewStore = viewStore,
+    )
+}
+```
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+Alternatively, you can use the `Store{}` DSL directly in the ViewModel as follows, but note that in this case you need to write tests for `CounterViewModel`.
 
-        setContent {
-            // create an instance of ViewStore
-            val viewStore = rememberViewStore { counterViewModel.store }
+```kt
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    counterRepository: CounterRepository,
+) : ViewModel() {
 
-            MyApplicationTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    // pass the ViewStore instance to lower components if necessary
-                    YourComposable(
-                        viewStore = viewStore,
-                    )
-            // ... 
+    val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+        // ...
+
+        coroutineContext(viewModelScope.coroutineContext)
+    }
+}
 ```
 
 You can create a `ViewStore` instance without using ViewModel as shown below:
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
-        // ...
+fun CounterStore(
+    coroutineContext: CoroutineContext,
+    stateSaver: StateSaver<CounterState>,
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
 
-        stateSaver(stateSaver)
-    }
+    coroutineContext(coroutineContext)
+    stateSaver(stateSaver)
 }
 ```
 
 ```kt
-@AndroidEntryPoint
-class CounterActivity : ComponentActivity() {
+@Composable
+fun CounterScreen(
+    viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
+        CounterStore(
+            coroutineContext = rememberCoroutineScope().coroutineContext, // or, specify the autoDispose option in rememberViewStore {}
+            stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
+            counterRepository = CounterRepositoryImpl(),
+        )
+    },
+) {
+    // ...
+}
+```
 
-    @Inject
-    lateinit var counterStoreBuilder: CounterStoreBuilder
+If you inject instances such as Repository using a DI library, it is useful to create a class like the following.
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+```kt
+class CounterStoreContainer(
+    private val counterRepository: CounterRepository,
+) {
+    fun build(coroutineContext: CoroutineContext, stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
+        // ...
 
-        setContent {
-            val viewStore = rememberViewStore(autoDispose = true) {
-                counterStoreBuilder.build(
-                    stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
-                )
-            }
-
-            // ... 
+        coroutineContext(coroutineContext)
+        stateSaver(stateSaver)
+    }
+}
 ```
 
 ### Rendering using State
@@ -613,7 +624,7 @@ Create an instance of `ViewStore` directly with the target *State*.
 @Composable
 fun LoadingPreview() {
     MyApplicationTheme {
-        YourComposable(
+        CounterScreen(
             viewStore = ViewStore {
                 CounterState.Loading
             },
