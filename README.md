@@ -4,6 +4,10 @@
 ![License](https://img.shields.io/github/license/yumemi-inc/Tart)
 [![Java CI with Gradle](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml/badge.svg)](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml)
 
+> [!IMPORTANT]
+> We are considering moving this repository to a different organization.
+> As part of that move, the library group name may change.
+
 Tart is a state management framework for Kotlin Multiplatform.
 
 - Data flow is one-way, making it easy to understand.
@@ -31,8 +35,7 @@ implementation("io.yumemi.tart:tart-core:<latest-release>")
 ### Basic
 
 Take a simple counter application as an example.
-
-First, prepare classes for *State*, *Action*, and *Event*.
+First, prepare classes for *State* and *Action*.
 
 ```kt
 data class CounterState(val count: Int) : State
@@ -170,7 +173,6 @@ fun CounterStore(
     state<CounterState> {
 
         action<CounterAction.Load> {
-            val count = counterRepository.get()
             nextState(state.copy(count = loadCount())) // call the function
         }
 
@@ -259,8 +261,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
             try {
                 val count = counterRepository.get()
                 nextState(CounterState.Main(count = count))
-            } catch (t: Throwable) {
-                nextState(CounterState.Error(error = t))
+            } catch (e: Exception) {
+                nextState(CounterState.Error(error = e))
             }
         }
     }
