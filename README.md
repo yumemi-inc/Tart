@@ -470,7 +470,7 @@ fun CounterScreen(
 }
 ```
 
-Alternatively, you can use the `Store{}` DSL directly in the ViewModel as follows, but note that in this case you need to write tests for `CounterViewModel`.
+Alternatively, you can use the `Store{}` DSL directly in the ViewModel as follows, but note that in this case you need to write tests for `CounterViewModel` and that sharing a *Store* across multiple platforms becomes difficult.
 
 ```kt
 @HiltViewModel
