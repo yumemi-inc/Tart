@@ -1,4 +1,11 @@
 <img src="doc/logo.png" width="350">
+<details>
+<summary>Logo Usage (CC0 1.0)</summary>
+
+The Tart logo (doc/logo.png, doc/logo-full.png) is licensed under CC0 1.0 Universal.
+You may use it freely for any purpose without attribution.
+See doc/LOGO_LICENSE for details.
+</details>
 
 ![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)
 ![License](https://img.shields.io/github/license/yumemi-inc/Tart)
