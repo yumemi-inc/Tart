@@ -1,4 +1,4 @@
-<img src="doc/logo.png" width=50%>
+<img src="doc/logo.png" width="350">
 
 ![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)
 ![License](https://img.shields.io/github/license/yumemi-inc/Tart)
