@@ -1,7 +1,7 @@
 [versions]
 tart = "4.0.0-alpha01"
-agp = "8.10.1"
-kotlin = "2.2.10"
+agp = "8.13.0"
+kotlin = "2.2.20"
 coroutines = "1.10.1"
 kermit = "2.0.6"
 android-minSdk = "24"
@@ -24,7 +24,7 @@ kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-pl
 vanniktech-maven-publish-gradlePlugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "vanniktechMavenPublish" }
 
 [plugins]
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
