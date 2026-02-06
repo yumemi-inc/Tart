@@ -2,14 +2,14 @@
 tart = "4.0.0-alpha01"
 agp = "8.13.0"
 kotlin = "2.2.20"
-coroutines = "1.10.1"
-kermit = "2.0.6"
+coroutines = "1.10.2"
+kermit = "2.0.8"
 android-minSdk = "24"
 android-compileSdk = "36"
-androidTools = "31.7.3"
-compose-multiplatform = "1.7.3"
+androidTools = "32.0.0"
+compose-multiplatform = "1.8.2"
 vanniktechMavenPublish = "0.34.0"
-rin = "0.3.0"
+rin = "0.4.0"
 
 [libraries]
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
