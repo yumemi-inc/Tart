@@ -7,7 +7,7 @@ kermit = "2.0.8"
 android-minSdk = "24"
 android-compileSdk = "36"
 androidTools = "32.0.0"
-compose-multiplatform = "1.8.2"
+compose-multiplatform = "1.8.2" # https://github.com/yumemi-inc/Tart/issues/149
 vanniktechMavenPublish = "0.34.0"
 rin = "0.4.0"
 
