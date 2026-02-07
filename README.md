@@ -2,7 +2,7 @@
 <details>
 <summary>Logo Usage (CC0 1.0)</summary>
 
-The Tart logo ([doc/logo.png](doc/logo.png), [doc/logo-full.png](doc/logo-full.png)) is licensed under CC0 1.0 Universal.
+The Tart logo ([doc/logo.png](doc/logo.png)) is licensed under CC0 1.0 Universal.
 You may use it freely for any purpose without attribution.
 See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
 </details>
