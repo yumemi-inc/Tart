@@ -59,6 +59,9 @@ class StoreBaseTest {
         // Store is not started
         assertIs<AppState.Loading>(store.currentState)
 
+        // Accessing state initializes the Store and runs Loading.enter
+        assertIs<AppState.Main>(store.state.value)
+
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Decrement)
