@@ -34,11 +34,9 @@ interface Store<S : State, A : Action, E : Event> {
     /**
      * Collects state changes.
      *
-     * @param skipInitialState Whether to skip the initial state
-     * @param startStore Whether to start the Store with this call
      * @param state Callback called when the state changes
      */
-    fun collectState(skipInitialState: Boolean = false, startStore: Boolean = true, state: (S) -> Unit)
+    fun collectState(state: (S) -> Unit)
 
     /**
      * Collects events.

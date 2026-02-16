@@ -1,6 +1,7 @@
 package io.yumemi.tart.core
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -53,15 +54,44 @@ class StoreBaseTest {
     }
 
     @Test
+    fun tartStore_shouldProcessInitialEnterWhenCollectingState() = runTest(testDispatcher) {
+        val store = createTestStore(AppState.Loading)
+
+        // Store is not started
+        assertIs<AppState.Loading>(store.currentState)
+
+        // start Store
+        store.collectState { }
+
+        // Store is started
+        assertIs<AppState.Main>(store.currentState)
+    }
+
+    @Test
+    fun tartStore_shouldProcessInitialEnterWhenCollectingStateFlow() = runTest(testDispatcher) {
+        val store = createTestStore(AppState.Loading)
+
+        // Store is not started
+        assertIs<AppState.Loading>(store.currentState)
+
+        val collectingJob = launch {
+            // start Store
+            store.state.collect { }
+        }
+
+        assertIs<AppState.Main>(store.currentState)
+
+        collectingJob.cancel()
+    }
+
+    @Test
     fun tartStore_shouldHandleActions() = runTest(testDispatcher) {
         val store = createTestStore(AppState.Loading)
 
         // Store is not started
         assertIs<AppState.Loading>(store.currentState)
 
-        // Accessing state initializes the Store and runs Loading.enter
-        assertIs<AppState.Main>(store.state.value)
-
+        // start Store and handle action
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Decrement)
