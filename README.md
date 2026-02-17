@@ -648,9 +648,9 @@ Create an instance of `ViewStore` directly with the target *State*.
 fun LoadingPreview() {
     MyApplicationTheme {
         CounterScreen(
-            viewStore = ViewStore {
-                CounterState.Loading
-            },
+            viewStore = ViewStore(
+                state = CounterState.Loading,
+            ),
         )
     }
 }
