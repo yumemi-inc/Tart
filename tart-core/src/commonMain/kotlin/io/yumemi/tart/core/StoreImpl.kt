@@ -38,7 +38,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
     final override val state: StateFlow<S> by lazy {
         object : StateFlow<S> {
-            override val replayCache: List<S> = _state.replayCache
+            override val replayCache: List<S> get() = _state.replayCache
             override val value: S get() = _state.value
             override suspend fun collect(collector: FlowCollector<S>): Nothing {
                 try {
