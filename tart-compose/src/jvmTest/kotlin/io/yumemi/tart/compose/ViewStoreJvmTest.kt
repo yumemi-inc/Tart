@@ -10,6 +10,7 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -171,6 +172,35 @@ class ViewStoreJvmTest {
         testScheduler.runCurrent()
 
         assertEquals(UiState.Ready(1), store.currentState)
+    }
+
+    @Test
+    fun rememberViewStore_usesStateFlowValueForInitialRenderingBeforeFirstCollectEmission() = runTest(testDispatcher) {
+        val enterGate = CompletableDeferred<Unit>()
+        val store = Store<UiState, UiAction, UiEvent>(initialState = UiState.Loading) {
+            coroutineContext(coroutineContext)
+            state<UiState.Loading> {
+                enter(coroutineDispatcher = testDispatcher) {
+                    enterGate.await()
+                    nextState(UiState.Ready(0))
+                }
+            }
+        }
+
+        lateinit var viewStore: ViewStore<UiState, UiAction, UiEvent>
+
+        withComposition(
+            content = {
+                viewStore = rememberViewStore(autoDispose = true) { store }
+            },
+            afterSetContent = {
+                assertEquals(UiState.Loading, viewStore.state)
+                assertEquals(UiState.Loading, store.currentState)
+                assertTrue(enterGate.complete(Unit))
+                testScheduler.runCurrent()
+                assertEquals(UiState.Ready(0), store.currentState)
+            },
+        )
     }
 
     private suspend fun TestScope.withComposition(
