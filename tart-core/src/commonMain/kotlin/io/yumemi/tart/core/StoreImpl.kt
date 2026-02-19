@@ -1,5 +1,6 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +29,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             try {
                 stateSaver.restore() ?: initialState
             } catch (t: Throwable) {
-                exceptionHandler.handle(t)
+                handleException(t)
                 initialState
             },
         )
@@ -37,11 +38,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
     final override val state: StateFlow<S> by lazy {
         object : StateFlow<S> {
-            override val replayCache: List<S> = _state.replayCache
+            override val replayCache: List<S> get() = _state.replayCache
             override val value: S get() = _state.value
             override suspend fun collect(collector: FlowCollector<S>): Nothing {
-                mutex.withLock {
-                    initializeIfNeeded()
+                try {
+                    mutex.withLock {
+                        initializeIfNeeded()
+                    }
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    handleException(t)
                 }
                 _state.collect(collector)
             }
@@ -74,8 +80,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private val coroutineScope by lazy {
         CoroutineScope(
             coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { _, exception ->
-                val t = if (exception is InternalError) exception.original else exception
-                exceptionHandler.handle(t)
+                handleException(exception)
             },
         )
     }
@@ -153,6 +158,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
             if (t is InternalError) {
                 throw t
             }
@@ -174,6 +182,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
             if (t is InternalError) {
                 throw t
             }
@@ -197,6 +208,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = inErrorHandling)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
             if (t is InternalError) {
                 throw t
             }
@@ -223,6 +237,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = true)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
             if (t is InternalError) {
                 throw t
             }
@@ -306,6 +323,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                             try {
                                                 block(transactionScope)
                                             } catch (t: Throwable) {
+                                                if (t is CancellationException) {
+                                                    throw t
+                                                }
                                                 onErrorOccurred(currentState, t)
                                                 return@withLock
                                             }
@@ -322,6 +342,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         try {
                             block(launchScope)
                         } catch (t: Throwable) {
+                            if (t is CancellationException) {
+                                throw t
+                            }
                             coroutineScope.launch(coroutineDispatcher) {
                                 mutex.withLock {
                                     if (stateScope.isActive) {
@@ -407,8 +430,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
             throw InternalError(t)
         }
+    }
+
+    private fun handleException(t: Throwable) {
+        val handled = if (t is InternalError) t.original else t
+        exceptionHandler.handle(handled)
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
