@@ -31,6 +31,9 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 </div>
 </br>
 
+Especially, Tart is particularly strong in applications with multiple explicit states.
+By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model each screen state explicitly and keep complex transitions readable and testable.
+
 ## Installation
 
 ```kt
@@ -645,9 +648,9 @@ Create an instance of `ViewStore` directly with the target *State*.
 fun LoadingPreview() {
     MyApplicationTheme {
         CounterScreen(
-            viewStore = ViewStore {
-                CounterState.Loading
-            },
+            viewStore = ViewStore(
+                state = CounterState.Loading,
+            ),
         )
     }
 }

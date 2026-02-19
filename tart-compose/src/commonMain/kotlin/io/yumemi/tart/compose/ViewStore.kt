@@ -19,33 +19,17 @@ import kotlinx.coroutines.flow.filter
  * Store wrapper class for use with Compose UI.
  * Provides state, action dispatching, and event handling.
  *
- * For Compose previews, you can create a ViewStore with state only.
- * ```
- * @Preview
- * @Composable
- * fun MyScreenPreview() {
- *     MyScreen(
- *         viewStore = ViewStore { MyState.Loading }
- *     )
- * }
- * ```
- *
+ * @param state The current state
  * @param dispatch Function to dispatch actions
  * @param eventFlow Flow to receive events
- * @param state Lambda that provides the current UI state
  */
 @Suppress("unused")
 @Stable
 class ViewStore<S : State, A : Action, E : Event>(
+    val state: S,
     val dispatch: (A) -> Unit = {},
     @PublishedApi internal val eventFlow: Flow<E> = emptyFlow(),
-    state: () -> S,
 ) {
-    /**
-     * Current UI state.
-     */
-    val state: S = state()
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ViewStore<*, *, *>) return false
@@ -119,9 +103,9 @@ fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoD
 
     return remember(state) {
         ViewStore(
+            state = state,
             dispatch = rememberedStore::dispatch,
             eventFlow = rememberedStore.event,
-            state = { state },
         )
     }
 }
