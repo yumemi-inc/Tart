@@ -27,7 +27,7 @@ class MessageMiddlewareTest {
 
         val store = createTestStore(CounterState(10), middleware, sendMessage)
 
-        store.state // access state to initialize the store
+        store.collectState { } // start Store
 
         assertEquals(sendMessage, receivedMessage)
     }
