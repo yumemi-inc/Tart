@@ -7,7 +7,7 @@ You may use it freely for any purpose without attribution.
 See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
 </details>
 
-![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)
+[![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)](https://central.sonatype.com/artifact/io.yumemi.tart/tart-core)
 ![License](https://img.shields.io/github/license/yumemi-inc/Tart)
 [![Java CI with Gradle](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml/badge.svg)](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml)
 
