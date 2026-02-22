@@ -360,7 +360,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 ### Collecting Flows
 
-You can use the `launch{}` specification in the `enter{}` block to collect flows and dispatch *Actions*.
+You can use the `launch{}` specification in the `enter{}` block to collect flows and update *State* (or emit *Event*s).
 This is useful for connecting external data streams to your *Store*:
 
 ```kt
@@ -725,8 +725,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 Note that *State* is read-only in Middleware.
 
-Each Middleware method is a suspending function, so it can be run synchronously (not asynchronously) with the *Store*.
-Because it runs synchronously and can block the *Store*, use a separate CoroutineScope for long-running work.
+Middleware methods are suspending functions. The *Store* waits for a method to complete before proceeding.
+Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
 
 In the next section, we introduce built-in Middleware.
 The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your Middleware implementation.
