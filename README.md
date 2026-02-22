@@ -17,6 +17,7 @@ See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
 
 Tart is a state management framework for Kotlin Multiplatform.
 
+Key benefits:
 - The data flow is one-way, making it easy to reason about.
 - Because state is immutable during processing, you don’t have to worry about side effects.
 - Code becomes more declarative.
@@ -33,6 +34,30 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 
 Especially, Tart is particularly strong in applications with multiple explicit states.
 By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model each screen state explicitly and keep complex transitions readable and testable.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Basic](#basic)
+  - [Delivering events to the UI](#delivering-events-to-the-ui)
+  - [Access repositories and UseCase classes](#access-repositories-and-usecase-classes)
+  - [Multiple states and transitions](#multiple-states-and-transitions)
+  - [Error handling](#error-handling)
+  - [Collecting Flows](#collecting-flows)
+  - [Specifying coroutineContext](#specifying-coroutinecontext)
+    - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
+  - [State Persistence](#state-persistence)
+  - [For iOS](#for-ios)
+- [Compose](#compose)
+  - [Rendering with State](#rendering-with-state)
+  - [Dispatch Actions](#dispatch-actions)
+  - [Handling Events](#handling-events)
+  - [Mocks for preview and testing](#mocks-for-preview-and-testing)
+- [Middleware](#middleware)
+  - [Logging](#logging)
+  - [Message](#message)
+- [Testing Store](#testing-store)
 
 ## Installation
 
