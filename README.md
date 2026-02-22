@@ -48,7 +48,7 @@ By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model e
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
-  - [For Platforms Without Flow/StateFlow Access](#for-platforms-with-flowstateflow-access)
+  - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
   - [Dispatch Actions](#dispatch-actions)
