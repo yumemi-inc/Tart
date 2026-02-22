@@ -48,7 +48,7 @@ By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model e
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
-  - [For iOS](#for-ios)
+  - [For Platforms Without Flow/StateFlow Access](#for-platforms-with-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
   - [Dispatch Actions](#dispatch-actions)
@@ -449,9 +449,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-### For iOS
+### For Platforms Without Flow/StateFlow Access
 
-Coroutines like Store's `.state` (StateFlow) property and `.event` (Flow) property cannot be used on iOS, so use the `.collectState()` and `.collectEvent()` methods.
+On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
 
 ## Compose
