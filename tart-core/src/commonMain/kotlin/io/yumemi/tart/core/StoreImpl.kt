@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -40,16 +41,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         object : StateFlow<S> {
             override val replayCache: List<S> get() = _state.replayCache
             override val value: S get() = _state.value
-            override suspend fun collect(collector: FlowCollector<S>): Nothing {
-                try {
+            override suspend fun collect(collector: FlowCollector<S>): Nothing = coroutineScope {
+                launch {
+                    _state.collect(collector)
+                }
+                coroutineScope.launch {
                     mutex.withLock {
                         initializeIfNeeded()
                     }
-                } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
-                    handleException(t)
                 }
-                _state.collect(collector)
+                awaitCancellation()
             }
         }
     }
