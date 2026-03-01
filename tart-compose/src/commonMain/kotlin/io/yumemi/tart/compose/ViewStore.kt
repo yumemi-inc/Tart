@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.filter
 class ViewStore<S : State, A : Action, E : Event>(
     val state: S,
     val dispatch: (A) -> Unit = {},
-    val eventFlow: Flow<E> = emptyFlow(),
+    @PublishedApi internal val eventFlow: Flow<E> = emptyFlow(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -45,29 +45,24 @@ class ViewStore<S : State, A : Action, E : Event>(
      *
      * @param block Composable function to perform rendering
      */
+    @Suppress("ComposableNaming")
     @Composable
-    inline fun <reified S2 : S> render(block: ViewStore<S2, A, E>.() -> Unit) {
+    inline fun <reified S2 : S> render(block: @Composable ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
-            block(
-                remember(state) {
-                    ViewStore(
-                        state = state,
-                        dispatch = dispatch,
-                        eventFlow = eventFlow,
-                    )
-                },
-            )
+            @Suppress("UNCHECKED_CAST")
+            block(this as ViewStore<S2, A, E>)
         }
     }
 
     /**
      * Handles events of a specified type.
      *
-     * @param block Callback function to process the event
+     * @param block Function to process the event
      */
+    @Suppress("ComposableNaming")
     @Composable
     inline fun <reified E2 : E> handle(crossinline block: ViewStore<S, A, E>.(E2) -> Unit) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(eventFlow) {
             eventFlow.filter { it is E2 }.collect {
                 block(this@ViewStore, it as E2)
             }
@@ -79,21 +74,29 @@ class ViewStore<S : State, A : Action, E : Event>(
  * Composable function that creates and returns a new ViewStore instance from a Store.
  * Monitors state changes in the Store and triggers UI redrawing.
  *
- * @param store The source Store instance
+ * @param key Key used to remember and retain the Store instance
  * @param autoDispose Whether to dispose the Store when the component is disposed
- * @return A new ViewStore instance
+ * @param store Composable function to create the source Store instance
+ * @return A ViewStore instance
  */
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, autoDispose: Boolean = false): ViewStore<S, A, E> {
-    val rememberStore = remember { store } // allow different Store instances to be passed
+fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoDispose: Boolean = false, store: @Composable () -> Store<S, A, E>): ViewStore<S, A, E> {
+    val fixedAutoDispose = remember { autoDispose }
 
-    val state by rememberStore.state.collectAsState()
+    val holder = remember(key) {
+        object {
+            var value: Store<S, A, E>? = null
+        }
+    }
+    val rememberedStore = holder.value ?: store().also { holder.value = it }
 
-    DisposableEffect(Unit) {
+    val state by rememberedStore.state.collectAsState()
+
+    DisposableEffect(rememberedStore) {
         onDispose {
-            if (autoDispose) {
-                rememberStore.dispose()
+            if (fixedAutoDispose) {
+                rememberedStore.dispose()
             }
         }
     }
@@ -101,8 +104,8 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
     return remember(state) {
         ViewStore(
             state = state,
-            dispatch = rememberStore::dispatch,
-            eventFlow = rememberStore.event,
+            dispatch = rememberedStore::dispatch,
+            eventFlow = rememberedStore.event,
         )
     }
 }

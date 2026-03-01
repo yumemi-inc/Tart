@@ -6,8 +6,7 @@ import io.yumemi.tart.core.Middleware
 import io.yumemi.tart.core.MiddlewareScope
 import io.yumemi.tart.core.State
 import kotlinx.coroutines.CoroutineDispatcher
-
-internal expect val defaultLoggingCoroutineDispatcher: CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Middleware that logs Store operations.
@@ -17,7 +16,7 @@ internal expect val defaultLoggingCoroutineDispatcher: CoroutineDispatcher
  */
 abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val logger: Logger = DefaultLogger,
-    private val coroutineDispatcher: CoroutineDispatcher = defaultLoggingCoroutineDispatcher,
+    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
 ) : Middleware<S, A, E> {
     private lateinit var middlewareScope: MiddlewareScope<A>
 
@@ -47,7 +46,7 @@ fun <S : State, A : Action, E : Event> simpleLogging(
     tag: String = "Tart",
     severity: Logger.Severity = Logger.Severity.Debug,
     logger: Logger = DefaultLogger,
-    coroutineDispatcher: CoroutineDispatcher = defaultLoggingCoroutineDispatcher,
+    coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
 ): Middleware<S, A, E> {
     return object : LoggingMiddleware<S, A, E>(
         logger = logger,

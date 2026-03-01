@@ -1,17 +1,29 @@
-# <img src="doc/logo.png" style="height: 1em; margin-bottom: -0.2em;"> Tart
+<img src="doc/logo.png" width="350">
+<details>
+<summary>Logo Usage (CC0 1.0)</summary>
 
-![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)
+The Tart logo ([doc/logo.png](doc/logo.png)) is licensed under CC0 1.0 Universal.
+You may use it freely for any purpose without attribution.
+See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
+</details>
+
+[![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)](https://central.sonatype.com/artifact/io.yumemi.tart/tart-core)
 ![License](https://img.shields.io/github/license/yumemi-inc/Tart)
 [![Java CI with Gradle](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml/badge.svg)](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml)
 
+> [!IMPORTANT]
+> We are considering moving this repository to a different organization.
+> As part of that move, the library group name may change.
+
 Tart is a state management framework for Kotlin Multiplatform.
 
-- Data flow is one-way, making it easy to understand.
-- Since the state remains unchanged during processing, there is no need to worry about side effects.
-- Code becomes declarative.
-- Writing test code is straightforward and easy.
-- Works on multiple platforms.
-  - Enables code sharing and consistent logic implementation across platforms.
+Key benefits:
+- The data flow is one-way, making it easy to reason about.
+- Because state is immutable during processing, you don’t have to worry about side effects.
+- Code becomes more declarative.
+- Writing tests is straightforward.
+- Works across multiple platforms.
+  - Enables code sharing and consistent logic across platforms.
 
 The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) and is as follows:
 
@@ -19,6 +31,33 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
   <img src="doc/architecture.png" width=60% />
 </div>
 </br>
+
+Especially, Tart is particularly strong in applications with multiple explicit states.
+By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model each screen state explicitly and keep complex transitions readable and testable.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Basic](#basic)
+  - [Delivering events to the UI](#delivering-events-to-the-ui)
+  - [Access repositories and UseCase classes](#access-repositories-and-usecase-classes)
+  - [Multiple states and transitions](#multiple-states-and-transitions)
+  - [Error handling](#error-handling)
+  - [Collecting Flows](#collecting-flows)
+  - [Specifying coroutineContext](#specifying-coroutinecontext)
+    - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
+  - [State Persistence](#state-persistence)
+  - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
+- [Compose](#compose)
+  - [Rendering with State](#rendering-with-state)
+  - [Dispatch Actions](#dispatch-actions)
+  - [Handling Events](#handling-events)
+  - [Mocks for preview and testing](#mocks-for-preview-and-testing)
+- [Middleware](#middleware)
+  - [Logging](#logging)
+  - [Message](#message)
+- [Testing Store](#testing-store)
 
 ## Installation
 
@@ -30,9 +69,8 @@ implementation("io.yumemi.tart:tart-core:<latest-release>")
 
 ### Basic
 
-Take a simple counter application as an example.
-
-First, prepare classes for *State*, *Action*, and *Event*.
+Let’s take a simple counter app as an example.
+First, define the *State* and *Action* classes.
 
 ```kt
 data class CounterState(val count: Int) : State
@@ -41,36 +79,33 @@ sealed interface CounterAction : Action {
     data object Increment : CounterAction
     data object Decrement : CounterAction
 }
-
-sealed interface CounterEvent : Event {} // currently empty
 ```
 
-Create a *Store* instance using the `Store{}` DSL with an initial *State*.
+Create a *Store* using the `Store{}` DSL and an initial *State*.
 
 ```kt
-val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {}
+val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {}
 
-// or, use initialState specification
-val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+// or, use the initialState() specification
+val store: Store<CounterState, CounterAction, Nothing> = Store {
 
     initialState(CounterState(count = 0))
 }
 ```
 
-Define how the *State* is changed by *Action* by using the `state{}` and `action{}` blocks.
-Specify the resulting *State* using the `nextState()` specification.
+Define how *Action*s change *State* using the `state{}` and `action{}` blocks.
+Specify the resulting *State* with `nextState()`.
 If no `nextState()` is specified, the current state remains unchanged.
-For complex state updates with conditional logic, you can use `nextStateBy{}` with a block that computes and returns the new state.
 
 ```kt
-val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {
 
     state<CounterState> {
 
         action<CounterAction.Increment> {
             nextState(state.copy(count = state.count + 1))
         }
-        
+
         action<CounterAction.Decrement> {
             if (0 < state.count) {
                 nextState(state.copy(count = state.count - 1))
@@ -82,10 +117,22 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState
 }
 ```
 
-The *Store* preparation is now complete.
-Keep the store instance in the ViewModel etc.
+For conditional or complex updates, use `nextStateBy{}` to compute and return the new state.
 
-Issue an *Action* from the UI using the Store's `dispatch()` method.
+```kt
+nextStateBy {
+    // ...
+
+    val newCount = ...
+
+    state.copy(count = newCount)
+}
+```
+
+The *Store* setup is complete.
+Keep the store instance in a ViewModel (or similar).
+
+Dispatch an *Action* from the UI using the Store's `dispatch()` method.
 
 ```kt
 // example in Compose
@@ -96,11 +143,11 @@ Button(
 }
 ```
 
-The new *State* will be reflected in the Store's `.state` (StateFlow) property, so draw it to the UI.
+The new *State* is exposed via the Store's `.state` (StateFlow), so render it in the UI.
 
-### Notify event to UI
+### Delivering events to the UI
 
-Prepare classes for *Event*.
+Define your *Event* class and set it as the third type parameter of *Store*.
 
 ```kt
 sealed interface CounterEvent : Event {
@@ -109,54 +156,49 @@ sealed interface CounterEvent : Event {
 }
 ```
 
-In a `action{}` block, specify that Event using the `event()` specification.
+```kt
+val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+    // ...
+}
+```
+
+In an `action{}` block, specify an Event with `event()`.
 
 ```kt
 action<CounterAction.Decrement> {
     if (0 < state.count) {
         nextState(state.copy(count = state.count - 1))
     } else {
-        event(CounterEvent.ShowToast("Can not Decrement.")) // issue event
+        event(CounterEvent.ShowToast("Can not Decrement.")) // raise event
     }
 }
 ```
 
-Subscribe to the Store's `.event` (Flow) property on the UI, and process it.
+Collect the Store's `.event` (Flow) in the UI and handle it.
 
-### Access to Repository, UseCase, etc.
+### Access repositories and UseCase classes
 
-Keep Repository, UseCase, etc. accessible from your store creation scope and use them in the `action{}` block.
-
-```kt
-class CounterStoreBuilder( // instantiate with DI library etc.
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-
-        state<CounterState> {
-
-            action<CounterAction.Load> {
-                val count = counterRepository.get() // load
-                nextState(state.copy(count = count))
-            }
-
-            action<CounterAction.Increment> {
-                val count = state.count + 1
-                counterRepository.set(count) // save
-                nextState(state.copy(count = count))
-            }
-
-            // ...
-```
-
-Or, create a *Store* simply like this with a function:
+Have repositories and UseCase classes available in your store creation scope and use them inside `action{}` blocks.
 
 ```kt
-fun createCounterStore(
-    counterRepository: CounterRepository
+fun CounterStore(
+    counterRepository: CounterRepository,
 ): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
-    // ...
-}
+
+    state<CounterState> {
+
+        action<CounterAction.Load> {
+            val count = counterRepository.get() // load
+            nextState(state.copy(count = count))
+        }
+
+        action<CounterAction.Increment> {
+            val count = state.count + 1
+            counterRepository.set(count) // save
+            nextState(state.copy(count = count))
+        }
+
+        // ...
 ```
 
 <details>
@@ -165,23 +207,22 @@ fun createCounterStore(
 Processing other than changing the *State* may be defined as functions, as they tend to become complex and lengthy.
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(count = 0)) {
 
-        // define as a function
-        suspend fun loadCount(): Int {
-            return counterRepository.get()
+    // define as a function
+    suspend fun loadCount(): Int {
+        return counterRepository.get()
+    }
+
+    state<CounterState> {
+
+        action<CounterAction.Load> {
+            nextState(state.copy(count = loadCount())) // call the function
         }
 
-        state<CounterState> {
-
-            action<CounterAction.Load> {
-                nextState(state.copy(count = loadCount())) // call the function
-            }
-
-            // ...
+        // ...
 ```
 
 You may also define them as extension functions of *State* or *Action*.
@@ -190,52 +231,50 @@ You may also define them as extension functions of *State* or *Action*.
 ### Multiple states and transitions
 
 In the previous examples, the *State* was single.
-However, if there are multiple *States*, for example a UI during data loading, prepare multiple *States*.
+If you need multiple *States* (for example, a UI during data loading), define them explicitly.
 
 ```kt
 sealed interface CounterState : State {
-    data object Loading: CounterState 
-    data class Main(val count: Int): CounterState
+    data object Loading : CounterState 
+    data class Main(val count: Int) : CounterState
 }
 ```
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
 
-        state<CounterState.Loading> { // for Loading state
-            action<CounterAction.Load> {
-                val count = counterRepository.get()
-                nextState(CounterState.Main(count = count)) // transition to Main state
-            }
+    state<CounterState.Loading> { // for Loading state
+        action<CounterAction.Load> {
+            val count = counterRepository.get()
+            nextState(CounterState.Main(count = count)) // transition to Main state
         }
+    }
 
-        state<CounterState.Main> { // for Main state
-            action<CounterAction.Increment> {
-                // ...
+    state<CounterState.Main> { // for Main state
+        action<CounterAction.Increment> {
+            // ...
 ```
 
 In this example, the `CounterAction.Load` action needs to be issued from the UI when the application starts.
-Otherwise, if you want to do something at the start of the *State*, use the `enter{}` block (similarly, you can use the `exit{}` block if necessary).
+If you want to run logic when a *State* starts, use the `enter{}` block (similarly, you can use the `exit{}` block if necessary).
 
 ```kt
-class CounterStoreBuilder(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+fun CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
 
-        state<CounterState.Loading> {
-            enter {
-                val count = counterRepository.get()
-                nextState(CounterState.Main(count = count)) // transition to Main state
-            }
+    state<CounterState.Loading> {
+        enter {
+            val count = counterRepository.get()
+            nextState(CounterState.Main(count = count)) // transition to Main state
         }
+    }
 
-        state<CounterState.Main> {
-            action<CounterAction.Increment> {
-                // ...
+    state<CounterState.Main> {
+        action<CounterAction.Increment> {
+            // ...
 ```
 
 The state diagram is as follows:
@@ -268,15 +307,15 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
             try {
                 val count = counterRepository.get()
                 nextState(CounterState.Main(count = count))
-            } catch (t: Throwable) {
-                nextState(CounterState.Error(error = t))
+            } catch (e: Exception) {
+                nextState(CounterState.Error(error = e))
             }
         }
     }
 }
 ```
 
-This is fine, but you can also handle errors using the `error{}` block.
+This works, but you can also handle errors with the `error{}` block.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -295,7 +334,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
             // ...
             nextState(CounterState.Error(error = error))
         }
-        
+
         // more general exception handlers should come last
         // you can also catch just 'Exception' and branch based on the type of the error property inside the block
         error<Exception> { // catches any remaining exceptions
@@ -321,7 +360,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 ### Collecting Flows
 
-You can use the `launch{}` specification in the `enter{}` block to collect flows and dispatch *Actions*.
+You can use the `launch{}` specification in the `enter{}` block to collect flows and update *State* (or emit *Event*s).
 This is useful for connecting external data streams to your *Store*:
 
 ```kt
@@ -341,13 +380,13 @@ state<MyState.Active> {
 }
 ```
 
-This pattern allows your *Store* to automatically react to external data changes, such as database updates, user preferences changes, or network events.
+This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
 The flow collection will be automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 
 ### Specifying coroutineContext
 
 The Store operates using Coroutines, and the default CoroutineContext is `EmptyCoroutineContext + Dispatchers.Default`.
-Specify it when you want to match the Store's Coroutines lifecycle with another context or change the thread on which it operates.
+Specify it to align the Store's Coroutines lifecycle with another context or to change the execution thread.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -357,7 +396,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-If you do not specify a context that is automatically disposed like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.dispose()` method explicitly when the *Store* is no longer needed.
+If you don’t use an auto-disposed scope like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.dispose()` method explicitly when the *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
 #### Specifying CoroutineDispatchers
@@ -410,9 +449,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-### For iOS
+### For Platforms Without Flow/StateFlow Access
 
-Coroutines like Store's `.state` (StateFlow) property and `.event` (Flow) property cannot be used on iOS, so use the `.collectState()` and `.collectEvent()` methods.
+On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
 
 ## Compose
@@ -426,94 +465,114 @@ You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` dir
 implementation("io.yumemi.tart:tart-compose:<latest-release>")
 ```
 
-Create an instance of the `ViewStore` from a *Store* instance using the `rememberViewStore()` function.
+Create an instance of the `ViewStore` from a *Store* using the `rememberViewStore()` function.
 For example, if you have a *Store* in ViewModels, it would look like this:
 
 ```kt
-class CounterStoreContainer(
-    private val counterRepository: CounterRepository,
-) {
-    fun build(): Store<CounterState, CounterAction, CounterEvent> = Store {
-        // ...
-    }
+fun CounterStore(
+    coroutineContext: CoroutineContext,
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
+
+    coroutineContext(coroutineContext)
 }
 ```
 
 ```kt
 @HiltViewModel
 class CounterViewModel @Inject constructor(
-    counterStoreBuilder: CounterStoreBuilder,
+    counterRepository: CounterRepository,
 ) : ViewModel() {
 
-    val store = counterStoreBuilder.build()
-
-    override fun onCleared() {
-        store.dispose()
-    }
+    val store = CounterStore(
+        coroutineContext = viewModelScope.coroutineContext,
+        counterRepository = counterRepository,
+    )
 }
 ```
 
 ```kt
-@AndroidEntryPoint
-class CounterActivity : ComponentActivity() {
+@Composable
+fun CounterScreen(
+    // create an instance of ViewStore
+    viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
+        hiltViewModel<CounterViewModel>().store
+    },
+) {
+    // ...
 
-    private val counterViewModel: CounterViewModel by viewModels()
+    // pass the ViewStore instance to lower components if necessary
+    YourComposable(
+        viewStore = viewStore,
+    )
+}
+```
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+Alternatively, you can use the `Store{}` DSL directly in the ViewModel as follows, but note that in this case you need tests for `CounterViewModel`, and sharing a *Store* across multiple platforms becomes harder.
 
-        setContent {
-            // create an instance of ViewStore
-            val viewStore = rememberViewStore(counterViewModel.store)
+```kt
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    counterRepository: CounterRepository,
+) : ViewModel() {
 
-            MyApplicationTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    // pass the ViewStore instance to lower components if necessary
-                    YourComposable(
-                        viewStore = viewStore,
-                    )
-            // ... 
+    val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+        // ...
+
+        coroutineContext(viewModelScope.coroutineContext)
+    }
+}
 ```
 
 You can create a `ViewStore` instance without using ViewModel as shown below:
 
 ```kt
-class CounterStoreBuilder(
+fun CounterStore(
+    coroutineContext: CoroutineContext,
+    stateSaver: StateSaver<CounterState>,
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
+
+    coroutineContext(coroutineContext)
+    stateSaver(stateSaver)
+}
+```
+
+```kt
+@Composable
+fun CounterScreen(
+    viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
+        CounterStore(
+            coroutineContext = rememberCoroutineScope().coroutineContext, // or, specify the autoDispose option in rememberViewStore {}
+            stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
+            counterRepository = CounterRepositoryImpl(),
+        )
+    },
+) {
+    // ...
+}
+```
+
+If you inject instances such as Repository using a DI library, it is useful to create a class like the following.
+
+```kt
+class CounterStoreContainer(
     private val counterRepository: CounterRepository,
 ) {
-    fun build(stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
+    fun build(coroutineContext: CoroutineContext, stateSaver: StateSaver<CounterState>): Store<CounterState, CounterAction, CounterEvent> = Store {
         // ...
 
+        coroutineContext(coroutineContext)
         stateSaver(stateSaver)
     }
 }
 ```
 
-```kt
-@AndroidEntryPoint
-class CounterActivity : ComponentActivity() {
+### Rendering with State
 
-    @Inject
-    lateinit var counterStoreBuilder: CounterStoreBuilder
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            val viewStore = rememberViewStore(
-                counterStoreBuilder.build(
-                    stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
-                )
-            )
-
-            // ... 
-```
-
-### Rendering using State
-
-If the *State* is single, just use ViewStore's `.state` property.
+If there’s a single *State*, just use ViewStore's `.state` property.
 
 ```kt
 Text(
@@ -521,7 +580,7 @@ Text(
 )
 ```
 
-If there are multiple *States*, use `.render()` method with the target *State*.
+If there are multiple *States*, use the `.render()` method for the target *State*.
 
 ```kt
 viewStore.render<CounterState.Main> {
@@ -570,7 +629,7 @@ fun YourComposable(
 }
 ```
 
-### Dispatch Action
+### Dispatch Actions
 
 Use ViewStore's `.dispatch()` with the target *Action*.
 
@@ -584,7 +643,7 @@ Button(
 }
 ```
 
-### Event handling
+### Handling Events
 
 Use ViewStore's `.handle()` with the target *Event*.
 
@@ -604,7 +663,7 @@ viewStore.handle<CounterEvent> { event ->
         // ...
 ```
 
-### Mock for preview and testing
+### Mocks for preview and testing
 
 Create an instance of `ViewStore` directly with the target *State*.
 
@@ -613,7 +672,7 @@ Create an instance of `ViewStore` directly with the target *State*.
 @Composable
 fun LoadingPreview() {
     MyApplicationTheme {
-        YourComposable(
+        CounterScreen(
             viewStore = ViewStore(
                 state = CounterState.Loading,
             ),
@@ -666,10 +725,10 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 Note that *State* is read-only in Middleware.
 
-Each Middleware method is a suspending function, so it can be run synchronously (not asynchronously) with the *Store*.
-However, since it will interrupt the *Store* process, you should prepare a new CoroutineScope for long processes.
+Middleware methods are suspending functions. The *Store* waits for a method to complete before proceeding.
+Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
 
-In the next section, we will introduce pre-prepared Middleware.
+In the next section, we introduce built-in Middleware.
 The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your Middleware implementation.
 
 ### Logging
@@ -758,7 +817,3 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 
 Tart's architecture makes writing unit tests for your *Store* straightforward.
 For test examples, see the [commonTest](tart-core/src/commonTest/kotlin/io/yumemi/tart/core) directory in the `:tart-core` module.
-
-## Acknowledgments
-
-I used [Flux](https://facebookarchive.github.io/flux/) and [UI layer](https://developer.android.com/topic/architecture/ui-layer) as a reference for the design, and [Macaron](https://github.com/fika-tech/Macaron) for the implementation.

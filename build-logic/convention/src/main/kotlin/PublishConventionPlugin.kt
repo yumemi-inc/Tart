@@ -1,4 +1,3 @@
-import com.vanniktech.maven.publish.SonatypeHost
 import io.yumemi.tart.buildlogic.PublishConventionExtension
 import io.yumemi.tart.buildlogic.dsl.alias
 import io.yumemi.tart.buildlogic.dsl.libs
@@ -16,7 +15,7 @@ class PublishConventionPlugin : Plugin<Project> {
             pluginManager.alias(libs.plugin("vanniktech-mavenPublish"))
 
             mavenPublishing {
-                publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+                publishToMavenCentral()
 
                 if (System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername") != null) {
                     signAllPublications()

@@ -39,7 +39,7 @@ class StoreExceptionTest {
             },
         )
 
-        store.state // access state to initialize the store
+        store.collectState { } // start Store
 
         assertNotNull(handledException)
     }
