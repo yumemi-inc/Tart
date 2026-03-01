@@ -199,15 +199,18 @@ fun CounterStore(
         }
 
         // ...
+    }
+}
 
-// or, 
+// or, define a Store class using delegation
 class CounterStore(
     counterRepository: CounterRepository,
 ): Store<CounterState, CounterAction, CounterEvent> by Store(
+    initialState = CounterState(count = 0),
     configure = {
-        initialState(CounterState(count = 0))
-        
-        // ...
+        state<CounterState> {
+            // ...
+        }
     },
 )
 ```
