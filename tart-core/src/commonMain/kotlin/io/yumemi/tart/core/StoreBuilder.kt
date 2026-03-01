@@ -261,16 +261,16 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
  * Creates a Store instance with the specified initial state and optional configuration.
  *
  * @param initialState The initial state of the store
- * @param block Optional configuration block to customize the store
+ * @param configure Optional configuration block to customize the store
  * @return A configured Store instance
  */
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
-    block: StoreBuilder<S, A, E>.() -> Unit,
+    configure: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
     return StoreBuilder<S, A, E>().apply {
         initialState(initialState)
-        block()
+        configure()
     }.build()
 }
 
@@ -278,12 +278,12 @@ fun <S : State, A : Action, E : Event> Store(
  * Creates a Store instance with configuration provided in the block.
  * The initial state must be set within the block using initialState().
  *
- * @param block Configuration block to customize the store
+ * @param configure Configuration block to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
-    block: StoreBuilder<S, A, E>.() -> Unit,
+    configure: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    return StoreBuilder<S, A, E>().apply(block).build()
+    return StoreBuilder<S, A, E>().apply(configure).build()
 }
