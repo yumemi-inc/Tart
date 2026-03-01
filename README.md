@@ -199,6 +199,17 @@ fun CounterStore(
         }
 
         // ...
+
+// or, 
+class CounterStore(
+    counterRepository: CounterRepository,
+): Store<CounterState, CounterAction, CounterEvent> by Store(
+    configure = {
+        initialState(CounterState(count = 0))
+        
+        // ...
+    },
+)
 ```
 
 <details>
