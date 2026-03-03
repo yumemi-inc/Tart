@@ -14,6 +14,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Default
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
+    private var storeActionDispatchControllers: MutableList<ActionDispatchController<A>> = mutableListOf()
 
     /**
      * Sets the initial state of the store.
@@ -67,6 +68,84 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      */
     fun middlewares(vararg middleware: Middleware<S, A, E>) {
         storeMiddlewares.addAll(middleware)
+    }
+
+    /**
+     * Delays dispatching matching actions until no new matching action arrives for the timeout duration.
+     *
+     * @param timeoutMillis debounce timeout in milliseconds
+     * @param keySelector Optional key selector. Actions with the same key share the same debounce window
+     * @param predicate Predicate to determine whether the action should be debounced
+     */
+    fun debounceAction(
+        timeoutMillis: Long,
+        keySelector: (A) -> Any? = { it::class },
+        predicate: (A) -> Boolean = { true },
+    ) {
+        require(timeoutMillis > 0) { "[Tart] timeoutMillis must be greater than 0 for debounceAction()" }
+        storeActionDispatchControllers.add(
+            DebounceActionDispatchController(
+                timeoutMillis = timeoutMillis,
+                predicate = predicate,
+                keySelector = keySelector,
+            ),
+        )
+    }
+
+    /**
+     * Delays dispatching a specific action type until no new action of the same key arrives for the timeout duration.
+     *
+     * @param timeoutMillis debounce timeout in milliseconds
+     * @param keySelector Optional key selector for the target action type
+     */
+    inline fun <reified A2 : A> debounceAction(
+        timeoutMillis: Long,
+        noinline keySelector: (A2) -> Any? = { it::class },
+    ) {
+        debounceAction(
+            timeoutMillis = timeoutMillis,
+            keySelector = { action -> (action as? A2)?.let(keySelector) ?: Unit },
+            predicate = { it is A2 },
+        )
+    }
+
+    /**
+     * Allows dispatching matching actions at most once per timeout duration.
+     *
+     * @param timeoutMillis throttle timeout in milliseconds
+     * @param keySelector Optional key selector. Actions with the same key share the same throttle window
+     * @param predicate Predicate to determine whether the action should be throttled
+     */
+    fun throttleAction(
+        timeoutMillis: Long,
+        keySelector: (A) -> Any? = { it::class },
+        predicate: (A) -> Boolean = { true },
+    ) {
+        require(timeoutMillis > 0) { "[Tart] timeoutMillis must be greater than 0 for throttleAction()" }
+        storeActionDispatchControllers.add(
+            ThrottleActionDispatchController(
+                timeoutMillis = timeoutMillis,
+                predicate = predicate,
+                keySelector = keySelector,
+            ),
+        )
+    }
+
+    /**
+     * Allows dispatching a specific action type at most once per timeout duration.
+     *
+     * @param timeoutMillis throttle timeout in milliseconds
+     * @param keySelector Optional key selector for the target action type
+     */
+    inline fun <reified A2 : A> throttleAction(
+        timeoutMillis: Long,
+        noinline keySelector: (A2) -> Any? = { it::class },
+    ) {
+        throttleAction(
+            timeoutMillis = timeoutMillis,
+            keySelector = { action -> (action as? A2)?.let(keySelector) ?: Unit },
+            predicate = { it is A2 },
+        )
     }
 
     class StateHandler<P, SC : StoreScope>(
@@ -249,6 +328,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
+            override val actionDispatchControllers: List<ActionDispatchController<A>> = storeActionDispatchControllers
             override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit

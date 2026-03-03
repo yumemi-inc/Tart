@@ -69,6 +69,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     protected abstract val exceptionHandler: ExceptionHandler
 
     protected abstract val middlewares: List<Middleware<S, A, E>>
+    protected abstract val actionDispatchControllers: List<ActionDispatchController<A>>
 
     protected abstract val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit
 
@@ -91,10 +92,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private val stateScopes = mutableMapOf<KClass<out S>, CoroutineScope>()
 
     final override fun dispatch(action: A) {
+        dispatch(action = action, bypassActionDispatchControllers = false)
+    }
+
+    private fun dispatch(action: A, bypassActionDispatchControllers: Boolean) {
         coroutineScope.launch {
             mutex.withLock {
                 initializeIfNeeded()
-                onActionDispatched(currentState, action)
+                val shouldDispatch = bypassActionDispatchControllers || actionDispatchControllers.all { it.shouldDispatch(action) }
+                if (shouldDispatch) {
+                    onActionDispatched(currentState, action)
+                }
             }
         }
     }
@@ -112,6 +120,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     final override fun dispose() {
+        actionDispatchControllers.forEach { it.onDispose() }
         coroutineScope.cancel()
     }
 
@@ -120,6 +129,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
         isInitialized = true
+        actionDispatchControllers.forEach { controller ->
+            controller.attach(coroutineScope) { action ->
+                dispatch(action = action, bypassActionDispatchControllers = true)
+            }
+        }
         processMiddleware {
             onStart(
                 object : MiddlewareScope<A> {
