@@ -45,6 +45,7 @@ By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model e
   - [Multiple states and transitions](#multiple-states-and-transitions)
   - [Error handling](#error-handling)
   - [Collecting Flows](#collecting-flows)
+  - [Action Dispatch Controls](#action-dispatch-controls)
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
@@ -396,6 +397,33 @@ state<MyState.Active> {
 
 This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
 The flow collection will be automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
+
+### Action Dispatch Controls
+
+Use `debounceAction()` or `throttleAction()` when you want to limit how frequently Actions are processed.
+
+```kt
+val store: Store<SearchState, SearchAction, Nothing> = Store {
+    initialState(SearchState())
+
+    debounceAction<SearchAction.QueryChanged>(timeoutMillis = 300)
+    throttleAction<SearchAction.Submit>(timeoutMillis = 1_000)
+
+    state<SearchState> {
+        action<SearchAction.QueryChanged> {
+            nextState(state.copy(query = action.query))
+        }
+        action<SearchAction.Submit> {
+            // execute search
+        }
+    }
+}
+```
+
+`debounceAction()` dispatches only the last Action in the window.  
+`throttleAction()` allows at most one Action in the window.
+
+You can also use the predicate-based overload to target arbitrary conditions and provide `keySelector` if you need separate windows per key.
 
 ### Specifying coroutineContext
 
