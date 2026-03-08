@@ -159,12 +159,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
-            if (t is InternalError) {
-                throw t
-            }
+            rethrowIfFatal(t)
             onErrorOccurred(currentState, t)
         }
     }
@@ -183,12 +178,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
-            if (t is InternalError) {
-                throw t
-            }
+            rethrowIfFatal(t)
             onErrorOccurred(currentState, t)
         }
     }
@@ -209,12 +199,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = inErrorHandling)
             }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
-            if (t is InternalError) {
-                throw t
-            }
+            rethrowIfFatal(t)
             if (inErrorHandling) {
                 throw InternalError(t)
             }
@@ -238,12 +223,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = true)
             }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
-            if (t is InternalError) {
-                throw t
-            }
+            rethrowIfFatal(t)
             throw InternalError(t)
         }
     }
@@ -468,6 +448,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             stateSaver.save(nextState)
         } catch (t: Throwable) {
+            rethrowIfFatal(t)
             throw InternalError(t)
         }
         processMiddleware { afterStateChange(nextState, state) }
@@ -512,9 +493,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
+            rethrowIfFatal(t)
             throw InternalError(t)
         }
     }
@@ -522,6 +501,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun handleException(t: Throwable) {
         val handled = if (t is InternalError) t.original else t
         exceptionHandler.handle(handled)
+    }
+
+    private fun rethrowIfFatal(t: Throwable) {
+        if (t is CancellationException || t is Error || t is InternalError) {
+            throw t
+        }
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
