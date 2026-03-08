@@ -376,6 +376,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
 This is useful for integrating long-running tasks such as flow collection, network calls, and background processing:
+If you prefer a shorter form, use `enterAsync{}` / `actionAsync{}`, which are shorthand for `enter { launch { ... } }` / `action<...> { launch { ... } }`.
 
 ```kt
 state<MyState.Active> {
