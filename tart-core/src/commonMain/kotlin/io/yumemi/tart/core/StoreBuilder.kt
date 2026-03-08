@@ -131,6 +131,19 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
 
         /**
+         * Registers an asynchronous enter handler.
+         * This is a shorthand of `enter { launch { ... } }`.
+         *
+         * @param coroutineDispatcher The CoroutineDispatcher used for the launched coroutine
+         * @param block The asynchronous handler block
+         */
+        fun enterAsync(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope.LaunchScope<S, E, S2>.() -> Unit) {
+            enter {
+                launch(coroutineDispatcher, block)
+            }
+        }
+
+        /**
          * Registers a handler for a specific action type in the current state configuration
          * with an optional CoroutineDispatcher.
          *
@@ -148,6 +161,19 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     },
                 ),
             )
+        }
+
+        /**
+         * Registers an asynchronous action handler for a specific action type.
+         * This is a shorthand of `action { launch { ... } }`.
+         *
+         * @param coroutineDispatcher The CoroutineDispatcher used for the launched coroutine
+         * @param block The asynchronous handler block
+         */
+        inline fun <reified A2 : A> actionAsync(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope.LaunchScope<S, A2, E, S2>.() -> Unit) {
+            action<A2> {
+                launch(coroutineDispatcher, block)
+            }
         }
 
         /**
