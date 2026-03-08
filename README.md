@@ -44,7 +44,7 @@ By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model e
   - [Access repositories and UseCase classes](#access-repositories-and-usecase-classes)
   - [Multiple states and transitions](#multiple-states-and-transitions)
   - [Error handling](#error-handling)
-  - [Collecting Flows](#collecting-flows)
+  - [Asynchronous Work](#asynchronous-work)
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
@@ -372,10 +372,10 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-### Collecting Flows
+### Asynchronous Work
 
-You can use the `launch{}` specification in the `enter{}` block to collect flows and update *State* (or emit *Event*s).
-This is useful for connecting external data streams to your *Store*:
+You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
+This is useful for integrating long-running tasks such as flow collection, network calls, and background processing:
 
 ```kt
 state<MyState.Active> {
@@ -394,8 +394,30 @@ state<MyState.Active> {
 }
 ```
 
+You can also start asynchronous work from an action:
+
+```kt
+state<MyState.Active> {
+    action<MyAction.Refresh> {
+        launch {
+            // state updates in launch must be done in transaction
+            transaction {
+                nextState(state.copy(isRefreshing = true))
+            }
+
+            dataRepository.refresh()
+
+            transaction {
+                nextState(state.copy(isRefreshing = false))
+            }
+        }
+    }
+}
+```
+
 This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
-The flow collection will be automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
+Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
+In `action{}`, `launch{}` is tied to the *State* active at action start.
 
 ### Specifying coroutineContext
 

@@ -266,6 +266,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override suspend fun event(event: E) {
                     emit(event)
                 }
+
+                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit) {
+                    val stateScope = stateScopes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
+                    launchInStateScope(
+                        stateScope = stateScope,
+                        coroutineDispatcher = coroutineDispatcher,
+                        buildLaunchScope = { buildActionLaunchScope(stateScope, action) },
+                        block = block,
+                    )
+                }
             },
         )
         val nextState = newState ?: state
@@ -295,72 +305,143 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
-                    stateScope.launch(coroutineDispatcher) {
-                        val launchScope = object : EnterScope.LaunchScope<S, E, S> {
-                            override val isActive: Boolean get() = stateScope.isActive
-                            override suspend fun event(event: E) {
-                                emit(event)
-                            }
-
-                            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
-                                val job = coroutineScope.launch(coroutineDispatcher) {
-                                    mutex.withLock {
-                                        if (stateScope.isActive) {
-                                            var newStateInBlock: S? = null
-                                            val transactionScope = object : EnterScope.LaunchScope.TransactionScope<S, E, S> {
-                                                override val state: S = currentState
-                                                override fun nextState(state: S) {
-                                                    newStateInBlock = state
-                                                }
-
-                                                override fun nextStateBy(block: () -> S) {
-                                                    newStateInBlock = block()
-                                                }
-
-                                                override suspend fun event(event: E) {
-                                                    emit(event)
-                                                }
-                                            }
-                                            try {
-                                                block(transactionScope)
-                                            } catch (t: Throwable) {
-                                                if (t is CancellationException) {
-                                                    throw t
-                                                }
-                                                onErrorOccurred(currentState, t)
-                                                return@withLock
-                                            }
-                                            val nextState = newStateInBlock ?: currentState
-                                            if (nextState != currentState) {
-                                                onStateChanged(currentState, nextState)
-                                            }
-                                        }
-                                    }
-                                }
-                                job.join()
-                            }
-                        }
-                        try {
-                            block(launchScope)
-                        } catch (t: Throwable) {
-                            if (t is CancellationException) {
-                                throw t
-                            }
-                            coroutineScope.launch(coroutineDispatcher) {
-                                mutex.withLock {
-                                    if (stateScope.isActive) {
-                                        onErrorOccurred(currentState, t)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    launchInStateScope(
+                        stateScope = stateScope,
+                        coroutineDispatcher = coroutineDispatcher,
+                        buildLaunchScope = { buildEnterLaunchScope(stateScope) },
+                        block = block,
+                    )
                 }
             },
         )
         val nextState = newState ?: state
         processMiddleware { afterStateEnter(state, nextState) }
         return nextState
+    }
+
+    private fun <LS> launchInStateScope(
+        stateScope: CoroutineScope,
+        coroutineDispatcher: CoroutineDispatcher,
+        buildLaunchScope: () -> LS,
+        block: suspend LS.() -> Unit,
+    ) {
+        stateScope.launch(coroutineDispatcher) {
+            val launchScope = buildLaunchScope()
+            try {
+                block(launchScope)
+            } catch (t: Throwable) {
+                if (t is CancellationException) {
+                    throw t
+                }
+                coroutineScope.launch(coroutineDispatcher) {
+                    mutex.withLock {
+                        if (stateScope.isActive) {
+                            onErrorOccurred(currentState, t)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterScope.LaunchScope<S, E, S> {
+        return object : EnterScope.LaunchScope<S, E, S> {
+            override val isActive: Boolean get() = stateScope.isActive
+
+            override suspend fun event(event: E) {
+                emit(event)
+            }
+
+            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(coroutineDispatcher) {
+                    mutex.withLock {
+                        if (stateScope.isActive) {
+                            var newState: S? = null
+                            val transactionScope = object : EnterScope.LaunchScope.TransactionScope<S, E, S> {
+                                override val state: S = currentState
+
+                                override fun nextState(state: S) {
+                                    newState = state
+                                }
+
+                                override fun nextStateBy(block: () -> S) {
+                                    newState = block()
+                                }
+
+                                override suspend fun event(event: E) {
+                                    emit(event)
+                                }
+                            }
+                            try {
+                                block(transactionScope)
+                            } catch (t: Throwable) {
+                                if (t is CancellationException) {
+                                    throw t
+                                }
+                                onErrorOccurred(currentState, t)
+                                return@withLock
+                            }
+                            val nextState = newState ?: currentState
+                            if (nextState != currentState) {
+                                onStateChanged(currentState, nextState)
+                            }
+                        }
+                    }
+                }
+                job.join()
+            }
+        }
+    }
+
+    private fun buildActionLaunchScope(stateScope: CoroutineScope, launchedAction: A): ActionScope.LaunchScope<S, A, E, S> {
+        return object : ActionScope.LaunchScope<S, A, E, S> {
+            override val isActive: Boolean get() = stateScope.isActive
+            override val action: A = launchedAction
+
+            override suspend fun event(event: E) {
+                emit(event)
+            }
+
+            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(coroutineDispatcher) {
+                    mutex.withLock {
+                        if (stateScope.isActive) {
+                            var newState: S? = null
+                            val transactionScope = object : ActionScope.LaunchScope.TransactionScope<S, A, E, S> {
+                                override val state: S = currentState
+                                override val action: A = launchedAction
+
+                                override fun nextState(state: S) {
+                                    newState = state
+                                }
+
+                                override fun nextStateBy(block: () -> S) {
+                                    newState = block()
+                                }
+
+                                override suspend fun event(event: E) {
+                                    emit(event)
+                                }
+                            }
+                            try {
+                                block(transactionScope)
+                            } catch (t: Throwable) {
+                                if (t is CancellationException) {
+                                    throw t
+                                }
+                                onErrorOccurred(currentState, t)
+                                return@withLock
+                            }
+                            val nextState = newState ?: currentState
+                            if (nextState != currentState) {
+                                onStateChanged(currentState, nextState)
+                            }
+                        }
+                    }
+                }
+                job.join()
+            }
+        }
     }
 
     private suspend fun processStateExit(state: S) {

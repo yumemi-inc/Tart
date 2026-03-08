@@ -181,6 +181,93 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * @param event The event to emit
      */
     suspend fun event(event: E)
+
+    /**
+     * Launches a coroutine within the context of the current state where this action is processed.
+     * The coroutine will be automatically cancelled when this state is exited.
+     *
+     * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param block The suspending block of code to execute
+     */
+    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+
+    /**
+     * Scope available within a launched coroutine from an action handler.
+     * Used for long-running operations or side effects within a state.
+     */
+    @TartStoreDsl
+    interface LaunchScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
+        /**
+         * Checks if the coroutine scope is still active.
+         * Use this to verify if the state is still active before performing operations.
+         *
+         * @return True if the scope is still active, false otherwise
+         */
+        val isActive: Boolean
+
+        /**
+         * The action being processed when the launch was started.
+         */
+        val action: A
+
+        /**
+         * Emits an event from the launched coroutine.
+         * Use this to communicate with the outside world about important occurrences.
+         *
+         * @param event The event to emit
+         */
+        suspend fun event(event: E)
+
+        /**
+         * Executes a transactional operation within the launch scope.
+         * This allows state updates to be performed in an atomic, consistent manner.
+         *
+         * @param coroutineDispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param block The suspending block of code to execute as a transaction
+         */
+        suspend fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
+
+        /**
+         * Scope available within a transaction operation.
+         * Used for atomic state updates with consistency guarantees.
+         */
+        @TartStoreDsl
+        interface TransactionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
+            /**
+             * The current state when the transaction is being executed
+             */
+            val state: S2
+
+            /**
+             * The action being processed when the launch was started.
+             */
+            val action: A
+
+            /**
+             * Updates the current state with a new state value.
+             * Used within transaction blocks to modify the state.
+             *
+             * @param state The new state value to update to
+             */
+            fun nextState(state: S)
+
+            /**
+             * Updates the current state with a new state value computed from the given block.
+             * Used within transaction blocks to modify the state with computed values.
+             *
+             * @param block A function that computes and returns the new state
+             */
+            fun nextStateBy(block: () -> S)
+
+            /**
+             * Emits an event from the transaction.
+             * Use this to communicate with the outside world about important occurrences.
+             *
+             * @param event The event to emit
+             */
+            suspend fun event(event: E)
+        }
+    }
 }
 
 /**
