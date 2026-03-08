@@ -117,6 +117,8 @@ val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(coun
 }
 ```
 
+`anyState{}` lets you register handlers for all *States*, and `anyAction{}` can be used there as a fallback for all *Actions*.
+
 For conditional or complex updates, use `nextStateBy{}` to compute and return the new state.
 
 ```kt
@@ -350,14 +352,15 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         }
 
         // more general exception handlers should come last
-        // you can also catch just 'Exception' and branch based on the type of the error property inside the block
-        error<Exception> { // catches any remaining exceptions
+        error<Exception> {
             // ...
             nextState(CounterState.Error(error = error))
         }
     }
 }
 ```
+
+`error<Exception>{}` can also be written as `anyError{}`.
 
 Errors can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
 In other words, your business logic errors can be handled in the `error{}` block.
@@ -376,7 +379,6 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
 This is useful for integrating long-running tasks such as flow collection, network calls, and background processing:
-If you prefer a shorter form, use `enterAsync{}` / `actionAsync{}`, which are shorthand for `enter { launch { ... } }` / `action<...> { launch { ... } }`.
 
 ```kt
 state<MyState.Active> {
@@ -401,7 +403,7 @@ You can also start asynchronous work from an action:
 state<MyState.Active> {
     action<MyAction.Refresh> {
         launch {
-            // state updates in launch must be done in transaction
+            // state updates in launch must be done in transaction{} block
             transaction {
                 nextState(state.copy(isRefreshing = true))
             }
@@ -415,6 +417,8 @@ state<MyState.Active> {
     }
 }
 ```
+
+If you prefer shorter forms, use `enterAsync{}` / `actionAsync{}` (or `anyActionAsync{}` when using `anyAction{}`).
 
 This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
