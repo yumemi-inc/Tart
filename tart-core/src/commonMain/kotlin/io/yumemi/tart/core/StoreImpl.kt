@@ -259,7 +259,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override suspend fun cancelPendingActions() {
+                override fun cancelPendingActions() {
                     clearPendingDispatchJobs()
                 }
 
@@ -300,7 +300,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override suspend fun cancelPendingActions() {
+                override fun cancelPendingActions() {
                     clearPendingDispatchJobs()
                 }
 
@@ -372,7 +372,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
-                                override suspend fun cancelPendingActions() {
+                                override fun cancelPendingActions() {
                                     clearPendingDispatchJobs()
                                 }
 
@@ -427,7 +427,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
-                                override suspend fun cancelPendingActions() {
+                                override fun cancelPendingActions() {
                                     clearPendingDispatchJobs()
                                 }
 
@@ -463,7 +463,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 object : ExitScope<S, E, S> {
                     override val state = state
 
-                    override suspend fun cancelPendingActions() {
+                    override fun cancelPendingActions() {
                         clearPendingDispatchJobs()
                     }
 
@@ -506,7 +506,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override suspend fun cancelPendingActions() {
+                override fun cancelPendingActions() {
                     clearPendingDispatchJobs()
                 }
 

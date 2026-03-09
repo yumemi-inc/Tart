@@ -40,7 +40,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Cancels actions that are already queued behind the currently executing store work.
      * The action/transaction currently in progress keeps running.
      */
-    suspend fun cancelPendingActions()
+    fun cancelPendingActions()
 
     /**
      * Emits an event from the enter handler.
@@ -121,7 +121,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
              * Cancels actions that are already queued behind the currently executing store work.
              * The action/transaction currently in progress keeps running.
              */
-            suspend fun cancelPendingActions()
+            fun cancelPendingActions()
 
             /**
              * Emits an event from the transaction.
@@ -149,7 +149,7 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
      * Cancels actions that are already queued behind the currently executing store work.
      * The action/transaction currently in progress keeps running.
      */
-    suspend fun cancelPendingActions()
+    fun cancelPendingActions()
 
     /**
      * Emits an event from the exit handler.
@@ -196,7 +196,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Cancels actions that are already queued behind the currently executing store work.
      * The action/transaction currently in progress keeps running.
      */
-    suspend fun cancelPendingActions()
+    fun cancelPendingActions()
 
     /**
      * Emits an event from the action handler.
@@ -287,7 +287,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
              * Cancels actions that are already queued behind the currently executing store work.
              * The action/transaction currently in progress keeps running.
              */
-            suspend fun cancelPendingActions()
+            fun cancelPendingActions()
 
             /**
              * Emits an event from the transaction.
@@ -336,7 +336,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      * Cancels actions that are already queued behind the currently executing store work.
      * The action/transaction currently in progress keeps running.
      */
-    suspend fun cancelPendingActions()
+    fun cancelPendingActions()
 
     /**
      * Emits an event from the error handler.
