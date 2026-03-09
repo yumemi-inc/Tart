@@ -86,15 +86,31 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         )
     }
 
+    private val dispatchScope by lazy {
+        CoroutineScope(
+            coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job]),
+        )
+    }
+
     private val mutex = Mutex()
 
     private val stateScopes = mutableMapOf<KClass<out S>, CoroutineScope>()
 
+    private var activeDispatchJob: Job? = null
+
     final override fun dispatch(action: A) {
-        coroutineScope.launch {
+        dispatchScope.launch {
             mutex.withLock {
-                initializeIfNeeded()
-                onActionDispatched(currentState, action)
+                val dispatchJob = coroutineContext[Job]
+                activeDispatchJob = dispatchJob
+                try {
+                    initializeIfNeeded()
+                    onActionDispatched(currentState, action)
+                } finally {
+                    if (activeDispatchJob == dispatchJob) {
+                        activeDispatchJob = null
+                    }
+                }
             }
         }
     }
@@ -243,6 +259,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
+                override fun cancelPendingActions() {
+                    clearPendingDispatchJobs()
+                }
+
                 override suspend fun event(event: E) {
                     emit(event)
                 }
@@ -278,6 +298,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
                 override fun nextStateBy(block: () -> S) {
                     newState = block()
+                }
+
+                override fun cancelPendingActions() {
+                    clearPendingDispatchJobs()
                 }
 
                 override suspend fun event(event: E) {
@@ -348,6 +372,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
+                                override fun cancelPendingActions() {
+                                    clearPendingDispatchJobs()
+                                }
+
                                 override suspend fun event(event: E) {
                                     emit(event)
                                 }
@@ -399,6 +427,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
+                                override fun cancelPendingActions() {
+                                    clearPendingDispatchJobs()
+                                }
+
                                 override suspend fun event(event: E) {
                                     emit(event)
                                 }
@@ -430,6 +462,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             onExit.invoke(
                 object : ExitScope<S, E, S> {
                     override val state = state
+
+                    override fun cancelPendingActions() {
+                        clearPendingDispatchJobs()
+                    }
+
                     override suspend fun event(event: E) {
                         emit(event)
                     }
@@ -469,6 +506,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
+                override fun cancelPendingActions() {
+                    clearPendingDispatchJobs()
+                }
+
                 override suspend fun event(event: E) {
                     emit(event)
                 }
@@ -483,6 +524,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
         processMiddleware { afterEventEmit(state, event) }
+    }
+
+    private fun clearPendingDispatchJobs() {
+        val currentJob = activeDispatchJob
+        val dispatchScopeJob = dispatchScope.coroutineContext[Job] ?: return
+        dispatchScopeJob.children
+            .filter { it != currentJob && it.isActive }
+            .forEach { it.cancel() }
     }
 
     private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
