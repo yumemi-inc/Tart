@@ -45,6 +45,8 @@ By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model e
   - [Multiple states and transitions](#multiple-states-and-transitions)
   - [Error handling](#error-handling)
   - [Asynchronous Work](#asynchronous-work)
+  - [Cancel Pending Actions](#cancel-pending-actions)
+  - [Alternative DSL Forms](#alternative-dsl-forms)
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
@@ -114,20 +116,6 @@ val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(coun
             }
         }
     }
-}
-```
-
-`anyState{}` lets you register handlers for all *States*, and `anyAction{}` can be used there as a fallback for all *Actions*.
-
-For conditional or complex updates, use `nextStateBy{}` to compute and return the new state.
-
-```kt
-nextStateBy {
-    // ...
-
-    val newCount = ...
-
-    state.copy(count = newCount)
 }
 ```
 
@@ -360,8 +348,6 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-`error<Exception>{}` can also be written as `anyError{}`.
-
 Errors can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
 In other words, your business logic errors can be handled in the `error{}` block.
 
@@ -418,11 +404,45 @@ state<MyState.Active> {
 }
 ```
 
-If you prefer shorter forms, use `enterAsync{}` / `actionAsync{}` (or `anyActionAsync{}` when using `anyAction{}`).
-
 This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
+
+### Cancel Pending Actions
+
+If you need to discard already queued `dispatch()` calls at a specific point, call `cancelPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
+
+```kt
+state<MyState.Active> {
+    action<MyAction.Finish> {
+        cancelPendingActions()
+        nextState(MyState.Done)
+    }
+}
+```
+
+### Alternative DSL Forms
+
+Some DSL APIs are just alternative forms of existing APIs:
+
+- `anyState{}` is the global form of `state<...>{}` and applies to all *States*.
+- `anyAction{}` is the global form of `action<...>{}` and applies to all *Actions*.
+- `anyError{}` is an alias of `error<Exception>{}`.
+- `enterAsync{}` is shorthand for `enter { launch { ... } }`.
+- `actionAsync{}` is shorthand for `action<...> { launch { ... } }`.
+- `anyActionAsync{}` is shorthand for `anyAction { launch { ... } }`.
+
+Instead of `nextState(...)`, use `nextStateBy{}` when you want to compute and return the next state inside a block.
+
+```kt
+nextStateBy {
+    // ...
+
+    val newCount = ...
+
+    state.copy(count = newCount)
+}
+```
 
 ### Specifying coroutineContext
 
