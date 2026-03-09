@@ -36,15 +36,21 @@ interface ExceptionHandler {
         }
 
         /**
-         * Default implementation of ExceptionHandler that rethrows all exceptions.
+         * Implementation of ExceptionHandler that leaves exceptions unhandled by rethrowing them.
          *
          * @return An ExceptionHandler instance that rethrows all exceptions
          */
-        val Default: ExceptionHandler = object : ExceptionHandler {
+        val Unhandled: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {
                 throw error
             }
         }
+
+        @Deprecated(
+            message = "Use Unhandled instead.",
+            replaceWith = ReplaceWith("ExceptionHandler.Unhandled"),
+        )
+        val Default: ExceptionHandler = Unhandled
     }
 }
 
