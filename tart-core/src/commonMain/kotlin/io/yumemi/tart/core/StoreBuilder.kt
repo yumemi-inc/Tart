@@ -12,7 +12,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeInitialState: S? = null
     private var storeCoroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
-    private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Default
+    private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
