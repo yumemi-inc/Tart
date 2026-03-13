@@ -68,6 +68,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val exceptionHandler: ExceptionHandler
 
+    protected abstract val pendingActionPolicy: PendingActionPolicy
+
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
     protected abstract val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit
@@ -169,6 +171,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             if (state != nextState) {
                 processStateChange(state, nextState)
+                if (state::class != nextState::class) {
+                    clearPendingActionsOnStateExitIfNeeded()
+                }
             }
 
             if (state::class != nextState::class) {
@@ -188,6 +193,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             if (state != nextState) {
                 processStateChange(state, nextState)
+                if (state::class != nextState::class) {
+                    clearPendingActionsOnStateExitIfNeeded()
+                }
             }
 
             if (state::class != nextState::class) {
@@ -209,6 +217,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             if (state != nextState) {
                 processStateChange(state, nextState)
+                if (state::class != nextState::class) {
+                    clearPendingActionsOnStateExitIfNeeded()
+                }
             }
 
             if (state::class != nextState::class) {
@@ -233,6 +244,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             if (state != nextState) {
                 processStateChange(state, nextState)
+                if (state::class != nextState::class) {
+                    clearPendingActionsOnStateExitIfNeeded()
+                }
             }
 
             if (state::class != nextState::class) {
@@ -259,7 +273,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override fun cancelPendingActions() {
+                override fun clearPendingActions() {
                     clearPendingDispatchJobs()
                 }
 
@@ -300,7 +314,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override fun cancelPendingActions() {
+                override fun clearPendingActions() {
                     clearPendingDispatchJobs()
                 }
 
@@ -372,7 +386,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
-                                override fun cancelPendingActions() {
+                                override fun clearPendingActions() {
                                     clearPendingDispatchJobs()
                                 }
 
@@ -427,7 +441,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = block()
                                 }
 
-                                override fun cancelPendingActions() {
+                                override fun clearPendingActions() {
                                     clearPendingDispatchJobs()
                                 }
 
@@ -463,7 +477,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 object : ExitScope<S, E, S> {
                     override val state = state
 
-                    override fun cancelPendingActions() {
+                    override fun clearPendingActions() {
                         clearPendingDispatchJobs()
                     }
 
@@ -506,7 +520,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = block()
                 }
 
-                override fun cancelPendingActions() {
+                override fun clearPendingActions() {
                     clearPendingDispatchJobs()
                 }
 
@@ -524,6 +538,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
         processMiddleware { afterEventEmit(state, event) }
+    }
+
+    private fun clearPendingActionsOnStateExitIfNeeded() {
+        if (pendingActionPolicy == PendingActionPolicy.CLEAR_ON_STATE_EXIT) {
+            clearPendingDispatchJobs()
+        }
     }
 
     private fun clearPendingDispatchJobs() {

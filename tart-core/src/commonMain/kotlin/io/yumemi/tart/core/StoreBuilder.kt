@@ -13,6 +13,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeCoroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
+    private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
@@ -49,6 +50,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      */
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
         storeExceptionHandler = exceptionHandler
+    }
+
+    /**
+     * Sets how queued actions are handled when the store exits the current state.
+     *
+     * @param policy The pending action policy to use
+     */
+    fun pendingActionPolicy(policy: PendingActionPolicy) {
+        storePendingActionPolicy = policy
     }
 
     /**
@@ -342,6 +352,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val coroutineContext: CoroutineContext = storeCoroutineContext
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
+            override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
             override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
