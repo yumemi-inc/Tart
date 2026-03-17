@@ -363,32 +363,37 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 }
 
 /**
- * Creates a Store instance with the specified initial state and optional configuration.
+ * Store DSL setup block.
+ */
+typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
+
+/**
+ * Creates a Store instance with the specified initial state and optional setup.
  *
  * @param initialState The initial state of the store
- * @param configure Optional configuration block to customize the store
+ * @param setup Optional setup block to customize the store
  * @return A configured Store instance
  */
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
-    configure: StoreBuilder<S, A, E>.() -> Unit,
+    setup: Setup<S, A, E>,
 ): Store<S, A, E> {
     return StoreBuilder<S, A, E>().apply {
         initialState(initialState)
-        configure()
+        setup()
     }.build()
 }
 
 /**
- * Creates a Store instance with configuration provided in the block.
+ * Creates a Store instance with setup provided in the block.
  * The initial state must be set within the block using initialState().
  *
- * @param configure Configuration block to customize the store
+ * @param setup Setup block to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
-    configure: StoreBuilder<S, A, E>.() -> Unit,
+    setup: Setup<S, A, E>,
 ): Store<S, A, E> {
-    return StoreBuilder<S, A, E>().apply(configure).build()
+    return StoreBuilder<S, A, E>().apply(setup).build()
 }

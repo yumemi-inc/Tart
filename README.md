@@ -69,6 +69,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Middleware](#middleware)
   - [Logging](#logging)
   - [Message](#message)
+- [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
 ## Installation
@@ -207,7 +208,7 @@ class CounterStore(
     counterRepository: CounterRepository,
 ): Store<CounterState, CounterAction, CounterEvent> by Store(
     initialState = CounterState(count = 0),
-    configure = {
+    setup = {
         state<CounterState> {
             // ...
         }
@@ -885,6 +886,78 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 }
 ```
 </details>
+
+## Project-specific AppStore Wrapper
+
+In larger projects, it can be useful to wrap `Store(...)` in a project-specific `AppStore(...)`.
+
+This allows you to centralize shared behavior such as common middleware, exception handling, and state persistence.
+It also gives you a place to prepare an extra setup hook for testing and debugging.
+
+```kt
+fun <S : State, A : Action, E : Event> AppStore(
+    initialState: S,
+    extraSetup: Setup<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> = Store(initialState) {
+    middleware(AppLoggingMiddleware())
+    exceptionHandler(AppExceptionHandler)
+
+    setup()
+    extraSetup()
+}
+```
+
+A feature Store can then focus on its own state transitions and actions:
+
+```kt
+fun CounterStore(
+    counterRepository: CounterRepository,
+    extraSetup: Setup<CounterState, CounterAction, CounterEvent> = {},
+): Store<CounterState, CounterAction, CounterEvent> = AppStore(
+    initialState = CounterState(count = 0),
+    extraSetup = extraSetup,
+) {
+    state<CounterState> {
+        action<CounterAction.Increment> {
+            val count = state.count + 1
+            counterRepository.set(count)
+            nextState(state.copy(count = count))
+        }
+    }
+}
+```
+
+For tests or debug builds, you can inject only the additional behavior you need:
+
+```kt
+val recordedEvents = mutableListOf<CounterEvent>()
+
+val store = CounterStore(
+    counterRepository = repository,
+    extraSetup = {
+        coroutineContext(testDispatcher)
+        middleware(
+            Middleware(
+                afterEventEmit = { _, event ->
+                    recordedEvents += event
+                },
+            ),
+        )
+    },
+)
+```
+
+This pattern is useful for:
+
+- applying project-wide middleware and exception handling
+- injecting test- or debug-only middleware
+- overriding `coroutineContext` in tests
+- keeping feature Store definitions focused on business logic
+
+Avoid using `extraSetup` to redefine `state {}` or `anyState {}` handlers, because handler selection depends on registration order.
+
+Also note that middleware execution order should not be relied on.
 
 ## Testing Store
 
