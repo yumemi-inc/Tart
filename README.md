@@ -22,6 +22,7 @@ Key benefits:
 - Because state is immutable during processing, you don’t have to worry about side effects.
 - Code becomes more declarative.
 - Writing tests is straightforward.
+- The state-machine-oriented DSL keeps state transitions explicit and readable.
 - Works across multiple platforms.
   - Enables code sharing and consistent logic across platforms.
 
@@ -32,11 +33,20 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 </div>
 </br>
 
-Especially, Tart is particularly strong in applications with multiple explicit states.
-By combining Tart with Kotlin `sealed class`/`sealed interface`, you can model each screen state explicitly and keep complex transitions readable and testable.
+## When Tart Fits Best
+
+Tart works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
+By combining Kotlin `sealed class`/`sealed interface` with Tart's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `error{}` behavior close together and make the transition rules easy to follow.
+
+## Current Scope
+
+Tart currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and middleware-driven extensions such as logging and inter-store messaging.
+It keeps surrounding helper layers intentionally small, so dependencies and feature composition can stay in ordinary Kotlin, while the core Store logic remains portable across platforms.
 
 ## Table of Contents
 
+- [When Tart Fits Best](#when-tart-fits-best)
+- [Current Scope](#current-scope)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Basic](#basic)
