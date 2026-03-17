@@ -1,4 +1,4 @@
-<img src="doc/logo.png" width="350">
+<img src="doc/logo.png" width="200">
 <details>
 <summary>Logo Usage (CC0 1.0)</summary>
 
@@ -55,11 +55,11 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
   - [Multiple states and transitions](#multiple-states-and-transitions)
   - [Error handling](#error-handling)
   - [Asynchronous Work](#asynchronous-work)
-  - [Clear Pending Actions](#clear-pending-actions)
   - [Alternative DSL Forms](#alternative-dsl-forms)
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
+  - [Clear Pending Actions](#clear-pending-actions)
   - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
@@ -419,21 +419,6 @@ This pattern lets your *Store* react to external data changes automatically, suc
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
 
-### Clear Pending Actions
-
-By default, Tart clears already queued actions when the store exits the current state and enters a different state variant.
-To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.KEEP)`.
-
-```kt
-val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
-    // ...
-
-    pendingActionPolicy(PendingActionPolicy.KEEP)
-}
-```
-
-Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
-
 ### Alternative DSL Forms
 
 Some DSL APIs are just alternative forms of existing APIs:
@@ -522,6 +507,21 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     stateSaver(...)
 }
 ```
+
+### Clear Pending Actions
+
+By default, Tart clears already queued actions when the store exits the current state and enters a different state variant.
+To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.KEEP)`.
+
+```kt
+val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
+    // ...
+
+    pendingActionPolicy(PendingActionPolicy.KEEP)
+}
+```
+
+Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
 
 ### For Platforms Without Flow/StateFlow Access
 
