@@ -33,12 +33,13 @@ class StorePendingActionCancellationTest {
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Active()) {
             coroutineContext(testDispatcher)
+            pendingActionPolicy(PendingActionPolicy.KEEP)
 
             state<AppState.Active> {
                 action<AppAction.HoldAndCancel>(testDispatcher) {
                     onHoldAndCancelStarted?.complete(Unit)
                     delay(100)
-                    cancelPendingActions()
+                    clearPendingActions()
                     onHoldAndCancelCompleted?.complete(Unit)
                     nextState(state.copy(value = state.value + 100))
                 }
@@ -48,7 +49,7 @@ class StorePendingActionCancellationTest {
                         transaction(testDispatcher) {
                             onTransactionStarted?.complete(Unit)
                             delay(100)
-                            cancelPendingActions()
+                            clearPendingActions()
                             onTransactionCompleted?.complete(Unit)
                             nextState(state.copy(value = state.value + 100))
                         }
