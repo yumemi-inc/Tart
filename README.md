@@ -1,8 +1,8 @@
-<img src="doc/logo.png" width="200">
+<img src="doc/logo-b.svg" width="250">
 <details>
 <summary>Logo Usage (CC0 1.0)</summary>
 
-The Tart logo ([doc/logo.png](doc/logo.png)) is licensed under CC0 1.0 Universal.
+The Tart logo ([doc/logo-*.svg](doc/)) is licensed under CC0 1.0 Universal.
 You may use it freely for any purpose without attribution.
 See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
 </details>
@@ -372,6 +372,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
+You can also create an `ExceptionHandler` instance with the `ExceptionHandler()` factory function.
+
 ### Asynchronous Work
 
 You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
@@ -507,6 +509,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     stateSaver(...)
 }
 ```
+
+You can also create a `StateSaver` instance with the `StateSaver()` factory function.
 
 ### Clear Pending Actions
 
@@ -798,6 +802,8 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 ```
 
 Note that *State* is read-only in Middleware.
+
+You can also create a `Middleware` instance with the `Middleware()` factory function.
 
 Middleware methods are suspending functions. The *Store* waits for a method to complete before proceeding.
 Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
