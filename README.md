@@ -1,8 +1,8 @@
-<img src="doc/logo-b.svg" width="250">
+<img src="doc/logo.svg" width="250">
 <details>
 <summary>Logo Usage (CC0 1.0)</summary>
 
-The Tart logo ([doc/logo-*.svg](doc/)) is licensed under CC0 1.0 Universal.
+The Tart logo ([doc/logo.svg](doc/logo.svg)) is licensed under CC0 1.0 Universal.
 You may use it freely for any purpose without attribution.
 See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
 </details>
