@@ -24,7 +24,6 @@ class StoreActionCoroutineScopeTest {
     sealed interface AppAction : Action {
         data object LaunchIncrement : AppAction
         data class LaunchWithDelta(val delta: Int) : AppAction
-        data class LaunchAsyncWithDelta(val delta: Int) : AppAction
         data object LaunchLongRunning : AppAction
         data object MoveToCompleted : AppAction
         data object MoveToCompletedThenLaunch : AppAction
@@ -54,13 +53,6 @@ class StoreActionCoroutineScopeTest {
                         transaction {
                             nextState(state.copy(value = state.value + delta + action.delta))
                         }
-                    }
-                }
-
-                actionAsync<AppAction.LaunchAsyncWithDelta> {
-                    val delta = action.delta
-                    transaction {
-                        nextState(state.copy(value = state.value + delta + action.delta))
                     }
                 }
 
@@ -126,16 +118,6 @@ class StoreActionCoroutineScopeTest {
         val store = createTestStore()
 
         store.dispatch(AppAction.LaunchWithDelta(delta = 2))
-        yield()
-
-        assertEquals(AppState.Active(value = 4), store.currentState)
-    }
-
-    @Test
-    fun actionAsync_canReferenceActionInLaunchAndTransaction() = runTest(testDispatcher) {
-        val store = createTestStore()
-
-        store.dispatch(AppAction.LaunchAsyncWithDelta(delta = 2))
         yield()
 
         assertEquals(AppState.Active(value = 4), store.currentState)

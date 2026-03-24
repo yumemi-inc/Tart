@@ -62,18 +62,20 @@ class StoreAnyHandlerDslTest {
         }
     }
 
-    private fun createAsyncAnyActionStore(): Store<AppState, AppAction, AppEvent> {
+    private fun createAnyActionLaunchStore(): Store<AppState, AppAction, AppEvent> {
         return Store(AppState.Counter(value = 0)) {
             coroutineContext(testDispatcher)
 
             anyState {
-                anyActionAsync {
+                anyAction {
                     when (val currentAction = action) {
                         is AppAction.AsyncAdd -> {
-                            val delta = currentAction.delta
-                            transaction {
-                                val currentState = state as? AppState.Counter ?: return@transaction
-                                nextState(currentState.copy(value = currentState.value + delta + currentAction.delta))
+                            launch {
+                                val delta = currentAction.delta
+                                transaction {
+                                    val currentState = state as? AppState.Counter ?: return@transaction
+                                    nextState(currentState.copy(value = currentState.value + delta + currentAction.delta))
+                                }
                             }
                         }
 
@@ -105,8 +107,8 @@ class StoreAnyHandlerDslTest {
     }
 
     @Test
-    fun anyActionAsync_canReferenceActionInLaunchAndTransaction() = runTest(testDispatcher) {
-        val store = createAsyncAnyActionStore()
+    fun anyActionLaunch_canReferenceActionInLaunchAndTransaction() = runTest(testDispatcher) {
+        val store = createAnyActionLaunchStore()
 
         store.dispatch(AppAction.AsyncAdd(delta = 2))
         yield()

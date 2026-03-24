@@ -170,27 +170,4 @@ class StoreStateCoroutineScopeTest {
         assertTrue(backgroundTaskCancelled, "Background task should have been cancelled")
     }
 
-    @Test
-    fun enterAsync_launchesCoroutineViaShorthand() = runTest(testDispatcher) {
-        val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Initial) {
-            coroutineContext(Dispatchers.Unconfined)
-
-            state<AppState.Initial> {
-                action<AppAction.Start> {
-                    nextState(AppState.Running())
-                }
-            }
-
-            state<AppState.Running> {
-                enterAsync {
-                    transaction {
-                        nextState(state.copy(value = 7))
-                    }
-                }
-            }
-        }
-
-        store.dispatch(AppAction.Start)
-        assertEquals(AppState.Running(value = 7), store.currentState)
-    }
 }

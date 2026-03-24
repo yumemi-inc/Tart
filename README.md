@@ -421,6 +421,36 @@ This pattern lets your *Store* react to external data changes automatically, suc
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
 
+If you want lightweight control over repeated coroutines launched from an action handler, set the policy directly on `launch(...)`:
+
+```kt
+state<MyState.Active> {
+    action<MyAction.Search> {
+        launch(policy = OverlapPolicy.CANCEL_PREVIOUS) {
+            delay(300)
+            transaction {
+                nextState(state.copy(isLoading = true))
+            }
+        }
+
+        launch(key = "analytics", policy = OverlapPolicy.DROP_IF_RUNNING) {
+            analytics.logSearch(action.query)
+        }
+    }
+
+    action<MyAction.Submit> {
+        launch(policy = OverlapPolicy.DROP_IF_RUNNING) {
+            submit()
+        }
+    }
+}
+```
+
+`OverlapPolicy.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
+`OverlapPolicy.DROP_IF_RUNNING` ignores new launches with the same key while previous work is still active.
+`OverlapPolicy.PARALLEL` keeps the default behavior and runs all launches independently.
+If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
+
 ### Alternative DSL Forms
 
 Some DSL APIs are just alternative forms of existing APIs:
@@ -428,9 +458,6 @@ Some DSL APIs are just alternative forms of existing APIs:
 - `anyState{}` is the global form of `state<...>{}` and applies to all *States*.
 - `anyAction{}` is the global form of `action<...>{}` and applies to all *Actions*.
 - `anyError{}` is an alias of `error<Exception>{}`.
-- `enterAsync{}` is shorthand for `enter { launch { ... } }`.
-- `actionAsync{}` is shorthand for `action<...> { launch { ... } }`.
-- `anyActionAsync{}` is shorthand for `anyAction { launch { ... } }`.
 
 Instead of `nextState(...)`, use `nextStateBy{}` when you want to compute and return the next state inside a block.
 

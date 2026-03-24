@@ -96,9 +96,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val mutex = Mutex()
 
-    private val stateScopes = mutableMapOf<KClass<out S>, CoroutineScope>()
+    private val stateRuntimes = mutableMapOf<KClass<out S>, StateRuntime>()
 
     private var activeDispatchJob: Job? = null
+
+    private data class StateRuntime(
+        val scope: CoroutineScope,
+        val actionLaunchJobs: MutableMap<Any, Job> = mutableMapOf(),
+    )
 
     final override fun dispatch(action: A) {
         dispatchScope.launch {
@@ -281,12 +286,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit) {
-                    val stateScope = stateScopes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
-                    launchInStateScope(
-                        stateScope = stateScope,
+                override fun launch(
+                    coroutineDispatcher: CoroutineDispatcher,
+                    key: Any?,
+                    policy: OverlapPolicy,
+                    block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
+                ) {
+                    val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
+                    launchActionInStateRuntime(
+                        stateRuntime = stateRuntime,
+                        key = key ?: action::class,
+                        policy = policy,
                         coroutineDispatcher = coroutineDispatcher,
-                        buildLaunchScope = { buildActionLaunchScope(stateScope, action) },
+                        buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
                         block = block,
                     )
                 }
@@ -299,9 +311,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processStateEnter(state: S): S {
         processMiddleware { beforeStateEnter(state) }
-        stateScopes[state::class]?.cancel()
-        val stateScope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job]))
-        stateScopes[state::class] = stateScope
+        stateRuntimes[state::class]?.scope?.cancel()
+        val stateRuntime = StateRuntime(
+            scope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job])),
+        )
+        stateRuntimes[state::class] = stateRuntime
         var newState: S? = null
         onEnter.invoke(
             object : EnterScope<S, A, E, S> {
@@ -323,10 +337,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
-                    launchInStateScope(
-                        stateScope = stateScope,
+                    launchInStateRuntime(
+                        stateRuntime = stateRuntime,
                         coroutineDispatcher = coroutineDispatcher,
-                        buildLaunchScope = { buildEnterLaunchScope(stateScope) },
+                        buildLaunchScope = { buildEnterLaunchScope(stateRuntime.scope) },
                         block = block,
                     )
                 }
@@ -337,25 +351,104 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         return nextState
     }
 
-    private fun <LS> launchInStateScope(
-        stateScope: CoroutineScope,
+    private fun <LS> launchInStateRuntime(
+        stateRuntime: StateRuntime,
+        coroutineDispatcher: CoroutineDispatcher,
+        buildLaunchScope: () -> LS,
+        block: suspend LS.() -> Unit,
+    ): Job {
+        return stateRuntime.scope.launch(coroutineDispatcher) {
+            executeLaunchInStateRuntime(
+                stateRuntime = stateRuntime,
+                coroutineDispatcher = coroutineDispatcher,
+                buildLaunchScope = buildLaunchScope,
+                block = block,
+            )
+        }
+    }
+
+    private fun <LS> launchActionInStateRuntime(
+        stateRuntime: StateRuntime,
+        key: Any,
+        policy: OverlapPolicy,
         coroutineDispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
-        stateScope.launch(coroutineDispatcher) {
-            val launchScope = buildLaunchScope()
+        when (policy) {
+            OverlapPolicy.PARALLEL -> {
+                launchInStateRuntime(
+                    stateRuntime = stateRuntime,
+                    coroutineDispatcher = coroutineDispatcher,
+                    buildLaunchScope = buildLaunchScope,
+                    block = block,
+                )
+            }
+
+            OverlapPolicy.CANCEL_PREVIOUS -> {
+                stateRuntime.actionLaunchJobs[key]?.cancel()
+                stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
+                    stateRuntime = stateRuntime,
+                    key = key,
+                    coroutineDispatcher = coroutineDispatcher,
+                    buildLaunchScope = buildLaunchScope,
+                    block = block,
+                )
+            }
+
+            OverlapPolicy.DROP_IF_RUNNING -> {
+                if (stateRuntime.actionLaunchJobs[key]?.isActive == true) return
+                stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
+                    stateRuntime = stateRuntime,
+                    key = key,
+                    coroutineDispatcher = coroutineDispatcher,
+                    buildLaunchScope = buildLaunchScope,
+                    block = block,
+                )
+            }
+        }
+    }
+
+    private fun <LS> launchTrackedActionInStateRuntime(
+        stateRuntime: StateRuntime,
+        key: Any,
+        coroutineDispatcher: CoroutineDispatcher,
+        buildLaunchScope: () -> LS,
+        block: suspend LS.() -> Unit,
+    ): Job {
+        return stateRuntime.scope.launch(coroutineDispatcher) {
             try {
-                block(launchScope)
-            } catch (t: Throwable) {
-                if (t is CancellationException) {
-                    throw t
+                executeLaunchInStateRuntime(
+                    stateRuntime = stateRuntime,
+                    coroutineDispatcher = coroutineDispatcher,
+                    buildLaunchScope = buildLaunchScope,
+                    block = block,
+                )
+            } finally {
+                if (stateRuntime.actionLaunchJobs[key] === coroutineContext[Job]) {
+                    stateRuntime.actionLaunchJobs.remove(key)
                 }
-                coroutineScope.launch(coroutineDispatcher) {
-                    mutex.withLock {
-                        if (stateScope.isActive) {
-                            onErrorOccurred(currentState, t)
-                        }
+            }
+        }
+    }
+
+    private suspend fun <LS> executeLaunchInStateRuntime(
+        stateRuntime: StateRuntime,
+        coroutineDispatcher: CoroutineDispatcher,
+        buildLaunchScope: () -> LS,
+        block: suspend LS.() -> Unit,
+    ) {
+        val launchScope = buildLaunchScope()
+        try {
+            block(launchScope)
+        } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
+            coroutineScope.launch(coroutineDispatcher) {
+                mutex.withLock {
+                    if (stateRuntime.scope.isActive) {
+                        onErrorOccurred(currentState, t)
                     }
                 }
             }
@@ -488,8 +581,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             )
             processMiddleware { afterStateExit(state) }
         } finally {
-            stateScopes[state::class]?.cancel()
-            stateScopes.remove(state::class)
+            stateRuntimes[state::class]?.scope?.cancel()
+            stateRuntimes.remove(state::class)
         }
     }
 
