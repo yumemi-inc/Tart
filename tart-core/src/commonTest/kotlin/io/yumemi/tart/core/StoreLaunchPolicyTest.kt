@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StoreOverlapPolicyTest {
+class StoreLaunchPolicyTest {
 
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
@@ -39,7 +39,7 @@ class StoreOverlapPolicyTest {
                 action<AppAction.CancelPreviousDefault> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         onCancelPreviousStart?.invoke(action.marker)
                         try {
@@ -54,7 +54,7 @@ class StoreOverlapPolicyTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "primary",
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -63,7 +63,7 @@ class StoreOverlapPolicyTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "secondary",
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -74,7 +74,7 @@ class StoreOverlapPolicyTest {
                 action<AppAction.SharedDefaultKey> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -82,7 +82,7 @@ class StoreOverlapPolicyTest {
                     }
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -93,7 +93,7 @@ class StoreOverlapPolicyTest {
                 action<AppAction.DropIfRunningAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = OverlapPolicy.DROP_IF_RUNNING,
+                        policy = LaunchPolicy.DROP_IF_RUNNING,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -105,7 +105,7 @@ class StoreOverlapPolicyTest {
                 action<AppAction.LatestAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = OverlapPolicy.CANCEL_PREVIOUS,
+                        policy = LaunchPolicy.CANCEL_PREVIOUS,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {

@@ -212,10 +212,10 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param key Optional launch key used for overlap coordination. When omitted, the current action type is used.
-     * @param policy The overlap policy used when the same key is launched repeatedly.
+     * @param policy The launch policy used when the same key is launched repeatedly.
      * @param block The suspending block of code to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, key: Any? = null, policy: OverlapPolicy = OverlapPolicy.PARALLEL, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, key: Any? = null, policy: LaunchPolicy = LaunchPolicy.PARALLEL, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine from an action handler.

@@ -426,29 +426,29 @@ If you want lightweight control over repeated coroutines launched from an action
 ```kt
 state<MyState.Active> {
     action<MyAction.Search> {
-        launch(policy = OverlapPolicy.CANCEL_PREVIOUS) {
+        launch(policy = LaunchPolicy.CANCEL_PREVIOUS) {
             delay(300)
             transaction {
                 nextState(state.copy(isLoading = true))
             }
         }
 
-        launch(key = "analytics", policy = OverlapPolicy.DROP_IF_RUNNING) {
+        launch(key = "analytics", policy = LaunchPolicy.DROP_IF_RUNNING) {
             analytics.logSearch(action.query)
         }
     }
 
     action<MyAction.Submit> {
-        launch(policy = OverlapPolicy.DROP_IF_RUNNING) {
+        launch(policy = LaunchPolicy.DROP_IF_RUNNING) {
             submit()
         }
     }
 }
 ```
 
-`OverlapPolicy.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
-`OverlapPolicy.DROP_IF_RUNNING` ignores new launches with the same key while previous work is still active.
-`OverlapPolicy.PARALLEL` keeps the default behavior and runs all launches independently.
+`LaunchPolicy.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
+`LaunchPolicy.DROP_IF_RUNNING` ignores new launches with the same key while previous work is still active.
+`LaunchPolicy.PARALLEL` keeps the default behavior and runs all launches independently.
 If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
 
 ### Alternative DSL Forms

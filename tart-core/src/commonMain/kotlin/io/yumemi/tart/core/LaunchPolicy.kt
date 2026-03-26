@@ -4,7 +4,7 @@ package io.yumemi.tart.core
  * Controls how repeated coroutines launched from the same `action{}` or `anyAction{}` handler behave
  * while previous work for the same launch key is still active.
  */
-enum class OverlapPolicy {
+enum class LaunchPolicy {
     /**
      * Launch every asynchronous handler invocation independently.
      */

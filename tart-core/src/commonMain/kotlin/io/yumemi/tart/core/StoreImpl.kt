@@ -289,7 +289,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override fun launch(
                     coroutineDispatcher: CoroutineDispatcher,
                     key: Any?,
-                    policy: OverlapPolicy,
+                    policy: LaunchPolicy,
                     block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
                 ) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
@@ -370,13 +370,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun <LS> launchActionInStateRuntime(
         stateRuntime: StateRuntime,
         key: Any,
-        policy: OverlapPolicy,
+        policy: LaunchPolicy,
         coroutineDispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
         when (policy) {
-            OverlapPolicy.PARALLEL -> {
+            LaunchPolicy.PARALLEL -> {
                 launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     coroutineDispatcher = coroutineDispatcher,
@@ -385,7 +385,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            OverlapPolicy.CANCEL_PREVIOUS -> {
+            LaunchPolicy.CANCEL_PREVIOUS -> {
                 stateRuntime.actionLaunchJobs[key]?.cancel()
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
@@ -396,7 +396,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            OverlapPolicy.DROP_IF_RUNNING -> {
+            LaunchPolicy.DROP_IF_RUNNING -> {
                 if (stateRuntime.actionLaunchJobs[key]?.isActive == true) return
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
