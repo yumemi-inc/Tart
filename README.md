@@ -797,7 +797,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     )
 
     // add multiple Middlewares
-    middlewares(..., ...)
+    middleware(..., ...)
 }
 ```
 
@@ -898,19 +898,21 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 In larger projects, it can be useful to wrap `Store(...)` in a project-specific `AppStore(...)`.
 
 This allows you to centralize shared behavior such as common middleware, exception handling, and state persistence.
-It also gives you a place to prepare an extra setup hook for testing and debugging.
+It also gives you a place to apply non-state overrides for testing and debugging.
 
 ```kt
 fun <S : State, A : Action, E : Event> AppStore(
     initialState: S,
-    extraSetup: Setup<S, A, E> = {},
+    overrides: Overrides<S, A, E> = {},
     setup: Setup<S, A, E>,
-): Store<S, A, E> = Store(initialState) {
+): Store<S, A, E> = Store(
+    initialState = initialState,
+    overrides = overrides,
+) {
     middleware(AppLoggingMiddleware())
     exceptionHandler(AppExceptionHandler)
 
     setup()
-    extraSetup()
 }
 ```
 
@@ -919,10 +921,10 @@ A feature Store can then focus on its own state transitions and actions:
 ```kt
 fun CounterStore(
     counterRepository: CounterRepository,
-    extraSetup: Setup<CounterState, CounterAction, CounterEvent> = {},
+    overrides: Overrides<CounterState, CounterAction, CounterEvent> = {},
 ): Store<CounterState, CounterAction, CounterEvent> = AppStore(
     initialState = CounterState(count = 0),
-    extraSetup = extraSetup,
+    overrides = overrides,
 ) {
     state<CounterState> {
         action<CounterAction.Increment> {
@@ -941,8 +943,9 @@ val recordedEvents = mutableListOf<CounterEvent>()
 
 val store = CounterStore(
     counterRepository = repository,
-    extraSetup = {
+    overrides = {
         coroutineContext(testDispatcher)
+        clearMiddlewares()
         middleware(
             Middleware(
                 afterEventEmit = { _, event ->
@@ -954,14 +957,17 @@ val store = CounterStore(
 )
 ```
 
+Use `replaceMiddlewares(...)` inside `overrides {}` when you want to replace the default middleware set.
+Use `clearMiddlewares()` when you want to remove all configured middleware.
+
 This pattern is useful for:
 
 - applying project-wide middleware and exception handling
 - injecting test- or debug-only middleware
+- overriding `stateSaver` or `exceptionHandler` for tests
 - overriding `coroutineContext` in tests
+- clearing or replacing default middleware via `clearMiddlewares()` / `replaceMiddlewares(...)`
 - keeping feature Store definitions focused on business logic
-
-Avoid using `extraSetup` to redefine `state {}` or `anyState {}` handlers, because handler selection depends on registration order.
 
 Also note that middleware execution order should not be relied on.
 
