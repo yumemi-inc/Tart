@@ -967,5 +967,31 @@ Also note that middleware execution order should not be relied on.
 
 ## Testing Store
 
-Tart's architecture makes writing unit tests for your *Store* straightforward.
-For test examples, see the [commonTest](tart-core/src/commonTest/kotlin/io/yumemi/tart/core) directory in the `:tart-core` module.
+You can attach a `StoreRecorder` before the *Store* starts and use it to assert recorded state and event history.
+
+```kt
+@OptIn(ExperimentalTartApi::class)
+@Test
+fun counterStore_recordsStateHistory() = runTest {
+    val recorder = StoreRecorder<CounterState, CounterEvent>()
+    val store = CounterStore(...)
+
+    store.attachObserver(recorder)
+
+    store.dispatch(CounterAction.Increment)
+
+    assertEquals(
+        listOf(
+            CounterState(count = 0),
+            CounterState(count = 1),
+        ),
+        recorder.states,
+    )
+    assertEquals(
+        listOf(CounterEvent.Incremented(count = 1)),
+        recorder.events,
+    )
+}
+```
+
+If you need different recording behavior, you can also implement your own recorder by implementing `StoreObserver`.

@@ -98,6 +98,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val stateScopes = mutableMapOf<KClass<out S>, CoroutineScope>()
 
+    private val observers = mutableListOf<StoreObserver<S, E>>()
+
     private var activeDispatchJob: Job? = null
 
     final override fun dispatch(action: A) {
@@ -126,6 +128,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     final override fun collectEvent(event: (E) -> Unit) {
         coroutineScope.launch((Dispatchers.Unconfined)) {
             this@StoreImpl.event.collect { event(it) }
+        }
+    }
+
+    final override fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
+        check(mutex.tryLock()) { "[Tart] Failed to attach observer because the Store is starting or already started" }
+        try {
+            check(!isInitialized) { "[Tart] Observer must be attached before the Store starts" }
+            if (notifyCurrentState) {
+                observer.onState(currentState)
+            }
+            observers.add(observer)
+        } finally {
+            mutex.unlock()
         }
     }
 
@@ -502,6 +517,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             rethrowIfFatal(t)
             throw InternalError(t)
         }
+        notifyStateRecorded(nextState)
         processMiddleware { afterStateChange(nextState, state) }
     }
 
@@ -537,6 +553,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun processEventEmit(state: S, event: E) {
         processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
+        notifyEventRecorded(event)
         processMiddleware { afterEventEmit(state, event) }
     }
 
@@ -564,6 +581,28 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         } catch (t: Throwable) {
             rethrowIfFatal(t)
             throw InternalError(t)
+        }
+    }
+
+    private fun notifyStateRecorded(state: S) {
+        observers.forEach { observer ->
+            try {
+                observer.onState(state)
+            } catch (t: Throwable) {
+                rethrowIfFatal(t)
+                throw InternalError(t)
+            }
+        }
+    }
+
+    private fun notifyEventRecorded(event: E) {
+        observers.forEach { observer ->
+            try {
+                observer.onEvent(event)
+            } catch (t: Throwable) {
+                rethrowIfFatal(t)
+                throw InternalError(t)
+            }
         }
     }
 

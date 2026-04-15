@@ -10,6 +10,7 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
+import io.yumemi.tart.core.StoreObserver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -268,6 +269,12 @@ private class TestStore(
     override fun collectState(state: (UiState) -> Unit) = Unit
 
     override fun collectEvent(event: (UiEvent) -> Unit) = Unit
+
+    override fun attachObserver(observer: StoreObserver<UiState, UiEvent>, notifyCurrentState: Boolean) {
+        if (notifyCurrentState) {
+            observer.onState(currentState)
+        }
+    }
 
     override fun dispose() {
         disposeCount++
