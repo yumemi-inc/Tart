@@ -32,6 +32,17 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     fun dispatch(action: A)
 
     /**
+     * Dispatches an action and suspends until the dispatch work completes.
+     *
+     * This waits for the action handling performed as part of the dispatch itself.
+     * It does not wait for additional work launched from action/enter handlers.
+     *
+     * @param action The action to dispatch
+     */
+    @ExperimentalTartApi
+    suspend fun dispatchAndAwait(action: A)
+
+    /**
      * Collects state changes.
      *
      * @param state Callback called when the state changes

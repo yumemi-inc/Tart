@@ -103,7 +103,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private var activeDispatchJob: Job? = null
 
     final override fun dispatch(action: A) {
-        dispatchScope.launch {
+        launchDispatch(action)
+    }
+
+    @OptIn(ExperimentalTartApi::class)
+    final override suspend fun dispatchAndAwait(action: A) {
+        launchDispatch(action).join()
+    }
+
+    private fun launchDispatch(action: A): Job {
+        return dispatchScope.launch {
             mutex.withLock {
                 val dispatchJob = coroutineContext[Job]
                 activeDispatchJob = dispatchJob

@@ -970,16 +970,18 @@ Also note that middleware execution order should not be relied on.
 You can attach a `StoreRecorder` before the *Store* starts and use it to assert recorded state and event history.
 
 ```kt
-@OptIn(ExperimentalTartApi::class)
 @Test
-fun counterStore_recordsStateHistory() = runTest {
+fun counterStore_recordsStatesAndEvents() = runTest {
+    // Given
     val recorder = StoreRecorder<CounterState, CounterEvent>()
     val store = CounterStore(...)
 
     store.attachObserver(recorder)
 
-    store.dispatch(CounterAction.Increment)
+    // When
+    store.dispatchAndAwait(CounterAction.Increment) // wait until the dispatched action completes
 
+    // Then
     assertEquals(
         listOf(
             CounterState(count = 0),
@@ -995,3 +997,4 @@ fun counterStore_recordsStateHistory() = runTest {
 ```
 
 If you need different recording behavior, you can also implement your own recorder by implementing `StoreObserver`.
+If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.

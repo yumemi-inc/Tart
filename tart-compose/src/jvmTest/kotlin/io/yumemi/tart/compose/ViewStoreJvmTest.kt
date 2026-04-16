@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.withRunningRecomposer
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
+import io.yumemi.tart.core.ExperimentalTartApi
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreObserver
@@ -264,6 +265,11 @@ private class TestStore(
 
     override fun dispatch(action: UiAction) {
         dispatchedActions += action
+    }
+
+    @OptIn(ExperimentalTartApi::class)
+    override suspend fun dispatchAndAwait(action: UiAction) {
+        dispatch(action)
     }
 
     override fun collectState(state: (UiState) -> Unit) = Unit
