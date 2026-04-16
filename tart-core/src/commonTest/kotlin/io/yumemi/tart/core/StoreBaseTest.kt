@@ -102,7 +102,7 @@ class StoreBaseTest {
     }
 
     @Test
-    fun tartStore_dispatchAndAwait_shouldSuspendUntilActionHandled() = runTest(testDispatcher) {
+    fun tartStore_dispatchAndWait_shouldSuspendUntilActionHandled() = runTest(testDispatcher) {
         val gate = CompletableDeferred<Unit>()
         val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
             coroutineContext(Dispatchers.Unconfined)
@@ -121,7 +121,7 @@ class StoreBaseTest {
 
         val dispatchJob = launch {
             @OptIn(ExperimentalTartApi::class)
-            store.dispatchAndAwait(AppAction.Increment)
+            store.dispatchAndWait(AppAction.Increment)
         }
 
         assertFalse(dispatchJob.isCompleted)

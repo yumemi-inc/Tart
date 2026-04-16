@@ -40,7 +40,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * @param action The action to dispatch
      */
     @ExperimentalTartApi
-    suspend fun dispatchAndAwait(action: A)
+    suspend fun dispatchAndWait(action: A)
 
     /**
      * Collects state changes.

@@ -268,7 +268,7 @@ private class TestStore(
     }
 
     @OptIn(ExperimentalTartApi::class)
-    override suspend fun dispatchAndAwait(action: UiAction) {
+    override suspend fun dispatchAndWait(action: UiAction) {
         dispatch(action)
     }
 

@@ -107,7 +107,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     @OptIn(ExperimentalTartApi::class)
-    final override suspend fun dispatchAndAwait(action: A) {
+    final override suspend fun dispatchAndWait(action: A) {
         launchDispatch(action).join()
     }
 

@@ -979,7 +979,7 @@ fun counterStore_recordsStatesAndEvents() = runTest {
     store.attachObserver(recorder)
 
     // When
-    store.dispatchAndAwait(CounterAction.Increment) // wait until the dispatched action completes
+    store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
 
     // Then
     assertEquals(
