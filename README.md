@@ -967,14 +967,14 @@ Also note that middleware execution order should not be relied on.
 
 ## Testing Store
 
-For most Store tests, use `attachRecorder()` to attach the default `StoreRecorder` and assert recorded state and event history.
+For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
 
 ```kt
 @Test
 fun counterStore_recordsStatesAndEvents() = runTest {
     // Given
     val store = CounterStore(...)
-    val recorder = store.attachRecorder()
+    val recorder = store.createRecorder()
 
     // When
     store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes

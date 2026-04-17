@@ -3,7 +3,7 @@ package io.yumemi.tart.core
 /**
  * Extension point for observing Store state snapshots and emitted events.
  *
- * For most test cases, prefer [StoreRecorder] or [Store.attachRecorder].
+ * For most test cases, prefer [StoreRecorder] or [Store.createRecorder].
  * Implement this interface when you need custom recording or observation behavior.
  */
 interface StoreObserver<S : State, E : Event> {
@@ -85,7 +85,7 @@ class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
  * @return The attached [StoreRecorder]
  */
 @ExperimentalTartApi
-fun <S : State, A : Action, E : Event> Store<S, A, E>.attachRecorder(
+fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(
     notifyCurrentState: Boolean = true,
 ): StoreRecorder<S, E> {
     val recorder = StoreRecorder<S, E>()

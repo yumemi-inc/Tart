@@ -89,10 +89,10 @@ class StoreRecorderTest {
     }
 
     @Test
-    fun attachRecorder_createsAndAttachesRecorder() = runTest(testDispatcher) {
+    fun createRecorder_createsAndAttachesRecorder() = runTest(testDispatcher) {
         val store = createTestStore()
 
-        val recorder = store.attachRecorder()
+        val recorder = store.createRecorder()
         store.dispatchAndWait(AppAction.Increment)
         store.dispatchAndWait(AppAction.EmitEvent)
 
