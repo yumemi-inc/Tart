@@ -967,16 +967,14 @@ Also note that middleware execution order should not be relied on.
 
 ## Testing Store
 
-You can attach a `StoreRecorder` before the *Store* starts and use it to assert recorded state and event history.
+For most Store tests, use `attachRecorder()` to attach the default `StoreRecorder` and assert recorded state and event history.
 
 ```kt
 @Test
 fun counterStore_recordsStatesAndEvents() = runTest {
     // Given
-    val recorder = StoreRecorder<CounterState, CounterEvent>()
     val store = CounterStore(...)
-
-    store.attachObserver(recorder)
+    val recorder = store.attachRecorder()
 
     // When
     store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
@@ -996,5 +994,5 @@ fun counterStore_recordsStatesAndEvents() = runTest {
 }
 ```
 
-If you need different recording behavior, you can also implement your own recorder by implementing `StoreObserver`.
+If you need custom recording behavior, you can implement your own recorder by implementing `StoreObserver`.
 If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.

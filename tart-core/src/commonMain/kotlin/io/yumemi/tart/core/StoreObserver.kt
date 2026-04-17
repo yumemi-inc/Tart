@@ -1,7 +1,10 @@
 package io.yumemi.tart.core
 
 /**
- * Observer for Store state snapshots and emitted events.
+ * Extension point for observing Store state snapshots and emitted events.
+ *
+ * For most test cases, prefer [StoreRecorder] or [Store.attachRecorder].
+ * Implement this interface when you need custom recording or observation behavior.
  */
 interface StoreObserver<S : State, E : Event> {
     /**
@@ -36,7 +39,7 @@ fun <S : State, E : Event> StoreObserver(
 }
 
 /**
- * Recorder that keeps Store state snapshots and emitted events in memory.
+ * Default in-memory [StoreObserver] implementation for tests.
  *
  * This API currently lives in `:tart-core`, but it is intended primarily for testing support.
  * It may be moved to a dedicated testing module in the future.
@@ -71,4 +74,21 @@ class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
     override fun onEvent(event: E) {
         recordedEvents.add(event)
     }
+}
+
+/**
+ * Creates and attaches the default [StoreRecorder] for this Store.
+ *
+ * Prefer this in tests unless you need a custom [StoreObserver] implementation.
+ *
+ * @param notifyCurrentState Whether to notify the recorder with the current state immediately
+ * @return The attached [StoreRecorder]
+ */
+@ExperimentalTartApi
+fun <S : State, A : Action, E : Event> Store<S, A, E>.attachRecorder(
+    notifyCurrentState: Boolean = true,
+): StoreRecorder<S, E> {
+    val recorder = StoreRecorder<S, E>()
+    attachObserver(recorder, notifyCurrentState)
+    return recorder
 }
