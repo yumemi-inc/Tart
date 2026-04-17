@@ -106,8 +106,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         launchDispatch(action)
     }
 
-    @OptIn(ExperimentalTartApi::class)
-    final override suspend fun dispatchAndWait(action: A) {
+    internal suspend fun dispatchAndWaitInternal(action: A) {
         launchDispatch(action).join()
     }
 
@@ -140,7 +139,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    final override fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
+    internal fun attachObserverInternal(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
         check(mutex.tryLock()) { "[Tart] Failed to attach observer because the Store is starting or already started" }
         try {
             check(!isInitialized) { "[Tart] Observer must be attached before the Store starts" }

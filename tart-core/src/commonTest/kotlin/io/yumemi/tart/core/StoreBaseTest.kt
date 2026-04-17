@@ -120,7 +120,6 @@ class StoreBaseTest {
         }
 
         val dispatchJob = launch {
-            @OptIn(ExperimentalTartApi::class)
             store.dispatchAndWait(AppAction.Increment)
         }
 
