@@ -1,5 +1,6 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -43,7 +44,7 @@ class StoreObserverTest {
         val history = ObservationHistory<AppState, AppEvent>()
         val observer = history.toObserver()
 
-        store.attachObserver(observer)
+        store.attachObserverForTest(observer)
 
         assertFalse(started)
         assertEquals(listOf<AppState>(AppState.Main(count = 5)), history.stateHistory)
@@ -56,7 +57,7 @@ class StoreObserverTest {
         val history = ObservationHistory<AppState, AppEvent>()
         val observer = history.toObserver()
 
-        store.attachObserver(observer)
+        store.attachObserverForTest(observer)
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.EmitEvent)
 
@@ -77,8 +78,8 @@ class StoreObserverTest {
         val firstHistory = ObservationHistory<AppState, AppEvent>()
         val secondHistory = ObservationHistory<AppState, AppEvent>()
 
-        store.attachObserver(firstHistory.toObserver())
-        store.attachObserver(secondHistory.toObserver())
+        store.attachObserverForTest(firstHistory.toObserver())
+        store.attachObserverForTest(secondHistory.toObserver())
         store.dispatch(AppAction.EmitEvent)
 
         assertEquals(firstHistory.stateHistory, secondHistory.stateHistory)
@@ -91,7 +92,7 @@ class StoreObserverTest {
         val history = ObservationHistory<AppState, AppEvent>()
 
         store.collectEvent { }
-        store.attachObserver(history.toObserver())
+        store.attachObserverForTest(history.toObserver())
         store.dispatch(AppAction.EmitEvent)
 
         assertEquals(
@@ -111,7 +112,12 @@ class StoreObserverTest {
         store.dispatch(AppAction.Increment)
 
         try {
-            store.attachObserver(StoreObserver())
+            store.attachObserverForTest(
+                object : StoreObserver<AppState, AppEvent> {
+                    override fun onState(state: AppState) = Unit
+                    override fun onEvent(event: AppEvent) = Unit
+                },
+            )
             fail("Expected attachObserver to fail after store start")
         } catch (t: Throwable) {
             assertIs<IllegalStateException>(t)
@@ -119,11 +125,47 @@ class StoreObserverTest {
     }
 
     @Test
+    fun attachObserver_throwsWhileStoreIsStarting() = runTest(testDispatcher) {
+        val startEntered = CompletableDeferred<Unit>()
+        val releaseStart = CompletableDeferred<Unit>()
+        val store = createTestStore(
+            onStart = {
+                startEntered.complete(Unit)
+                releaseStart.await()
+            },
+        )
+
+        store.dispatch(AppAction.Increment)
+        startEntered.await()
+
+        try {
+            store.attachObserverForTest(
+                object : StoreObserver<AppState, AppEvent> {
+                    override fun onState(state: AppState) = Unit
+                    override fun onEvent(event: AppEvent) = Unit
+                },
+            )
+            fail("Expected attachObserver to fail while store is starting")
+        } catch (t: Throwable) {
+            assertIs<IllegalStateException>(t)
+            assertEquals(
+                "[Tart] Failed to attach observer because the Store is starting or already started",
+                t.message,
+            )
+        } finally {
+            releaseStart.complete(Unit)
+        }
+
+        testScheduler.runCurrent()
+        assertEquals(AppState.Main(count = 1), store.currentState)
+    }
+
+    @Test
     fun attachObserver_canSkipInitialCurrentStateSnapshot() = runTest(testDispatcher) {
         val store = createTestStore()
         val history = ObservationHistory<AppState, AppEvent>()
 
-        store.attachObserver(history.toObserver(), notifyCurrentState = false)
+        store.attachObserverForTest(history.toObserver(), notifyCurrentState = false)
         store.dispatch(AppAction.Increment)
 
         assertEquals(
@@ -145,15 +187,17 @@ class StoreObserverTest {
                 restore = { AppState.Main(count = 5) },
             ),
         )
-        val observer = StoreObserver<AppState, AppEvent>(
-            onState = {
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) {
                 observerInvocationCount++
                 throw IllegalStateException("observer failed during attach")
-            },
-        )
+            }
+
+            override fun onEvent(event: AppEvent) = Unit
+        }
 
         try {
-            store.attachObserver(observer)
+            store.attachObserverForTest(observer)
             fail("Expected attachObserver to rethrow observer exception")
         } catch (t: Throwable) {
             assertIs<IllegalStateException>(t)
@@ -174,15 +218,17 @@ class StoreObserverTest {
             },
             errorStateOnException = AppState.Main(count = -1),
         )
-        val observer = StoreObserver<AppState, AppEvent>(
-            onState = { state ->
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) {
                 if (state == AppState.Main(count = 1)) {
                     throw IllegalArgumentException("observer state failed")
                 }
-            },
-        )
+            }
 
-        store.attachObserver(observer)
+            override fun onEvent(event: AppEvent) = Unit
+        }
+
+        store.attachObserverForTest(observer)
         store.dispatch(AppAction.Increment)
         testScheduler.runCurrent()
 
@@ -199,13 +245,15 @@ class StoreObserverTest {
             },
             errorStateOnException = AppState.Main(count = -1),
         )
-        val observer = StoreObserver<AppState, AppEvent>(
-            onEvent = {
-                throw IllegalArgumentException("observer event failed")
-            },
-        )
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) = Unit
 
-        store.attachObserver(observer)
+            override fun onEvent(event: AppEvent) {
+                throw IllegalArgumentException("observer event failed")
+            }
+        }
+
+        store.attachObserverForTest(observer)
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.EmitEvent)
         testScheduler.runCurrent()
@@ -216,7 +264,7 @@ class StoreObserverTest {
 
     private fun createTestStore(
         stateSaver: StateSaver<AppState> = StateSaver.Noop(),
-        onStart: (() -> Unit)? = null,
+        onStart: (suspend () -> Unit)? = null,
         exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
         errorStateOnException: AppState? = null,
     ): Store<AppState, AppAction, AppEvent> {
@@ -261,24 +309,38 @@ class StoreObserverTest {
         val stateHistory = mutableListOf<S>()
         val eventHistory = mutableListOf<E>()
 
-        fun toObserver(): StoreObserver<S, E> = StoreObserver(
-            onState = { state ->
+        fun toObserver(): StoreObserver<S, E> = object : StoreObserver<S, E> {
+            override fun onState(state: S) {
                 stateHistory.add(state)
-            },
-            onEvent = { event ->
+            }
+
+            override fun onEvent(event: E) {
                 eventHistory.add(event)
-            },
-        )
+            }
+        }
+    }
+
+    @OptIn(InternalTartApi::class)
+    private fun Store<AppState, AppAction, AppEvent>.attachObserverForTest(
+        observer: StoreObserver<AppState, AppEvent>,
+        notifyCurrentState: Boolean = true,
+    ) {
+        @Suppress("UNCHECKED_CAST")
+        val storeInternalApi = this as? StoreInternalApi<AppState, AppAction, AppEvent>
+            ?: error("Expected Tart Store to implement StoreInternalApi")
+        storeInternalApi.attachObserver(observer, notifyCurrentState)
     }
 
     @Test
-    fun storeObserverFactory_canCreateStateOnlyObserver() = runTest(testDispatcher) {
+    fun storeObserver_canObserveState() = runTest(testDispatcher) {
         val observedStates = mutableListOf<AppState>()
-        val observer = StoreObserver<AppState, AppEvent>(
-            onState = { state ->
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) {
                 observedStates.add(state)
-            },
-        )
+            }
+
+            override fun onEvent(event: AppEvent) = Unit
+        }
 
         observer.onState(AppState.Loading)
 
@@ -286,13 +348,15 @@ class StoreObserverTest {
     }
 
     @Test
-    fun storeObserverFactory_canCreateEventOnlyObserver() = runTest(testDispatcher) {
+    fun storeObserver_canObserveEvent() = runTest(testDispatcher) {
         val observedEvents = mutableListOf<AppEvent>()
-        val observer = StoreObserver<AppState, AppEvent>(
-            onEvent = { event ->
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) = Unit
+
+            override fun onEvent(event: AppEvent) {
                 observedEvents.add(event)
-            },
-        )
+            }
+        }
 
         observer.onEvent(AppEvent.CountUpdated(count = 1))
 
@@ -300,8 +364,11 @@ class StoreObserverTest {
     }
 
     @Test
-    fun storeObserverFactory_defaultsToNoopCallbacks() = runTest(testDispatcher) {
-        val observer = StoreObserver<AppState, AppEvent>()
+    fun storeObserver_canBeImplementedWithNoopCallbacks() = runTest(testDispatcher) {
+        val observer = object : StoreObserver<AppState, AppEvent> {
+            override fun onState(state: AppState) = Unit
+            override fun onEvent(event: AppEvent) = Unit
+        }
 
         observer.onState(AppState.Loading)
         observer.onEvent(AppEvent.CountUpdated(count = 1))

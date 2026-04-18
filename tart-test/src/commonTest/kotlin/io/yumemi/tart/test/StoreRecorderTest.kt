@@ -1,12 +1,24 @@
-package io.yumemi.tart.core
+package io.yumemi.tart.test
 
+import io.yumemi.tart.core.Action
+import io.yumemi.tart.core.Event
+import io.yumemi.tart.core.ExperimentalTartApi
+import io.yumemi.tart.core.State
+import io.yumemi.tart.core.Store
+import io.yumemi.tart.core.StoreObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 @OptIn(ExperimentalTartApi::class, ExperimentalCoroutinesApi::class)
 class StoreRecorderTest {
@@ -110,5 +122,39 @@ class StoreRecorderTest {
             ),
             recorder.events,
         )
+    }
+
+    @Test
+    fun extensions_throwForStoresThatDoNotImplementTestingInterfaces() = runTest(testDispatcher) {
+        val store = FakeStore()
+
+        assertFailsWith<IllegalStateException> {
+            store.attachObserver(
+                object : StoreObserver<AppState, AppEvent> {
+                    override fun onState(state: AppState) = Unit
+                    override fun onEvent(event: AppEvent) = Unit
+                },
+            )
+        }
+        try {
+            store.dispatchAndWait(AppAction.Increment)
+            fail("Expected dispatchAndWait to fail for stores without StoreInternalApi support")
+        } catch (_: IllegalStateException) {
+        }
+    }
+
+    private class FakeStore :
+        Store<AppState, AppAction, AppEvent> {
+        override val state: StateFlow<AppState> = MutableStateFlow(AppState.Loading)
+        override val event: Flow<AppEvent> = emptyFlow()
+        override val currentState: AppState = AppState.Loading
+
+        override fun dispatch(action: AppAction) = Unit
+
+        override fun collectState(state: (AppState) -> Unit) = Unit
+
+        override fun collectEvent(event: (AppEvent) -> Unit) = Unit
+
+        override fun dispose() = Unit
     }
 }

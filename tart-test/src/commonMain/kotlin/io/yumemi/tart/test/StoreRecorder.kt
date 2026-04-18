@@ -1,48 +1,14 @@
-package io.yumemi.tart.core
+package io.yumemi.tart.test
 
-/**
- * Extension point for observing Store state snapshots and emitted events.
- *
- * For most test cases, prefer [StoreRecorder] or [Store.createRecorder].
- * Implement this interface when you need custom recording or observation behavior.
- */
-interface StoreObserver<S : State, E : Event> {
-    /**
-     * Called when a state snapshot is observed.
-     */
-    fun onState(state: S)
-
-    /**
-     * Called when an event emission is observed.
-     */
-    fun onEvent(event: E)
-}
-
-/**
- * Factory function to easily create a StoreObserver instance.
- *
- * @param onState Callback invoked when a state snapshot is observed
- * @param onEvent Callback invoked when an event emission is observed
- * @return A new StoreObserver instance
- */
-fun <S : State, E : Event> StoreObserver(
-    onState: (S) -> Unit = {},
-    onEvent: (E) -> Unit = {},
-): StoreObserver<S, E> = object : StoreObserver<S, E> {
-    override fun onState(state: S) {
-        onState.invoke(state)
-    }
-
-    override fun onEvent(event: E) {
-        onEvent.invoke(event)
-    }
-}
+import io.yumemi.tart.core.Action
+import io.yumemi.tart.core.Event
+import io.yumemi.tart.core.ExperimentalTartApi
+import io.yumemi.tart.core.State
+import io.yumemi.tart.core.Store
+import io.yumemi.tart.core.StoreObserver
 
 /**
  * Default in-memory [StoreObserver] implementation for tests.
- *
- * This API currently lives in `:tart-core`, but it is intended primarily for testing support.
- * It may be moved to a dedicated testing module in the future.
  */
 @ExperimentalTartApi
 class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {

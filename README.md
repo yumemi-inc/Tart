@@ -1004,6 +1004,12 @@ val testStore = CounterStore(
 
 ## Testing Store
 
+Add `:tart-test` to your test source set to use Tart's test helpers such as `createRecorder()`, `dispatchAndWait()`, and `attachObserver()`.
+
+```kt
+commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
+```
+
 For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
 
 ```kt

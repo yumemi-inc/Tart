@@ -19,9 +19,22 @@ package io.yumemi.tart.core
 annotation class ExperimentalTartApi
 
 /**
- * Annotation to mark classes for DSL marker usage.
- * This annotation restricts the scope of implicit receivers to avoid confusion between receivers.
+ * Annotation to mark internal APIs in the Tart framework.
+ * APIs marked with this annotation are not intended for public use
+ * and may be changed or removed without notice.
  */
+@RequiresOptIn(
+    level = RequiresOptIn.Level.ERROR,
+    message = "This is an internal API for Tart Framework. It is not intended for public use and may be changed or removed without notice.",
+)
+@Retention(AnnotationRetention.BINARY)
+@Target(
+    AnnotationTarget.CLASS,
+    AnnotationTarget.FUNCTION,
+)
+annotation class InternalTartApi
+
 @DslMarker
+@Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 internal annotation class TartStoreDsl

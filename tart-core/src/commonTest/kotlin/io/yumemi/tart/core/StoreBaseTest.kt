@@ -11,7 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, InternalTartApi::class)
 class StoreBaseTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -120,7 +120,7 @@ class StoreBaseTest {
         }
 
         val dispatchJob = launch {
-            store.dispatchAndWait(AppAction.Increment)
+            store.dispatchAndWaitForTest(AppAction.Increment)
         }
 
         assertFalse(dispatchJob.isCompleted)
@@ -146,5 +146,12 @@ class StoreBaseTest {
 
         assertNotNull(emittedEvent)
         assertEquals(AppEvent.CountUpdated(1), emittedEvent)
+    }
+
+    private suspend fun Store<AppState, AppAction, AppEvent>.dispatchAndWaitForTest(action: AppAction) {
+        @Suppress("UNCHECKED_CAST")
+        val storeInternalApi = this as? StoreInternalApi<AppState, AppAction, AppEvent>
+            ?: error("Expected Tart Store to implement StoreInternalApi")
+        storeInternalApi.dispatchAndWait(action)
     }
 }
