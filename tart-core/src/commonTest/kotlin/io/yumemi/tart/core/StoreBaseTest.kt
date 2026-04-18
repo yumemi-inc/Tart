@@ -1,11 +1,13 @@
 package io.yumemi.tart.core
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -95,6 +97,37 @@ class StoreBaseTest {
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Increment)
         store.dispatch(AppAction.Decrement)
+
+        assertEquals(AppState.Main(1), store.currentState)
+    }
+
+    @Test
+    fun tartStore_dispatchAndWait_shouldSuspendUntilActionHandled() = runTest(testDispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
+            coroutineContext(Dispatchers.Unconfined)
+            state<AppState.Loading> {
+                enter {
+                    nextState(AppState.Main(count = 0))
+                }
+            }
+            state<AppState.Main> {
+                action<AppAction.Increment> {
+                    gate.await()
+                    nextState(state.copy(count = state.count + 1))
+                }
+            }
+        }
+
+        val dispatchJob = launch {
+            store.dispatchAndWait(AppAction.Increment)
+        }
+
+        assertFalse(dispatchJob.isCompleted)
+        assertEquals(AppState.Main(0), store.currentState)
+
+        gate.complete(Unit)
+        dispatchJob.join()
 
         assertEquals(AppState.Main(1), store.currentState)
     }
