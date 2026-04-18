@@ -60,6 +60,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
   - [Clear Pending Actions](#clear-pending-actions)
+  - [Using Control Flow in Store{}](#using-control-flow-in-store)
   - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
@@ -69,6 +70,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Middleware](#middleware)
   - [Logging](#logging)
   - [Message](#message)
+- [Overrides](#overrides)
 - [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
@@ -527,6 +529,22 @@ val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
 
 Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
 
+### Using Control Flow in `Store{}`
+
+The body of `Store{}` is ordinary Kotlin code, so you can use control flow such as `if` and `when` when specifying *Store* configuration.
+
+```kt
+fun CounterStore(
+    logExceptions: Boolean,
+): Store<CounterState, CounterAction, Nothing> = Store {
+    initialState(CounterState(count = 0))
+
+    if (logExceptions) {
+        exceptionHandler(ExceptionHandler.Log)
+    }
+}
+```
+
 ### For Platforms Without Flow/StateFlow Access
 
 On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
@@ -797,7 +815,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     )
 
     // add multiple Middlewares
-    middlewares(..., ...)
+    middleware(..., ...)
 }
 ```
 
@@ -893,77 +911,96 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 ```
 </details>
 
-## Project-specific AppStore Wrapper
+## Overrides
 
-In larger projects, it can be useful to wrap `Store(...)` in a project-specific `AppStore(...)`.
-
-This allows you to centralize shared behavior such as common middleware, exception handling, and state persistence.
-It also gives you a place to prepare an extra setup hook for testing and debugging.
-
-```kt
-fun <S : State, A : Action, E : Event> AppStore(
-    initialState: S,
-    extraSetup: Setup<S, A, E> = {},
-    setup: Setup<S, A, E>,
-): Store<S, A, E> = Store(initialState) {
-    middleware(AppLoggingMiddleware())
-    exceptionHandler(AppExceptionHandler)
-
-    setup()
-    extraSetup()
-}
-```
-
-A feature Store can then focus on its own state transitions and actions:
+`Store{}` DSL accepts an `overrides` block that is applied after the main setup block.
+Use it when you want to override *Store* configuration.
 
 ```kt
 fun CounterStore(
-    counterRepository: CounterRepository,
-    extraSetup: Setup<CounterState, CounterAction, CounterEvent> = {},
-): Store<CounterState, CounterAction, CounterEvent> = AppStore(
+    overrides: Overrides<CounterState, CounterAction, Nothing> = {},
+): Store<CounterState, CounterAction, Nothing> = Store(
     initialState = CounterState(count = 0),
-    extraSetup = extraSetup,
+    overrides = overrides,
 ) {
+    middleware(AppLoggingMiddleware())
+
     state<CounterState> {
-        action<CounterAction.Increment> {
-            val count = state.count + 1
-            counterRepository.set(count)
-            nextState(state.copy(count = count))
-        }
+        // ...
     }
 }
-```
 
-For tests or debug builds, you can inject only the additional behavior you need:
+val store = CounterStore()
 
-```kt
-val recordedEvents = mutableListOf<CounterEvent>()
-
-val store = CounterStore(
-    counterRepository = repository,
-    extraSetup = {
-        coroutineContext(testDispatcher)
-        middleware(
-            Middleware(
-                afterEventEmit = { _, event ->
-                    recordedEvents += event
-                },
-            ),
-        )
+val testStore = CounterStore(
+    overrides = {
+        clearMiddlewares()
+        exceptionHandler(ExceptionHandler.Log)
     },
 )
 ```
 
-This pattern is useful for:
+Inside `overrides` block, you can use these APIs:
 
-- applying project-wide middleware and exception handling
-- injecting test- or debug-only middleware
-- overriding `coroutineContext` in tests
-- keeping feature Store definitions focused on business logic
+- `coroutineContext(...)`
+- `stateSaver(...)`
+- `exceptionHandler(...)`
+- `middleware(...)`
+- `clearMiddlewares()`
+- `replaceMiddlewares(...)`
 
-Avoid using `extraSetup` to redefine `state {}` or `anyState {}` handlers, because handler selection depends on registration order.
+Typical uses are:
 
-Also note that middleware execution order should not be relied on.
+- changing shared *Store* behavior in tests without rewriting the *Store* definition
+- injecting debug-only middleware or logging
+
+## Project-specific AppStore Wrapper
+
+In larger projects, it can be useful to wrap `Store{}` DSL in a project-specific `AppStore{}` that applies app-wide defaults in one place.
+This lets you centralize shared *Store* configuration.
+
+```kt
+fun <S : State, A : Action, E : Event> AppStore(
+    initialState: S,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> = Store(
+    initialState = initialState,
+    overrides = overrides,
+) {
+    // shared Store configuration
+    middleware(AppLoggingMiddleware())
+    exceptionHandler(AppExceptionHandler)
+
+    setup()
+}
+```
+
+A feature *Store* can then focus on its own state transitions and actions:
+
+```kt
+fun CounterStore(
+    counterRepository: CounterRepository,
+    overrides: Overrides<CounterState, CounterAction, CounterEvent> = {},
+): Store<CounterState, CounterAction, CounterEvent> = AppStore( // use AppStore{}
+    initialState = CounterState(count = 0),
+    overrides = overrides,
+) {
+    state<CounterState> {
+        // ...
+    }
+}
+
+val store = CounterStore(counterRepository = counterRepository)
+
+val testStore = CounterStore(
+    counterRepository = counterRepository,
+    overrides = {
+        clearMiddlewares()
+        // ...
+    },
+)
+```
 
 ## Testing Store
 
