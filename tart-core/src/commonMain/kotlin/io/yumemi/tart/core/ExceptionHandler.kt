@@ -45,12 +45,6 @@ interface ExceptionHandler {
                 throw error
             }
         }
-
-        @Deprecated(
-            message = "Use Unhandled instead.",
-            replaceWith = ReplaceWith("ExceptionHandler.Unhandled"),
-        )
-        val Default: ExceptionHandler = Unhandled
     }
 }
 
