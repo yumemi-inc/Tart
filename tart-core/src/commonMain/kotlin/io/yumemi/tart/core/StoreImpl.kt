@@ -24,7 +24,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
-internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E> {
+@OptIn(InternalTartApi::class)
+internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E>, StoreInternalApi<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
         MutableStateFlow(
             try {
@@ -106,7 +107,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         launchDispatch(action)
     }
 
-    internal suspend fun dispatchAndWaitInternal(action: A) {
+    final override suspend fun dispatchAndWait(action: A) {
         launchDispatch(action).join()
     }
 
@@ -139,7 +140,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    internal fun attachObserverInternal(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
+    final override fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
         check(mutex.tryLock()) { "[Tart] Failed to attach observer because the Store is starting or already started" }
         try {
             check(!isInitialized) { "[Tart] Observer must be attached before the Store starts" }
