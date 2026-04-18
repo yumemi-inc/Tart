@@ -69,6 +69,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Middleware](#middleware)
   - [Logging](#logging)
   - [Message](#message)
+- [Overrides](#overrides)
 - [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
@@ -893,12 +894,53 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 ```
 </details>
 
+## Overrides
+
+`Store{}` DSL accepts an `overrides` block that is applied after the main setup block.
+Use it when you want to override *Store* configuration.
+
+```kt
+fun CounterStore(
+    overrides: Overrides<CounterState, CounterAction, Nothing> = {},
+): Store<CounterState, CounterAction, Nothing> = Store(
+    initialState = CounterState(count = 0),
+    overrides = overrides,
+) {
+    middleware(AppLoggingMiddleware())
+
+    state<CounterState> {
+        // ...
+    }
+}
+
+val store = CounterStore()
+
+val testStore = CounterStore(
+    overrides = {
+        clearMiddlewares()
+        exceptionHandler(ExceptionHandler.Log)
+    },
+)
+```
+
+Inside `overrides` block, you can use these APIs:
+
+- `coroutineContext(...)`
+- `stateSaver(...)`
+- `exceptionHandler(...)`
+- `middleware(...)`
+- `clearMiddlewares()`
+- `replaceMiddlewares(...)`
+
+Typical uses are:
+
+- changing shared *Store* behavior in tests without rewriting the *Store* definition
+- injecting debug-only middleware or logging
+
 ## Project-specific AppStore Wrapper
 
-In larger projects, it can be useful to wrap `Store(...)` in a project-specific `AppStore(...)`.
-
-This allows you to centralize shared behavior such as common middleware, exception handling, and state persistence.
-It also gives you a place to apply non-state overrides for testing and debugging.
+In larger projects, it can be useful to wrap `Store{}` DSL in a project-specific `AppStore{}` that applies app-wide defaults in one place.
+This lets you centralize shared *Store* configuration.
 
 ```kt
 fun <S : State, A : Action, E : Event> AppStore(
@@ -909,6 +951,7 @@ fun <S : State, A : Action, E : Event> AppStore(
     initialState = initialState,
     overrides = overrides,
 ) {
+    // shared Store configuration
     middleware(AppLoggingMiddleware())
     exceptionHandler(AppExceptionHandler)
 
@@ -916,60 +959,31 @@ fun <S : State, A : Action, E : Event> AppStore(
 }
 ```
 
-A feature Store can then focus on its own state transitions and actions:
+A feature *Store* can then focus on its own state transitions and actions:
 
 ```kt
 fun CounterStore(
     counterRepository: CounterRepository,
     overrides: Overrides<CounterState, CounterAction, CounterEvent> = {},
-): Store<CounterState, CounterAction, CounterEvent> = AppStore(
+): Store<CounterState, CounterAction, CounterEvent> = AppStore( // use AppStore{}
     initialState = CounterState(count = 0),
     overrides = overrides,
 ) {
     state<CounterState> {
-        action<CounterAction.Increment> {
-            val count = state.count + 1
-            counterRepository.set(count)
-            nextState(state.copy(count = count))
-        }
+        // ...
     }
 }
-```
 
-For tests or debug builds, you can inject only the additional behavior you need:
+val store = CounterStore(counterRepository = counterRepository)
 
-```kt
-val recordedEvents = mutableListOf<CounterEvent>()
-
-val store = CounterStore(
-    counterRepository = repository,
+val testStore = CounterStore(
+    counterRepository = counterRepository,
     overrides = {
-        coroutineContext(testDispatcher)
         clearMiddlewares()
-        middleware(
-            Middleware(
-                afterEventEmit = { _, event ->
-                    recordedEvents += event
-                },
-            ),
-        )
+        // ...
     },
 )
 ```
-
-Use `replaceMiddlewares(...)` inside `overrides {}` when you want to replace the default middleware set.
-Use `clearMiddlewares()` when you want to remove all configured middleware.
-
-This pattern is useful for:
-
-- applying project-wide middleware and exception handling
-- injecting test- or debug-only middleware
-- overriding `stateSaver` or `exceptionHandler` for tests
-- overriding `coroutineContext` in tests
-- clearing or replacing default middleware via `clearMiddlewares()` / `replaceMiddlewares(...)`
-- keeping feature Store definitions focused on business logic
-
-Also note that middleware execution order should not be relied on.
 
 ## Testing Store
 
