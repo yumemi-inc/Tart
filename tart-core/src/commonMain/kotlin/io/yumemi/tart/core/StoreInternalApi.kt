@@ -7,7 +7,21 @@ package io.yumemi.tart.core
  * Implement this interface when you need custom recording or observation behavior.
  */
 interface StoreObserver<S : State, E : Event> {
+    /**
+     * Called when the Store exposes a state snapshot to observers.
+     *
+     * Depending on how the observer is attached, this may be called immediately with the
+     * current state before the Store starts processing actions.
+     *
+     * @param state The observed state snapshot
+     */
     fun onState(state: S)
+
+    /**
+     * Called when the Store emits an event.
+     *
+     * @param event The emitted event
+     */
     fun onEvent(event: E)
 }
 
