@@ -60,6 +60,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
   - [Clear Pending Actions](#clear-pending-actions)
+  - [Using Control Flow in Store{}](#using-control-flow-in-store)
   - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
@@ -527,6 +528,22 @@ val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
 ```
 
 Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
+
+### Using Control Flow in `Store{}`
+
+The body of `Store{}` is ordinary Kotlin code, so you can use control flow such as `if` and `when` when specifying *Store* configuration.
+
+```kt
+fun CounterStore(
+    logExceptions: Boolean,
+): Store<CounterState, CounterAction, Nothing> = Store {
+    initialState(CounterState(count = 0))
+
+    if (logExceptions) {
+        exceptionHandler(ExceptionHandler.Log)
+    }
+}
+```
 
 ### For Platforms Without Flow/StateFlow Access
 
