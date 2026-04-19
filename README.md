@@ -520,7 +520,7 @@ By default, Tart clears already queued actions when the store exits the current 
 To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.KEEP)`.
 
 ```kt
-val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
+val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
     pendingActionPolicy(PendingActionPolicy.KEEP)
@@ -823,7 +823,18 @@ Note that *State* is read-only in Middleware.
 
 You can also create a `Middleware` instance with the `Middleware()` factory function.
 
-Middleware methods are suspending functions. The *Store* waits for a method to complete before proceeding.
+Middleware methods are suspending functions. The *Store* waits for middleware processing to complete before proceeding.
+When multiple middleware instances are registered, Tart invokes them concurrently by default.
+If middleware must run one by one in registration order, set `middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)`.
+
+```kt
+val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
+
+    middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)
+}
+```
+
 Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
 
 In the next section, we introduce built-in Middleware.
@@ -948,6 +959,7 @@ Inside `overrides` block, you can use these APIs:
 - `middleware(...)`
 - `clearMiddlewares()`
 - `replaceMiddlewares(...)`
+- `middlewareExecutionPolicy(...)`
 
 Typical uses are:
 
