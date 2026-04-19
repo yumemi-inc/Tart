@@ -70,7 +70,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Middleware](#middleware)
   - [Logging](#logging)
   - [Message](#message)
-- [Overrides](#overrides)
+- [Store Configuration Overrides](#store-configuration-overrides)
 - [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
@@ -922,7 +922,7 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 ```
 </details>
 
-## Overrides
+## Store Configuration Overrides
 
 `Store{}` DSL accepts an `overrides` block that is applied after the main setup block.
 Use it when you want to override *Store* configuration.
@@ -959,6 +959,7 @@ Inside `overrides` block, you can use these APIs:
 - `middleware(...)`
 - `clearMiddlewares()`
 - `replaceMiddlewares(...)`
+- `pendingActionPolicy(...)`
 - `middlewareExecutionPolicy(...)`
 
 Typical uses are:
@@ -1016,7 +1017,7 @@ val testStore = CounterStore(
 
 ## Testing Store
 
-Add `:tart-test` to your test source set to use Tart's test helpers such as `createRecorder()`, `dispatchAndWait()`, and `attachObserver()`.
+Add `:tart-test` to your test source set to use Tart's test helpers such as `createRecorder()` and `dispatchAndWait()`.
 
 ```kt
 commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
@@ -1049,5 +1050,5 @@ fun counterStore_recordsStatesAndEvents() = runTest {
 }
 ```
 
-If you need custom recording behavior, you can implement your own recorder by implementing `StoreObserver`.
+If you need custom recording behavior, implement your own `StoreObserver` and attach it with `attachObserver()`.
 If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.

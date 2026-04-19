@@ -1,16 +1,33 @@
 package io.yumemi.tart.core
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class StoreOverridesTest {
 
     data class AppState(val count: Int) : State
 
     sealed interface AppAction : Action {
         data object Increment : AppAction
+    }
+
+    sealed interface PendingPolicyState : State {
+        data object Initial : PendingPolicyState
+        data class Active(val value: Int = 0) : PendingPolicyState
+    }
+
+    sealed interface PendingPolicyAction : Action {
+        data object EnterActiveAfterDelay : PendingPolicyAction
+        data object Increment : PendingPolicyAction
     }
 
     private class RecordingStateSaver(
@@ -160,5 +177,42 @@ class StoreOverridesTest {
             listOf("override1", "override2", "setup1", "setup2"),
             middlewareRecords.sorted(),
         )
+    }
+
+    @Test
+    fun pendingActionPolicyInOverrides_shouldOverrideSetupConfiguration() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val store = Store<PendingPolicyState, PendingPolicyAction, Nothing>(
+            initialState = PendingPolicyState.Initial,
+            overrides = {
+                pendingActionPolicy(PendingActionPolicy.KEEP)
+            },
+        ) {
+            coroutineContext(testDispatcher)
+            pendingActionPolicy(PendingActionPolicy.CLEAR_ON_STATE_EXIT)
+
+            state<PendingPolicyState.Initial> {
+                action<PendingPolicyAction.EnterActiveAfterDelay>(testDispatcher) {
+                    delay(100)
+                    nextState(PendingPolicyState.Active())
+                }
+            }
+
+            state<PendingPolicyState.Active> {
+                action<PendingPolicyAction.Increment>(testDispatcher) {
+                    nextState(state.copy(value = state.value + 1))
+                }
+            }
+        }
+
+        store.dispatch(PendingPolicyAction.EnterActiveAfterDelay)
+        runCurrent()
+
+        store.dispatch(PendingPolicyAction.Increment)
+        store.dispatch(PendingPolicyAction.Increment)
+
+        advanceUntilIdle()
+
+        assertEquals(PendingPolicyState.Active(value = 2), store.currentState)
     }
 }
