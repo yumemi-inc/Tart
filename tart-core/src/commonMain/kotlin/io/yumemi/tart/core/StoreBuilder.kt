@@ -373,7 +373,7 @@ typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
 /**
  * Store overrides block applied after the main Store setup.
  * This block is limited to non-state configuration such as coroutine context,
- * persistence, exception handling, and middleware.
+ * persistence, exception handling, pending action policy, and middleware.
  */
 typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
 
@@ -405,6 +405,13 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
      */
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
         operations.add { exceptionHandler(exceptionHandler) }
+    }
+
+    /**
+     * Overrides how queued actions are handled when the store exits the current state.
+     */
+    fun pendingActionPolicy(policy: PendingActionPolicy) {
+        operations.add { pendingActionPolicy(policy) }
     }
 
     /**
