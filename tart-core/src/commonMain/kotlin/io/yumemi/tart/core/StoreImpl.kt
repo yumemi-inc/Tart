@@ -71,6 +71,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val pendingActionPolicy: PendingActionPolicy
 
+    protected abstract val middlewareExecutionPolicy: MiddlewareExecutionPolicy
+
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
     protected abstract val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit
@@ -582,9 +584,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
         try {
-            coroutineScope {
-                middlewares.map {
-                    launch { block(it) }
+            when (middlewareExecutionPolicy) {
+                MiddlewareExecutionPolicy.CONCURRENT -> coroutineScope {
+                    middlewares.forEach { middleware ->
+                        launch { middleware.block() }
+                    }
+                }
+                MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER -> middlewares.forEach { middleware ->
+                    middleware.block()
                 }
             }
         } catch (t: Throwable) {

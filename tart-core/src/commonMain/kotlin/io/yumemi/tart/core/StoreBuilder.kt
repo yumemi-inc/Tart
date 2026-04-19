@@ -14,6 +14,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT
+    private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.CONCURRENT
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
@@ -59,6 +60,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      */
     fun pendingActionPolicy(policy: PendingActionPolicy) {
         storePendingActionPolicy = policy
+    }
+
+    /**
+     * Sets how the store invokes middleware when multiple middleware instances are registered.
+     *
+     * @param policy The middleware execution policy to use
+     */
+    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
+        storeMiddlewareExecutionPolicy = policy
     }
 
     /**
@@ -356,6 +366,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
+            override val middlewareExecutionPolicy: MiddlewareExecutionPolicy = storeMiddlewareExecutionPolicy
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
             override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
@@ -412,6 +423,13 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
      */
     fun pendingActionPolicy(policy: PendingActionPolicy) {
         operations.add { pendingActionPolicy(policy) }
+    }
+
+    /**
+     * Overrides how the store invokes middleware when multiple middleware instances are registered.
+     */
+    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
+        operations.add { middlewareExecutionPolicy(policy) }
     }
 
     /**
