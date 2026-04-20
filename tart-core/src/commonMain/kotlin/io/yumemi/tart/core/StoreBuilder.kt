@@ -464,16 +464,34 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
 
 private fun <S : State, A : Action, E : Event> buildStore(
     initialState: S? = null,
+    coroutineContext: CoroutineContext? = null,
     overrides: Overrides<S, A, E>? = null,
     setup: Setup<S, A, E>,
 ): Store<S, A, E> {
     val builder = StoreBuilder<S, A, E>()
     initialState?.let(builder::initialState)
+    coroutineContext?.let(builder::coroutineContext)
     builder.setup()
     overrides?.let {
         StoreOverridesBuilder<S, A, E>().apply(it).applyTo(builder)
     }
     return builder.build()
+}
+
+/**
+ * Creates a Store instance with setup provided in the block and optional overrides.
+ * The initial state must be set within the block using initialState().
+ *
+ * @param overrides Overrides block for non-state Store configuration
+ * @param setup Setup block to customize the store
+ * @return A configured Store instance
+ * @throws IllegalArgumentException if the initial state is not set in the block
+ */
+fun <S : State, A : Action, E : Event> Store(
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> {
+    return buildStore(overrides = overrides, setup = setup)
 }
 
 /**
@@ -494,17 +512,41 @@ fun <S : State, A : Action, E : Event> Store(
 }
 
 /**
- * Creates a Store instance with setup provided in the block and optional overrides.
+ * Creates a Store instance with the specified coroutine context and optional overrides.
+ * The coroutine context parameter is applied before the main setup block.
  * The initial state must be set within the block using initialState().
+ * Overrides are applied after the main setup block.
  *
+ * @param coroutineContext The coroutine context to use for store operations
  * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
+    coroutineContext: CoroutineContext,
     overrides: Overrides<S, A, E> = {},
     setup: Setup<S, A, E>,
 ): Store<S, A, E> {
-    return buildStore(overrides = overrides, setup = setup)
+    return buildStore(coroutineContext = coroutineContext, overrides = overrides, setup = setup)
+}
+
+/**
+ * Creates a Store instance with the specified initial state and coroutine context.
+ * The initial state and coroutine context parameters are applied before the main setup block.
+ * Overrides are applied after the main setup block.
+ *
+ * @param initialState The initial state of the store
+ * @param coroutineContext The coroutine context to use for store operations
+ * @param overrides Overrides block for non-state Store configuration
+ * @param setup Setup block to customize the store
+ * @return A configured Store instance
+ */
+fun <S : State, A : Action, E : Event> Store(
+    initialState: S,
+    coroutineContext: CoroutineContext,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> {
+    return buildStore(initialState = initialState, coroutineContext = coroutineContext, overrides = overrides, setup = setup)
 }
