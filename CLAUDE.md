@@ -41,3 +41,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Include state transition diagrams in tests
 - Document experimental APIs with @ExperimentalTartApi
 - Use KDoc comments for public APIs
+- Put internal design/spec notes under `doc/internal/` so they stay separate from user-facing docs
