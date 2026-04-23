@@ -2,6 +2,7 @@
 
 - 状態: メモ
 - 更新日: 2026-04-23
+- 反映状況: 未反映
 - 関連: [StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[StoreBuilder.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreBuilder.kt)、[Store.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/Store.kt)、[StoreInternalApi.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreInternalApi.kt)、[StoreBaseTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StoreBaseTest.kt)、[StoreObserverTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StoreObserverTest.kt)、[ViewStore.kt](../../tart-compose/src/commonMain/kotlin/io/yumemi/tart/compose/ViewStore.kt)
 
 ## 背景

@@ -2,6 +2,7 @@
 
 - 状態: 決定済み
 - 更新日: 2026-04-23
+- 反映状況: 反映済み
 - 関連: [StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[Store.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/Store.kt)、[ViewStore.kt](../../tart-compose/src/commonMain/kotlin/io/yumemi/tart/compose/ViewStore.kt)、[Message.kt](../../tart-message/src/commonMain/kotlin/io/yumemi/tart/message/Message.kt)
 
 ## 背景

@@ -2,6 +2,7 @@
 
 - 状態: 決定済み
 - 更新日: 2026-04-22
+- 反映状況: 反映済み
 - 関連: [PendingActionPolicy.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/PendingActionPolicy.kt)、[StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[StorePendingActionPolicyTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StorePendingActionPolicyTest.kt)、[StorePendingActionCancellationTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StorePendingActionCancellationTest.kt)、[PR #181](https://github.com/yumemi-inc/Tart/pull/181)
 
 ## 背景
