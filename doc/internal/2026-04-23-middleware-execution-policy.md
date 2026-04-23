@@ -2,6 +2,7 @@
 
 - 状態: 決定済み
 - 更新日: 2026-04-23
+- 反映状況: 反映済み
 - 関連: [MiddlewareExecutionPolicy.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/MiddlewareExecutionPolicy.kt)、[StoreBuilder.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreBuilder.kt)、[StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[README.md](../../README.md)
 
 ## 背景
