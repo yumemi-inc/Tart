@@ -1,9 +1,7 @@
 # Middleware 実行ポリシーは並行を標準にする
 
-- 状態: 決定済み
 - 更新日: 2026-04-23
-- 反映状況: 反映済み
-- 関連: [MiddlewareExecutionPolicy.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/MiddlewareExecutionPolicy.kt)、[StoreBuilder.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreBuilder.kt)、[StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[README.md](../../README.md)
+- 関連: 
 
 ## 背景
 
@@ -13,7 +11,7 @@ Tart では複数の `Middleware` を登録できる。
 `Middleware` は logging、message bridge、監視、補助的な dispatch など、Store の本体ロジックから関心事を分離するための拡張ポイントとして使う。
 そのため、複数の `Middleware` が互いの副作用や実行順に依存し始めると、設計意図から外れやすい。
 
-## 結論
+## 決定
 
 `MiddlewareExecutionPolicy` のデフォルトは `CONCURRENT` とする。
 
@@ -28,7 +26,3 @@ Tart では複数の `Middleware` を登録できる。
 - 並行実行であれば、「各 `Middleware` は独立した観測者・拡張として振る舞う」という期待に揃えやすい。
 - Store は各 hook で全 middleware の完了を待つ。そのため、`CONCURRENT` でも fire-and-forget にはならず、完了待ちは維持される。
 - 一部の統合事情、移行事情、あるいは処理順を明示したいケースでは直列実行も自然な選択になり得るため、`IN_REGISTRATION_ORDER` も選択肢として残す。
-
-## 未解決事項
-
-- なし

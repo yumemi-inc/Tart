@@ -1,9 +1,7 @@
 # PendingActionPolicy 拡張案の却下
 
-- 状態: 決定済み
 - 更新日: 2026-04-22
-- 反映状況: 反映済み
-- 関連: [PendingActionPolicy.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/PendingActionPolicy.kt)、[StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[StorePendingActionPolicyTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StorePendingActionPolicyTest.kt)、[StorePendingActionCancellationTest.kt](../../tart-core/src/commonTest/kotlin/io/yumemi/tart/core/StorePendingActionCancellationTest.kt)、[PR #181](https://github.com/yumemi-inc/Tart/pull/181)
+- 関連: 
 
 ## 背景
 
@@ -16,7 +14,7 @@
 
 どちらも「古い前提で積まれた action を後続で実行しない」を自動化したい、という動機から出た案だった。
 
-## 結論
+## 決定
 
 次の 2 案は、どちらも `PendingActionPolicy` には入れない。
 

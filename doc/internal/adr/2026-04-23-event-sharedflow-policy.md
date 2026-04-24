@@ -1,9 +1,7 @@
 # Event 用 MutableSharedFlow の設定方針
 
-- 状態: 決定済み
 - 更新日: 2026-04-23
-- 反映状況: 反映済み
-- 関連: [StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[Store.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/Store.kt)、[ViewStore.kt](../../tart-compose/src/commonMain/kotlin/io/yumemi/tart/compose/ViewStore.kt)、[Message.kt](../../tart-message/src/commonMain/kotlin/io/yumemi/tart/message/Message.kt)
+- 関連: 
 
 ## 背景
 
@@ -15,7 +13,7 @@
 - `buffer` や `overflow` を内部で明示的に設定しておくべきか
 - それらの挙動を利用者が policy として選べるようにするべきか
 
-## 結論
+## 決定
 
 現時点では、`Store.event` と `MessageHub` の `MutableSharedFlow` について、`replay`、`buffer`、`overflow` は追加で設定しない。
 
@@ -37,7 +35,4 @@
 - 設定値をそのまま公開すると、利用者に `SharedFlow` 内部仕様の理解を要求しやすく、API 表面積のわりに得られる一貫した意味づけが弱い。特に `replay` は UI event の再配送と密接に結びつくため、生の数値を公開するより高水準の意味で設計すべき項目である。
 - 将来、実運用で「遅い event handler により Store 側の処理が詰まる」問題が確認された場合は、まず内部実装として小さい `extraBufferCapacity` を追加する案を再検討する。その場合でも、最初の候補は `SUSPEND` を維持したままの小容量 buffer とする。
 - 可読性のために `MutableSharedFlow(replay = 0, extraBufferCapacity = 0)` のように明示する変更はあり得るが、これは挙動変更ではなく意図の明文化として扱う。
-
-## 未解決事項
-
 - 実利用で event collector の遅延が問題になる具体例が出た場合にのみ、内部 buffer の導入を再評価する。
