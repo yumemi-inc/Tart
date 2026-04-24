@@ -1,9 +1,6 @@
 # Event 用 MutableSharedFlow の設定方針
 
-- 状態: 決定済み
-- 更新日: 2026-04-23
-- 反映状況: 反映済み
-- 関連: [StoreImpl.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StoreImpl.kt)、[Store.kt](../../tart-core/src/commonMain/kotlin/io/yumemi/tart/core/Store.kt)、[ViewStore.kt](../../tart-compose/src/commonMain/kotlin/io/yumemi/tart/compose/ViewStore.kt)、[Message.kt](../../tart-message/src/commonMain/kotlin/io/yumemi/tart/message/Message.kt)
+- 決定日: 2026-04-23
 
 ## 背景
 
@@ -15,7 +12,7 @@
 - `buffer` や `overflow` を内部で明示的に設定しておくべきか
 - それらの挙動を利用者が policy として選べるようにするべきか
 
-## 結論
+## 決定
 
 現時点では、`Store.event` と `MessageHub` の `MutableSharedFlow` について、`replay`、`buffer`、`overflow` は追加で設定しない。
 
