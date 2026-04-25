@@ -1,7 +1,6 @@
 # Event 用 MutableSharedFlow の設定方針
 
 - 更新日: 2026-04-23
-- 関連: 
 
 ## 背景
 

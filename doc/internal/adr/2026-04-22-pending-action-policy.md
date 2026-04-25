@@ -1,7 +1,6 @@
 # PendingActionPolicy 拡張案の却下
 
 - 更新日: 2026-04-22
-- 関連: 
 
 ## 背景
 
