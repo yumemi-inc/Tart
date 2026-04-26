@@ -1,6 +1,6 @@
 # Store の開始タイミング policy 案
 
-- 更新日: 2026-04-23
+- 更新日: 2026-04-26
 
 ## 背景
 
@@ -51,6 +51,10 @@ fun startPolicy(policy: StoreStartPolicy)
 - `ON_FIRST_STATE_COLLECTION` のような collect 専用 policy は v1 では不要。`dispatch()` したのに start しない挙動は直感に反しやすい。
 - 未採用候補として `EAGER` も考えられる。これは「`dispatch()` や `state` の collect を待たず、Store 作成直後に start する」という意味になる。v1 では見送るのがよい。`attachObserver()` が start 前のみ許可という現行前提と衝突しやすい。
 - `ON_FIRST_DISPATCH` では、`state` を collect しても start しない。その場合でも `StateFlow` としては current snapshot を読めるので、UI が「現在値の監視」と「副作用の開始」を分離しやすくなる。
+- start 直後に `enter { event(...) }` のような one-shot event を出したい場合、現状の default では `state` の collect が先に start trigger になり、あとから `event` を購読した側が初回 event を見逃しうる。
+- この問題は Compose の `rememberViewStore()` でも起こりうる。`rememberViewStore()` は内部で `store.state.collectAsState()` を行う一方、event の collect は `ViewStore.handle()` 側の `LaunchedEffect` で始まるため、同じ画面内で両方を書いていても event collector が start 前に間に合う保証はない。
+- この問題に対しては start policy が有効な回避策になりうる。`ON_FIRST_DISPATCH` なら `state` / `event` の購読を張ったあとに明示的な最初の `dispatch()` で start でき、`MANUAL` なら購読を張ったあとに `start()` を呼ぶ順序をさらに明示しやすい。
+- ただし start policy が解決するのは「購読前に start しない」ことまでであり、`Store.event` 自体の replay semantics は変えない。start 後に購読した側へ過去 event を再配送するわけではない。
 - `MANUAL` で start 前に `dispatch()` された場合は、暗黙 start や silently ignore ではなく、例外で失敗させる方がバグを早く見つけやすい。
 
 ## 未解決事項
