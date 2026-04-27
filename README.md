@@ -55,7 +55,6 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
   - [Multiple states and transitions](#multiple-states-and-transitions)
   - [Error handling](#error-handling)
   - [Asynchronous Work](#asynchronous-work)
-  - [Alternative DSL Forms](#alternative-dsl-forms)
   - [Specifying coroutineContext](#specifying-coroutinecontext)
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
@@ -110,7 +109,8 @@ val store: Store<CounterState, CounterAction, Nothing> = Store {
 
 Define how *Action*s change *State* using the `state{}` and `action{}` blocks.
 Specify the resulting *State* with `nextState()`.
-If no `nextState()` is specified, the current state remains unchanged.
+If you want to compute and return the next state inside a block, use `nextStateBy { ... }`.
+If neither `nextState()` nor `nextStateBy()` is specified, the current state remains unchanged.
 
 ```kt
 val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {
@@ -129,6 +129,16 @@ val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(coun
             }
         }
     }
+}
+```
+
+For conditional or complex updates, `nextStateBy {}` can make the computation easier to read.
+
+```kt
+nextStateBy {
+    // ...
+    val newCount = ...
+    state.copy(count = newCount)
 }
 ```
 
@@ -304,6 +314,54 @@ The state diagram is as follows:
 This framework's architecture can be easily visualized using state diagrams.
 It would be a good idea to document it and share it with your development team.
 
+#### Parent state/action handlers
+
+You can also target a parent sealed type in `state<...>{}` or `action<...>{}` when the same handler should apply across multiple variants.
+
+```kt
+val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState.Loading) {
+    state<CounterState> {
+        enter {
+            // runs for all CounterState variants
+        }
+    }
+
+    state<CounterState.Main> {
+        action<CounterAction> {
+            when (action) {
+                CounterAction.Increment -> {
+                    // ...
+                }
+
+                CounterAction.Decrement -> {
+                    // ...
+                }
+
+                CounterAction.Load -> Unit
+            }
+        }
+    }
+}
+```
+
+Handler selection is first-match.
+If both broad and specific handlers can match, the one registered earlier is used.
+In practice, place broader handlers after more specific ones.
+
+```kt
+state<CounterState.Loading> {
+    action<CounterAction.Load> {
+        // specific handler
+    }
+}
+
+state<CounterState> {
+    action<CounterAction> {
+        // broader fallback handler
+    }
+}
+```
+
 ### Error handling
 
 If you prepare a *State* for error display and handle the error in the `enter{}` block, it will be as follows:
@@ -452,22 +510,6 @@ state<MyState.Active> {
 `LaunchOverlap.DROP_NEW` ignores new launches with the same key while previous work is still active.
 `LaunchOverlap.ALLOW` keeps the default behavior and runs all launches independently.
 If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
-
-### Alternative DSL Forms
-
-Some DSL APIs are just alternative forms of existing APIs:
-
-Instead of `nextState(...)`, use `nextStateBy{}` when you want to compute and return the next state inside a block.
-
-```kt
-nextStateBy {
-    // ...
-
-    val newCount = ...
-
-    state.copy(count = newCount)
-}
-```
 
 ### Specifying coroutineContext
 
