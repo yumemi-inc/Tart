@@ -315,14 +315,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override fun launch(
                     coroutineDispatcher: CoroutineDispatcher,
                     key: Any?,
-                    overlap: LaunchOverlap,
+                    mode: LaunchMode,
                     block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
                 ) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
                     launchActionInStateRuntime(
                         stateRuntime = stateRuntime,
                         key = key ?: action::class,
-                        overlap = overlap,
+                        mode = mode,
                         coroutineDispatcher = coroutineDispatcher,
                         buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
                         block = block,
@@ -396,13 +396,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun <LS> launchActionInStateRuntime(
         stateRuntime: StateRuntime,
         key: Any,
-        overlap: LaunchOverlap,
+        mode: LaunchMode,
         coroutineDispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
-        when (overlap) {
-            LaunchOverlap.ALLOW -> {
+        when (mode) {
+            LaunchMode.CONCURRENT -> {
                 launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     coroutineDispatcher = coroutineDispatcher,
@@ -411,7 +411,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            LaunchOverlap.CANCEL_PREVIOUS -> {
+            LaunchMode.CANCEL_PREVIOUS -> {
                 stateRuntime.actionLaunchJobs[key]?.cancel()
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
@@ -422,7 +422,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            LaunchOverlap.DROP_NEW -> {
+            LaunchMode.DROP_NEW -> {
                 if (stateRuntime.actionLaunchJobs[key]?.isActive == true) return
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,

@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StoreLaunchOverlapTest {
+class StoreLaunchModeTest {
 
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
@@ -39,7 +39,7 @@ class StoreLaunchOverlapTest {
                 action<AppAction.CancelPreviousDefault> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         onCancelPreviousStart?.invoke(action.marker)
                         try {
@@ -54,7 +54,7 @@ class StoreLaunchOverlapTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "primary",
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -63,7 +63,7 @@ class StoreLaunchOverlapTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "secondary",
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -74,7 +74,7 @@ class StoreLaunchOverlapTest {
                 action<AppAction.SharedDefaultKey> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -82,7 +82,7 @@ class StoreLaunchOverlapTest {
                     }
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -93,7 +93,7 @@ class StoreLaunchOverlapTest {
                 action<AppAction.DropNewAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        overlap = LaunchOverlap.DROP_NEW,
+                        mode = LaunchMode.DROP_NEW,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -105,7 +105,7 @@ class StoreLaunchOverlapTest {
                 action<AppAction.LatestAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
+                        mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -122,7 +122,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_cancelPreviousCancelsMatchingKeyAcrossDispatches() = runTest {
+    fun launchMode_cancelPreviousCancelsMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
@@ -146,7 +146,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_cancelPreviousLaunchIsCancelledOnStateChange() = runTest {
+    fun launchMode_cancelPreviousLaunchIsCancelledOnStateChange() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
@@ -165,7 +165,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_distinctKeysKeepLaunchesIndependent() = runTest {
+    fun launchMode_distinctKeysKeepLaunchesIndependent() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -176,7 +176,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
+    fun launchMode_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -187,7 +187,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchMode_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -212,7 +212,7 @@ class StoreLaunchOverlapTest {
     }
 
     @Test
-    fun launchOverlap_cancelPreviousUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchMode_cancelPreviousUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 

@@ -481,34 +481,34 @@ This pattern lets your *Store* react to external data changes automatically, suc
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
 
-If you want lightweight control over repeated coroutines launched from an action handler, set the policy directly on `launch(...)`:
+If you want lightweight control over repeated coroutines launched from an action handler, set the mode directly on `launch(...)`:
 
 ```kt
 state<MyState.Active> {
     action<MyAction.Search> {
-        launch(overlap = LaunchOverlap.CANCEL_PREVIOUS) {
+        launch(mode = LaunchMode.CANCEL_PREVIOUS) {
             delay(300)
             transaction {
                 nextState(state.copy(isLoading = true))
             }
         }
 
-        launch(key = "analytics", overlap = LaunchOverlap.DROP_NEW) {
+        launch(key = "analytics", mode = LaunchMode.DROP_NEW) {
             analytics.logSearch(action.query)
         }
     }
 
     action<MyAction.Submit> {
-        launch(overlap = LaunchOverlap.DROP_NEW) {
+        launch(mode = LaunchMode.DROP_NEW) {
             submit()
         }
     }
 }
 ```
 
-`LaunchOverlap.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
-`LaunchOverlap.DROP_NEW` ignores new launches with the same key while previous work is still active.
-`LaunchOverlap.ALLOW` keeps the default behavior and runs all launches independently.
+`LaunchMode.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
+`LaunchMode.DROP_NEW` ignores new launches with the same key while previous work is still active.
+`LaunchMode.CONCURRENT` keeps the default behavior and runs all launches independently.
 If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
 
 ### Specifying coroutineContext

@@ -4,11 +4,11 @@ package io.yumemi.tart.core
  * Controls how repeated coroutines launched from the same `action{}` handler behave
  * while previous work for the same launch key is still active.
  */
-enum class LaunchOverlap {
+enum class LaunchMode {
     /**
-     * Launch every asynchronous handler invocation independently.
+     * Launch every asynchronous handler invocation concurrently.
      */
-    ALLOW,
+    CONCURRENT,
 
     /**
      * Cancel the previous asynchronous job from the same handler before starting a new one.
