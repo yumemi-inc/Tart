@@ -154,19 +154,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
 
         /**
-         * Registers an asynchronous enter handler.
-         * This is a shorthand of `enter { launch { ... } }`.
-         *
-         * @param coroutineDispatcher The CoroutineDispatcher used for the launched coroutine
-         * @param block The asynchronous handler block
-         */
-        fun enterAsync(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope.LaunchScope<S, E, S2>.() -> Unit) {
-            enter {
-                launch(coroutineDispatcher, block)
-            }
-        }
-
-        /**
          * Registers a handler for a specific action type in the current state configuration
          * with an optional CoroutineDispatcher.
          *
@@ -184,49 +171,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     },
                 ),
             )
-        }
-
-        /**
-         * Registers an asynchronous action handler for a specific action type.
-         * This is a shorthand of `action { launch { ... } }`.
-         *
-         * @param coroutineDispatcher The CoroutineDispatcher used for the launched coroutine
-         * @param block The asynchronous handler block
-         */
-        inline fun <reified A2 : A> actionAsync(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope.LaunchScope<S, A2, E, S2>.() -> Unit) {
-            action<A2> {
-                launch(coroutineDispatcher, block)
-            }
-        }
-
-        /**
-         * Registers a handler for all action types in the current state configuration
-         * with an optional CoroutineDispatcher.
-         *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the action handler, defaults to Dispatchers.Unconfined
-         * @param block The handler function that processes any action and updates the state
-         */
-        fun anyAction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ActionScope<S, A, E, S2>.() -> Unit) {
-            stateActionHandlers.add(
-                ThreadedHandler(
-                    coroutineDispatcher = coroutineDispatcher,
-                    predicate = { true },
-                    handler = block,
-                ),
-            )
-        }
-
-        /**
-         * Registers an asynchronous handler for all action types.
-         * This is a shorthand of `anyAction { launch { ... } }`.
-         *
-         * @param coroutineDispatcher The CoroutineDispatcher used for the launched coroutine
-         * @param block The asynchronous handler block
-         */
-        fun anyActionAsync(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ActionScope.LaunchScope<S, A, E, S2>.() -> Unit) {
-            anyAction {
-                launch(coroutineDispatcher, block)
-            }
         }
 
         /**
@@ -260,36 +204,21 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             )
         }
 
-        /**
-         * Registers a handler for Exception and its subclasses in the current state configuration
-         * with an optional CoroutineDispatcher.
-         *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the error handler, defaults to Dispatchers.Unconfined
-         * @param block The handler function that processes exceptions and updates the state
-         */
-        fun anyError(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ErrorScope<S, E, S2, Exception>.() -> Unit) {
-            stateErrorHandlers.add(
-                ThreadedHandler(
-                    coroutineDispatcher = coroutineDispatcher,
-                    predicate = { it is Exception },
-                    handler = {
-                        @Suppress("UNCHECKED_CAST")
-                        block(this as ErrorScope<S, E, S2, Exception>)
-                    },
-                ),
-            )
-        }
     }
 
-    @PublishedApi
-    internal fun <S2 : S> registerStateConfig(
-        config: StateHandlerConfig<S, A, E, S2>,
-        statePredicate: (S) -> Boolean,
-    ) {
+    /**
+     * Configures handlers for actions when the store is in a specific state type.
+     * This creates a DSL scope for defining type-specific action handlers.
+     *
+     * @param block The configuration block where you can define action handlers using the action() function
+     */
+    inline fun <reified S2 : S> state(noinline block: StateHandlerConfig<S, A, E, S2>.() -> Unit) {
+        val config = StateHandlerConfig<S, A, E, S2>().apply(block)
+
         for (enterHandler in config.stateEnterHandlers) {
             registeredEnterHandlers.add(
                 StateHandler(
-                    predicate = statePredicate,
+                    predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
                         enterHandler.invoke(this as EnterScope<S, A, E, S2>)
@@ -301,7 +230,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         for (actionHandler in config.stateActionHandlers) {
             registeredActionHandlers.add(
                 StateHandler(
-                    predicate = { state, action -> statePredicate(state) && actionHandler.predicate(action) },
+                    predicate = { state, action -> state is S2 && actionHandler.predicate(action) },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
                         actionHandler.invoke(this as ActionScope<S, A, E, S2>)
@@ -313,7 +242,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         for (exitHandler in config.stateExitHandlers) {
             registeredExitHandlers.add(
                 StateHandler(
-                    predicate = statePredicate,
+                    predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
                         exitHandler.invoke(this as ExitScope<S, E, S2>)
@@ -325,7 +254,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         for (errorHandler in config.stateErrorHandlers) {
             registeredErrorHandlers.add(
                 StateHandler(
-                    predicate = { state, throwable -> statePredicate(state) && errorHandler.predicate(throwable) },
+                    predicate = { state, throwable -> state is S2 && errorHandler.predicate(throwable) },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
                         errorHandler.invoke(this as ErrorScope<S, E, S2, Throwable>)
@@ -333,28 +262,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                 ),
             )
         }
-    }
-
-    /**
-     * Configures handlers for actions when the store is in a specific state type.
-     * This creates a DSL scope for defining type-specific action handlers.
-     *
-     * @param block The configuration block where you can define action handlers using the action() function
-     */
-    inline fun <reified S2 : S> state(noinline block: StateHandlerConfig<S, A, E, S2>.() -> Unit) {
-        val config = StateHandlerConfig<S, A, E, S2>().apply(block)
-        registerStateConfig(config) { it is S2 }
-    }
-
-    /**
-     * Configures handlers for all state types in the store.
-     * This creates a DSL scope for defining global handlers.
-     *
-     * @param block The configuration block where you can define handlers
-     */
-    fun anyState(block: StateHandlerConfig<S, A, E, S>.() -> Unit) {
-        val config = StateHandlerConfig<S, A, E, S>().apply(block)
-        registerStateConfig(config) { true }
     }
 
     internal fun build(): Store<S, A, E> {

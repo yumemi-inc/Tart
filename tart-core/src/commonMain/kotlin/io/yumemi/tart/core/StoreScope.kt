@@ -211,9 +211,11 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * The coroutine will be automatically cancelled when this state is exited.
      *
      * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param key Optional launch key used for launch coordination. When omitted, the current action type is used.
+     * @param mode The launch mode used when the same key is launched repeatedly.
      * @param block The suspending block of code to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, key: Any? = null, mode: LaunchMode = LaunchMode.CONCURRENT, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine from an action handler.
