@@ -126,12 +126,12 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
 
         class ThreadedHandler<P, SC : StoreScope>(
-            private val coroutineDispatcher: CoroutineDispatcher,
+            private val dispatcher: CoroutineDispatcher,
             val predicate: P,
             private val handler: suspend SC.() -> Unit,
         ) {
             suspend operator fun invoke(scope: SC) {
-                withContext(coroutineDispatcher) {
+                withContext(dispatcher) {
                     handler(scope)
                 }
             }
@@ -144,26 +144,26 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         /**
          * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
-         * If no coroutineDispatcher is provided, Dispatchers.Unconfined is used as default.
+         * If no dispatcher is provided, Dispatchers.Unconfined is used as default.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the enter handler (defaults to Dispatchers.Unconfined)
+         * @param dispatcher The CoroutineDispatcher to use for executing the enter handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when entering this state
          */
-        fun enter(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope<S, A, E, S2>.() -> Unit) {
-            stateEnterHandlers.add(ThreadedHandler(coroutineDispatcher, null, block))
+        fun enter(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend EnterScope<S, A, E, S2>.() -> Unit) {
+            stateEnterHandlers.add(ThreadedHandler(dispatcher, null, block))
         }
 
         /**
          * Registers a handler for a specific action type in the current state configuration
          * with an optional CoroutineDispatcher.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the action handler, defaults to Dispatchers.Unconfined
+         * @param dispatcher The CoroutineDispatcher to use for executing the action handler, defaults to Dispatchers.Unconfined
          * @param block The handler function that processes the action and updates the state
          */
-        inline fun <reified A2 : A> action(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope<S, A2, E, S2>.() -> Unit) {
+        inline fun <reified A2 : A> action(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ActionScope<S, A2, E, S2>.() -> Unit) {
             stateActionHandlers.add(
                 ThreadedHandler(
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     predicate = { it is A2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
@@ -175,26 +175,26 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         /**
          * Registers a handler to be invoked when exiting this state with the specified CoroutineDispatcher.
-         * If no coroutineDispatcher is provided, Dispatchers.Unconfined is used as default.
+         * If no dispatcher is provided, Dispatchers.Unconfined is used as default.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the exit handler (defaults to Dispatchers.Unconfined)
+         * @param dispatcher The CoroutineDispatcher to use for executing the exit handler (defaults to Dispatchers.Unconfined)
          * @param block The handler function that will be executed when exiting this state
          */
-        fun exit(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ExitScope<S, E, S2>.() -> Unit) {
-            stateExitHandlers.add(ThreadedHandler(coroutineDispatcher, null, block))
+        fun exit(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend ExitScope<S, E, S2>.() -> Unit) {
+            stateExitHandlers.add(ThreadedHandler(dispatcher, null, block))
         }
 
         /**
          * Registers a handler for a specific error type in the current state configuration
          * with an optional CoroutineDispatcher.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for executing the error handler, defaults to Dispatchers.Unconfined
+         * @param dispatcher The CoroutineDispatcher to use for executing the error handler, defaults to Dispatchers.Unconfined
          * @param block The handler function that processes the error and updates the state
          */
-        inline fun <reified T : Throwable> error(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
+        inline fun <reified T : Throwable> error(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
             stateErrorHandlers.add(
                 ThreadedHandler(
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     predicate = { it is T },
                     handler = {
                         @Suppress("UNCHECKED_CAST")

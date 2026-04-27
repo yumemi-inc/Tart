@@ -19,8 +19,8 @@ interface MiddlewareScope<A : Action> {
     /**
      * Launches a coroutine within the store's scope.
      *
-     * @param coroutineDispatcher The dispatcher to use for the coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher The dispatcher to use for the coroutine (defaults to Dispatchers.Unconfined)
      * @param block The coroutine body to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend CoroutineScope.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend CoroutineScope.() -> Unit)
 }

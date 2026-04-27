@@ -176,8 +176,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         this@StoreImpl.dispatch(action)
                     }
 
-                    override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend CoroutineScope.() -> Unit) {
-                        coroutineScope.launch(coroutineDispatcher) {
+                    override fun launch(dispatcher: CoroutineDispatcher, block: suspend CoroutineScope.() -> Unit) {
+                        coroutineScope.launch(dispatcher) {
                             block()
                         }
                     }
@@ -313,7 +313,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun launch(
-                    coroutineDispatcher: CoroutineDispatcher,
+                    dispatcher: CoroutineDispatcher,
                     key: Any?,
                     mode: LaunchMode,
                     block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
@@ -323,7 +323,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         stateRuntime = stateRuntime,
                         key = key ?: action::class,
                         mode = mode,
-                        coroutineDispatcher = coroutineDispatcher,
+                        dispatcher = dispatcher,
                         buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
                         block = block,
                     )
@@ -362,10 +362,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
+                override fun launch(dispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
                     launchInStateRuntime(
                         stateRuntime = stateRuntime,
-                        coroutineDispatcher = coroutineDispatcher,
+                        dispatcher = dispatcher,
                         buildLaunchScope = { buildEnterLaunchScope(stateRuntime.scope) },
                         block = block,
                     )
@@ -379,14 +379,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchInStateRuntime(
         stateRuntime: StateRuntime,
-        coroutineDispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch(coroutineDispatcher) {
+        return stateRuntime.scope.launch(dispatcher) {
             executeLaunchInStateRuntime(
                 stateRuntime = stateRuntime,
-                coroutineDispatcher = coroutineDispatcher,
+                dispatcher = dispatcher,
                 buildLaunchScope = buildLaunchScope,
                 block = block,
             )
@@ -397,7 +397,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateRuntime: StateRuntime,
         key: Any,
         mode: LaunchMode,
-        coroutineDispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -405,7 +405,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             LaunchMode.CONCURRENT -> {
                 launchInStateRuntime(
                     stateRuntime = stateRuntime,
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
@@ -416,7 +416,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
                     key = key,
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
@@ -427,7 +427,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
                     key = key,
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
@@ -438,15 +438,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun <LS> launchTrackedActionInStateRuntime(
         stateRuntime: StateRuntime,
         key: Any,
-        coroutineDispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch(coroutineDispatcher) {
+        return stateRuntime.scope.launch(dispatcher) {
             try {
                 executeLaunchInStateRuntime(
                     stateRuntime = stateRuntime,
-                    coroutineDispatcher = coroutineDispatcher,
+                    dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
@@ -460,7 +460,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun <LS> executeLaunchInStateRuntime(
         stateRuntime: StateRuntime,
-        coroutineDispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -469,7 +469,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             block(launchScope)
         } catch (t: Throwable) {
             rethrowIfFatal(t)
-            coroutineScope.launch(coroutineDispatcher) {
+            coroutineScope.launch(dispatcher) {
                 mutex.withLock {
                     if (stateRuntime.scope.isActive) {
                         onErrorOccurred(currentState, t)
@@ -487,8 +487,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 emit(event)
             }
 
-            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
-                val job = coroutineScope.launch(coroutineDispatcher) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(dispatcher) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null
@@ -539,8 +539,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 emit(event)
             }
 
-            override suspend fun transaction(coroutineDispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
-                val job = coroutineScope.launch(coroutineDispatcher) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(dispatcher) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null

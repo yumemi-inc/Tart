@@ -54,10 +54,10 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Launches a coroutine within the context of this state.
      * The coroutine will be automatically cancelled when the state is exited.
      *
-     * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param block The suspending block of code to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine.
@@ -85,10 +85,10 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Executes a transactional operation within the launch scope.
          * This allows state updates to be performed in an atomic, consistent manner.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param dispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
@@ -210,12 +210,12 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Launches a coroutine within the context of the current state where this action is processed.
      * The coroutine will be automatically cancelled when this state is exited.
      *
-     * @param coroutineDispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param key Optional launch key used for launch coordination. When omitted, the current action type is used.
      * @param mode The launch mode used when the same key is launched repeatedly.
      * @param block The suspending block of code to execute
      */
-    fun launch(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, key: Any? = null, mode: LaunchMode = LaunchMode.CONCURRENT, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, key: Any? = null, mode: LaunchMode = LaunchMode.CONCURRENT, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine from an action handler.
@@ -248,10 +248,10 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Executes a transactional operation within the launch scope.
          * This allows state updates to be performed in an atomic, consistent manner.
          *
-         * @param coroutineDispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param dispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
