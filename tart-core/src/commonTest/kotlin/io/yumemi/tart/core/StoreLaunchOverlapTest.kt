@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StoreLaunchPolicyTest {
+class StoreLaunchOverlapTest {
 
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
@@ -22,7 +22,7 @@ class StoreLaunchPolicyTest {
         data class CancelPreviousDefault(val marker: Int) : AppAction
         data object KeyedLaunches : AppAction
         data object SharedDefaultKey : AppAction
-        data class DropIfRunningAdd(val delta: Int) : AppAction
+        data class DropNewAdd(val delta: Int) : AppAction
         data class LatestAdd(val delta: Int) : AppAction
         data object MoveToCompleted : AppAction
     }
@@ -39,7 +39,7 @@ class StoreLaunchPolicyTest {
                 action<AppAction.CancelPreviousDefault> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         onCancelPreviousStart?.invoke(action.marker)
                         try {
@@ -54,7 +54,7 @@ class StoreLaunchPolicyTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "primary",
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -63,7 +63,7 @@ class StoreLaunchPolicyTest {
                     launch(
                         coroutineDispatcher = testDispatcher,
                         key = "secondary",
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -74,7 +74,7 @@ class StoreLaunchPolicyTest {
                 action<AppAction.SharedDefaultKey> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -82,7 +82,7 @@ class StoreLaunchPolicyTest {
                     }
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -90,10 +90,10 @@ class StoreLaunchPolicyTest {
                     }
                 }
 
-                action<AppAction.DropIfRunningAdd> {
+                action<AppAction.DropNewAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = LaunchPolicy.DROP_IF_RUNNING,
+                        overlap = LaunchOverlap.DROP_NEW,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -105,7 +105,7 @@ class StoreLaunchPolicyTest {
                 action<AppAction.LatestAdd> {
                     launch(
                         coroutineDispatcher = testDispatcher,
-                        policy = LaunchPolicy.CANCEL_PREVIOUS,
+                        overlap = LaunchOverlap.CANCEL_PREVIOUS,
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -122,7 +122,7 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_cancelPreviousCancelsMatchingKeyAcrossDispatches() = runTest {
+    fun launchOverlap_cancelPreviousCancelsMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
@@ -146,7 +146,7 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_cancelPreviousLaunchIsCancelledOnStateChange() = runTest {
+    fun launchOverlap_cancelPreviousLaunchIsCancelledOnStateChange() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
@@ -165,7 +165,7 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_distinctKeysKeepLaunchesIndependent() = runTest {
+    fun launchOverlap_distinctKeysKeepLaunchesIndependent() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -176,7 +176,7 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
+    fun launchOverlap_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -187,12 +187,12 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_dropIfRunningUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchOverlap_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
-        store.dispatch(AppAction.DropIfRunningAdd(delta = 1))
-        store.dispatch(AppAction.DropIfRunningAdd(delta = 10))
+        store.dispatch(AppAction.DropNewAdd(delta = 1))
+        store.dispatch(AppAction.DropNewAdd(delta = 10))
         runCurrent()
 
         assertEquals(AppState.Active(value = 0), store.currentState)
@@ -202,7 +202,7 @@ class StoreLaunchPolicyTest {
 
         assertEquals(AppState.Active(value = 1), store.currentState)
 
-        store.dispatch(AppAction.DropIfRunningAdd(delta = 10))
+        store.dispatch(AppAction.DropNewAdd(delta = 10))
         runCurrent()
 
         advanceTimeBy(100)
@@ -212,7 +212,7 @@ class StoreLaunchPolicyTest {
     }
 
     @Test
-    fun launchPolicy_cancelPreviousUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchOverlap_cancelPreviousUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 

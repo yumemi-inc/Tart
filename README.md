@@ -428,38 +428,34 @@ If you want lightweight control over repeated coroutines launched from an action
 ```kt
 state<MyState.Active> {
     action<MyAction.Search> {
-        launch(policy = LaunchPolicy.CANCEL_PREVIOUS) {
+        launch(overlap = LaunchOverlap.CANCEL_PREVIOUS) {
             delay(300)
             transaction {
                 nextState(state.copy(isLoading = true))
             }
         }
 
-        launch(key = "analytics", policy = LaunchPolicy.DROP_IF_RUNNING) {
+        launch(key = "analytics", overlap = LaunchOverlap.DROP_NEW) {
             analytics.logSearch(action.query)
         }
     }
 
     action<MyAction.Submit> {
-        launch(policy = LaunchPolicy.DROP_IF_RUNNING) {
+        launch(overlap = LaunchOverlap.DROP_NEW) {
             submit()
         }
     }
 }
 ```
 
-`LaunchPolicy.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
-`LaunchPolicy.DROP_IF_RUNNING` ignores new launches with the same key while previous work is still active.
-`LaunchPolicy.PARALLEL` keeps the default behavior and runs all launches independently.
+`LaunchOverlap.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
+`LaunchOverlap.DROP_NEW` ignores new launches with the same key while previous work is still active.
+`LaunchOverlap.ALLOW` keeps the default behavior and runs all launches independently.
 If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
 
 ### Alternative DSL Forms
 
 Some DSL APIs are just alternative forms of existing APIs:
-
-- `anyState{}` is the global form of `state<...>{}` and applies to all *States*.
-- `anyAction{}` is the global form of `action<...>{}` and applies to all *Actions*.
-- `anyError{}` is an alias of `error<Exception>{}`.
 
 Instead of `nextState(...)`, use `nextStateBy{}` when you want to compute and return the next state inside a block.
 
