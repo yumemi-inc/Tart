@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Core interface of Tart that provides application state management.
  * It has features such as state updates, event emission, action dispatching, etc.
  */
-interface Store<S : State, A : Action, E : Event>: AutoCloseable {
+interface Store<S : State, A : Action, E : Event> : AutoCloseable {
 
     /**
      * StateFlow representing the current state. You can monitor state changes by subscribing to this.
@@ -50,5 +50,7 @@ interface Store<S : State, A : Action, E : Event>: AutoCloseable {
      */
     fun dispose()
 
-    override fun close() { dispose() }
+    override fun close() {
+        dispose()
+    }
 }

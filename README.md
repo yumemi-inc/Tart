@@ -60,6 +60,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
     - [Specifying CoroutineDispatchers](#specifying-coroutinedispatchers)
   - [State Persistence](#state-persistence)
   - [Clear Pending Actions](#clear-pending-actions)
+  - [Using Control Flow in Store{}](#using-control-flow-in-store)
   - [For Platforms Without Flow/StateFlow Access](#for-platforms-without-flowstateflow-access)
 - [Compose](#compose)
   - [Rendering with State](#rendering-with-state)
@@ -69,6 +70,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Middleware](#middleware)
   - [Logging](#logging)
   - [Message](#message)
+- [Store Configuration Overrides](#store-configuration-overrides)
 - [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
@@ -545,7 +547,7 @@ By default, Tart clears already queued actions when the store exits the current 
 To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.KEEP)`.
 
 ```kt
-val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
+val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
     pendingActionPolicy(PendingActionPolicy.KEEP)
@@ -553,6 +555,22 @@ val store = Store<MyState, MyAction, MyEvent>(MyState.Initial) {
 ```
 
 Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
+
+### Using Control Flow in `Store{}`
+
+The body of `Store{}` is ordinary Kotlin code, so you can use control flow such as `if` and `when` when specifying *Store* configuration.
+
+```kt
+fun CounterStore(
+    logExceptions: Boolean,
+): Store<CounterState, CounterAction, Nothing> = Store {
+    initialState(CounterState(count = 0))
+
+    if (logExceptions) {
+        exceptionHandler(ExceptionHandler.Log)
+    }
+}
+```
 
 ### For Platforms Without Flow/StateFlow Access
 
@@ -824,7 +842,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     )
 
     // add multiple Middlewares
-    middlewares(..., ...)
+    middleware(..., ...)
 }
 ```
 
@@ -832,7 +850,18 @@ Note that *State* is read-only in Middleware.
 
 You can also create a `Middleware` instance with the `Middleware()` factory function.
 
-Middleware methods are suspending functions. The *Store* waits for a method to complete before proceeding.
+Middleware methods are suspending functions. The *Store* waits for middleware processing to complete before proceeding.
+When multiple middleware instances are registered, Tart invokes them concurrently by default.
+If middleware must run one by one in registration order, set `middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)`.
+
+```kt
+val store: Store<CounterState, CounterAction, CounterEvent> = Store {
+    // ...
+
+    middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)
+}
+```
+
 Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
 
 In the next section, we introduce built-in Middleware.
@@ -920,79 +949,133 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 ```
 </details>
 
-## Project-specific AppStore Wrapper
+## Store Configuration Overrides
 
-In larger projects, it can be useful to wrap `Store(...)` in a project-specific `AppStore(...)`.
-
-This allows you to centralize shared behavior such as common middleware, exception handling, and state persistence.
-It also gives you a place to prepare an extra setup hook for testing and debugging.
-
-```kt
-fun <S : State, A : Action, E : Event> AppStore(
-    initialState: S,
-    extraSetup: Setup<S, A, E> = {},
-    setup: Setup<S, A, E>,
-): Store<S, A, E> = Store(initialState) {
-    middleware(AppLoggingMiddleware())
-    exceptionHandler(AppExceptionHandler)
-
-    setup()
-    extraSetup()
-}
-```
-
-A feature Store can then focus on its own state transitions and actions:
+`Store{}` DSL accepts an `overrides` block that is applied after the main setup block.
+Use it when you want to override *Store* configuration.
 
 ```kt
 fun CounterStore(
-    counterRepository: CounterRepository,
-    extraSetup: Setup<CounterState, CounterAction, CounterEvent> = {},
-): Store<CounterState, CounterAction, CounterEvent> = AppStore(
+    overrides: Overrides<CounterState, CounterAction, Nothing> = {},
+): Store<CounterState, CounterAction, Nothing> = Store(
     initialState = CounterState(count = 0),
-    extraSetup = extraSetup,
+    overrides = overrides,
 ) {
+    middleware(AppLoggingMiddleware())
+
     state<CounterState> {
-        action<CounterAction.Increment> {
-            val count = state.count + 1
-            counterRepository.set(count)
-            nextState(state.copy(count = count))
-        }
+        // ...
     }
 }
-```
 
-For tests or debug builds, you can inject only the additional behavior you need:
+val store = CounterStore()
 
-```kt
-val recordedEvents = mutableListOf<CounterEvent>()
-
-val store = CounterStore(
-    counterRepository = repository,
-    extraSetup = {
-        coroutineContext(testDispatcher)
-        middleware(
-            Middleware(
-                afterEventEmit = { _, event ->
-                    recordedEvents += event
-                },
-            ),
-        )
+val testStore = CounterStore(
+    overrides = {
+        clearMiddlewares()
+        exceptionHandler(ExceptionHandler.Log)
     },
 )
 ```
 
-This pattern is useful for:
+Inside `overrides` block, you can use these APIs:
 
-- applying project-wide middleware and exception handling
-- injecting test- or debug-only middleware
-- overriding `coroutineContext` in tests
-- keeping feature Store definitions focused on business logic
+- `coroutineContext(...)`
+- `stateSaver(...)`
+- `exceptionHandler(...)`
+- `middleware(...)`
+- `clearMiddlewares()`
+- `replaceMiddlewares(...)`
+- `pendingActionPolicy(...)`
+- `middlewareExecutionPolicy(...)`
 
-Avoid using `extraSetup` to redefine `state {}` or `anyState {}` handlers, because handler selection depends on registration order.
+Typical uses are:
 
-Also note that middleware execution order should not be relied on.
+- changing shared *Store* behavior in tests without rewriting the *Store* definition
+- injecting debug-only middleware or logging
+
+## Project-specific AppStore Wrapper
+
+In larger projects, it can be useful to wrap `Store{}` DSL in a project-specific `AppStore{}` that applies app-wide defaults in one place.
+This lets you centralize shared *Store* configuration.
+
+```kt
+fun <S : State, A : Action, E : Event> AppStore(
+    initialState: S,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> = Store(
+    initialState = initialState,
+    overrides = overrides,
+) {
+    // shared Store configuration
+    middleware(AppLoggingMiddleware())
+    exceptionHandler(AppExceptionHandler)
+
+    setup()
+}
+```
+
+A feature *Store* can then focus on its own state transitions and actions:
+
+```kt
+fun CounterStore(
+    counterRepository: CounterRepository,
+    overrides: Overrides<CounterState, CounterAction, CounterEvent> = {},
+): Store<CounterState, CounterAction, CounterEvent> = AppStore( // use AppStore{}
+    initialState = CounterState(count = 0),
+    overrides = overrides,
+) {
+    state<CounterState> {
+        // ...
+    }
+}
+
+val store = CounterStore(counterRepository = counterRepository)
+
+val testStore = CounterStore(
+    counterRepository = counterRepository,
+    overrides = {
+        clearMiddlewares()
+        // ...
+    },
+)
+```
 
 ## Testing Store
 
-Tart's architecture makes writing unit tests for your *Store* straightforward.
-For test examples, see the [commonTest](tart-core/src/commonTest/kotlin/io/yumemi/tart/core) directory in the `:tart-core` module.
+Add `:tart-test` to your test source set to use Tart's test helpers such as `createRecorder()` and `dispatchAndWait()`.
+
+```kt
+commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
+```
+
+For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
+
+```kt
+@Test
+fun counterStore_recordsStatesAndEvents() = runTest {
+    // Given
+    val store = CounterStore(...)
+    val recorder = store.createRecorder()
+
+    // When
+    store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
+
+    // Then
+    assertEquals(
+        listOf(
+            CounterState(count = 0),
+            CounterState(count = 1),
+        ),
+        recorder.states,
+    )
+    assertEquals(
+        listOf(CounterEvent.Incremented(count = 1)),
+        recorder.events,
+    )
+}
+```
+
+If you need custom recording behavior, implement your own `StoreObserver` and attach it with `attachObserver()`.
+If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.

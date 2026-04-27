@@ -14,6 +14,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT
+    private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.CONCURRENT
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
@@ -62,21 +63,33 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Adds a single middleware instance to the store.
+     * Sets how the store invokes middleware when multiple middleware instances are registered.
      *
-     * @param middleware The middleware instance to add
+     * @param policy The middleware execution policy to use
      */
-    fun middleware(middleware: Middleware<S, A, E>) {
-        storeMiddlewares.add(middleware)
+    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
+        storeMiddlewareExecutionPolicy = policy
     }
 
     /**
-     * Adds multiple middleware instances to the store.
+     * Adds one or more middleware instances to the store.
      *
-     * @param middleware Array of middleware instances to add
+     * @param first The first middleware instance to add
+     * @param rest Additional middleware instances to add
      */
-    fun middlewares(vararg middleware: Middleware<S, A, E>) {
-        storeMiddlewares.addAll(middleware)
+    fun middleware(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
+        storeMiddlewares.add(first)
+        storeMiddlewares.addAll(rest)
+    }
+
+    internal fun clearMiddlewares() {
+        storeMiddlewares.clear()
+    }
+
+    internal fun replaceMiddlewares(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
+        clearMiddlewares()
+        storeMiddlewares.add(first)
+        storeMiddlewares.addAll(rest)
     }
 
     class StateHandler<P, SC : StoreScope>(
@@ -314,6 +327,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
+            override val middlewareExecutionPolicy: MiddlewareExecutionPolicy = storeMiddlewareExecutionPolicy
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
             override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
@@ -329,32 +343,171 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
 
 /**
- * Creates a Store instance with the specified initial state and optional setup.
- *
- * @param initialState The initial state of the store
- * @param setup Optional setup block to customize the store
- * @return A configured Store instance
+ * Store overrides block applied after the main Store setup.
+ * This block is limited to non-state configuration such as coroutine context,
+ * persistence, exception handling, pending action policy, and middleware.
  */
-fun <S : State, A : Action, E : Event> Store(
-    initialState: S,
+typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
+
+/**
+ * DSL for overriding Store configuration after the main setup has been applied.
+ * This DSL intentionally does not expose state/action handler APIs.
+ */
+@Suppress("unused")
+@TartStoreDsl
+class StoreOverridesBuilder<S : State, A : Action, E : Event> internal constructor() {
+    private val operations = mutableListOf<StoreBuilder<S, A, E>.() -> Unit>()
+
+    /**
+     * Overrides the coroutine context for store operations.
+     */
+    fun coroutineContext(coroutineContext: CoroutineContext) {
+        operations.add { coroutineContext(coroutineContext) }
+    }
+
+    /**
+     * Overrides the state saver used by the store.
+     */
+    fun stateSaver(stateSaver: StateSaver<S>) {
+        operations.add { stateSaver(stateSaver) }
+    }
+
+    /**
+     * Overrides the exception handler used by the store.
+     */
+    fun exceptionHandler(exceptionHandler: ExceptionHandler) {
+        operations.add { exceptionHandler(exceptionHandler) }
+    }
+
+    /**
+     * Overrides how queued actions are handled when the store exits the current state.
+     */
+    fun pendingActionPolicy(policy: PendingActionPolicy) {
+        operations.add { pendingActionPolicy(policy) }
+    }
+
+    /**
+     * Overrides how the store invokes middleware when multiple middleware instances are registered.
+     */
+    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
+        operations.add { middlewareExecutionPolicy(policy) }
+    }
+
+    /**
+     * Adds one or more middleware instances after the main Store setup.
+     */
+    fun middleware(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
+        val restValues = rest.copyOf()
+        operations.add { middleware(first, *restValues) }
+    }
+
+    /**
+     * Replaces all middleware instances configured so far.
+     * This can be used to remove default middleware in tests or debug setups.
+     */
+    fun replaceMiddlewares(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
+        val restValues = rest.copyOf()
+        operations.add { replaceMiddlewares(first, *restValues) }
+    }
+
+    /**
+     * Clears all middleware instances configured so far.
+     * This can be used to remove default middleware in tests or debug setups.
+     */
+    fun clearMiddlewares() {
+        operations.add { clearMiddlewares() }
+    }
+
+    internal fun applyTo(builder: StoreBuilder<S, A, E>) {
+        operations.forEach { operation -> operation(builder) }
+    }
+}
+
+private fun <S : State, A : Action, E : Event> buildStore(
+    initialState: S? = null,
+    coroutineContext: CoroutineContext? = null,
+    overrides: Overrides<S, A, E>? = null,
     setup: Setup<S, A, E>,
 ): Store<S, A, E> {
-    return StoreBuilder<S, A, E>().apply {
-        initialState(initialState)
-        setup()
-    }.build()
+    val builder = StoreBuilder<S, A, E>()
+    initialState?.let(builder::initialState)
+    coroutineContext?.let(builder::coroutineContext)
+    builder.setup()
+    overrides?.let {
+        StoreOverridesBuilder<S, A, E>().apply(it).applyTo(builder)
+    }
+    return builder.build()
 }
 
 /**
- * Creates a Store instance with setup provided in the block.
+ * Creates a Store instance with setup provided in the block and optional overrides.
  * The initial state must be set within the block using initialState().
  *
+ * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
+    overrides: Overrides<S, A, E> = {},
     setup: Setup<S, A, E>,
 ): Store<S, A, E> {
-    return StoreBuilder<S, A, E>().apply(setup).build()
+    return buildStore(overrides = overrides, setup = setup)
+}
+
+/**
+ * Creates a Store instance with the specified initial state and optional overrides.
+ * Overrides are applied after the main setup block.
+ *
+ * @param initialState The initial state of the store
+ * @param overrides Overrides block for non-state Store configuration
+ * @param setup Setup block to customize the store
+ * @return A configured Store instance
+ */
+fun <S : State, A : Action, E : Event> Store(
+    initialState: S,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> {
+    return buildStore(initialState = initialState, overrides = overrides, setup = setup)
+}
+
+/**
+ * Creates a Store instance with the specified coroutine context and optional overrides.
+ * The coroutine context parameter is applied before the main setup block.
+ * The initial state must be set within the block using initialState().
+ * Overrides are applied after the main setup block.
+ *
+ * @param coroutineContext The coroutine context to use for store operations
+ * @param overrides Overrides block for non-state Store configuration
+ * @param setup Setup block to customize the store
+ * @return A configured Store instance
+ * @throws IllegalArgumentException if the initial state is not set in the block
+ */
+fun <S : State, A : Action, E : Event> Store(
+    coroutineContext: CoroutineContext,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> {
+    return buildStore(coroutineContext = coroutineContext, overrides = overrides, setup = setup)
+}
+
+/**
+ * Creates a Store instance with the specified initial state and coroutine context.
+ * The initial state and coroutine context parameters are applied before the main setup block.
+ * Overrides are applied after the main setup block.
+ *
+ * @param initialState The initial state of the store
+ * @param coroutineContext The coroutine context to use for store operations
+ * @param overrides Overrides block for non-state Store configuration
+ * @param setup Setup block to customize the store
+ * @return A configured Store instance
+ */
+fun <S : State, A : Action, E : Event> Store(
+    initialState: S,
+    coroutineContext: CoroutineContext,
+    overrides: Overrides<S, A, E> = {},
+    setup: Setup<S, A, E>,
+): Store<S, A, E> {
+    return buildStore(initialState = initialState, coroutineContext = coroutineContext, overrides = overrides, setup = setup)
 }

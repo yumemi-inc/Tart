@@ -24,7 +24,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
-internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E> {
+@OptIn(InternalTartApi::class)
+internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E>, StoreInternalApi<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
         MutableStateFlow(
             try {
@@ -70,6 +71,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val pendingActionPolicy: PendingActionPolicy
 
+    protected abstract val middlewareExecutionPolicy: MiddlewareExecutionPolicy
+
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
     protected abstract val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit
@@ -98,6 +101,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val stateRuntimes = mutableMapOf<KClass<out S>, StateRuntime>()
 
+    private val observers = mutableListOf<StoreObserver<S, E>>()
+
     private var activeDispatchJob: Job? = null
 
     private data class StateRuntime(
@@ -106,7 +111,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     )
 
     final override fun dispatch(action: A) {
-        dispatchScope.launch {
+        launchDispatch(action)
+    }
+
+    final override suspend fun dispatchAndWait(action: A) {
+        launchDispatch(action).join()
+    }
+
+    private fun launchDispatch(action: A): Job {
+        return dispatchScope.launch {
             mutex.withLock {
                 val dispatchJob = coroutineContext[Job]
                 activeDispatchJob = dispatchJob
@@ -131,6 +144,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     final override fun collectEvent(event: (E) -> Unit) {
         coroutineScope.launch((Dispatchers.Unconfined)) {
             this@StoreImpl.event.collect { event(it) }
+        }
+    }
+
+    final override fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
+        check(mutex.tryLock()) { "[Tart] Failed to attach observer because the Store is starting or already started" }
+        try {
+            check(!isInitialized) { "[Tart] Observer must be attached before the Store starts" }
+            if (notifyCurrentState) {
+                observer.onState(currentState)
+            }
+            observers.add(observer)
+        } finally {
+            mutex.unlock()
         }
     }
 
@@ -595,6 +621,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             rethrowIfFatal(t)
             throw InternalError(t)
         }
+        notifyStateRecorded(nextState)
         processMiddleware { afterStateChange(nextState, state) }
     }
 
@@ -630,6 +657,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun processEventEmit(state: S, event: E) {
         processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
+        notifyEventRecorded(event)
         processMiddleware { afterEventEmit(state, event) }
     }
 
@@ -649,14 +677,41 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
         try {
-            coroutineScope {
-                middlewares.map {
-                    launch { block(it) }
+            when (middlewareExecutionPolicy) {
+                MiddlewareExecutionPolicy.CONCURRENT -> coroutineScope {
+                    middlewares.forEach { middleware ->
+                        launch { middleware.block() }
+                    }
+                }
+                MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER -> middlewares.forEach { middleware ->
+                    middleware.block()
                 }
             }
         } catch (t: Throwable) {
             rethrowIfFatal(t)
             throw InternalError(t)
+        }
+    }
+
+    private fun notifyStateRecorded(state: S) {
+        observers.forEach { observer ->
+            try {
+                observer.onState(state)
+            } catch (t: Throwable) {
+                rethrowIfFatal(t)
+                throw InternalError(t)
+            }
+        }
+    }
+
+    private fun notifyEventRecorded(event: E) {
+        observers.forEach { observer ->
+            try {
+                observer.onEvent(event)
+            } catch (t: Throwable) {
+                rethrowIfFatal(t)
+                throw InternalError(t)
+            }
         }
     }
 
