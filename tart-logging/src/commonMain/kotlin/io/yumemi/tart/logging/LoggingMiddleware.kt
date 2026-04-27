@@ -12,11 +12,11 @@ import kotlinx.coroutines.Dispatchers
  * Middleware that logs Store operations.
  *
  * @param logger Logger to use
- * @param coroutineDispatcher Coroutine dispatcher to use for log processing
+ * @param dispatcher Coroutine dispatcher to use for log processing
  */
 abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
     private val logger: Logger = DefaultLogger,
-    private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
 ) : Middleware<S, A, E> {
     private lateinit var middlewareScope: MiddlewareScope<A>
 
@@ -25,7 +25,7 @@ abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
     }
 
     protected fun log(severity: Logger.Severity, tag: String, throwable: Throwable? = null, message: () -> String) {
-        middlewareScope.launch(coroutineDispatcher) { // launch Coroutines to avoid blocking Store processing in case of heavy logging
+        middlewareScope.launch(dispatcher) { // launch Coroutines to avoid blocking Store processing in case of heavy logging
             logger.log(severity = severity, tag = tag, throwable = throwable, message = message())
         }
     }
@@ -39,18 +39,18 @@ abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
  * @param tag The tag to use for logging
  * @param severity The severity level for log messages
  * @param logger The logger implementation to use
- * @param coroutineDispatcher The dispatcher for logging operations
+ * @param dispatcher The dispatcher for logging operations
  * @return A middleware that performs logging for all store operations
  */
 fun <S : State, A : Action, E : Event> simpleLogging(
     tag: String = "Tart",
     severity: Logger.Severity = Logger.Severity.Debug,
     logger: Logger = DefaultLogger,
-    coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+    dispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
 ): Middleware<S, A, E> {
     return object : LoggingMiddleware<S, A, E>(
         logger = logger,
-        coroutineDispatcher = coroutineDispatcher,
+        dispatcher = dispatcher,
     ) {
         override suspend fun beforeActionDispatch(state: S, action: A) {
             log(severity, tag) { "Action: $action" }

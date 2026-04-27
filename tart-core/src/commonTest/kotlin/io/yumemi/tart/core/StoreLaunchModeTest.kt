@@ -38,7 +38,7 @@ class StoreLaunchModeTest {
             state<AppState.Active> {
                 action<AppAction.CancelPreviousDefault> {
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         onCancelPreviousStart?.invoke(action.marker)
@@ -52,7 +52,7 @@ class StoreLaunchModeTest {
 
                 action<AppAction.KeyedLaunches> {
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         key = "primary",
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
@@ -61,7 +61,7 @@ class StoreLaunchModeTest {
                         }
                     }
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         key = "secondary",
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
@@ -73,7 +73,7 @@ class StoreLaunchModeTest {
 
                 action<AppAction.SharedDefaultKey> {
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
@@ -81,7 +81,7 @@ class StoreLaunchModeTest {
                         }
                     }
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         transaction(testDispatcher) {
@@ -92,7 +92,7 @@ class StoreLaunchModeTest {
 
                 action<AppAction.DropNewAdd> {
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         mode = LaunchMode.DROP_NEW,
                     ) {
                         delay(100)
@@ -104,7 +104,7 @@ class StoreLaunchModeTest {
 
                 action<AppAction.LatestAdd> {
                     launch(
-                        coroutineDispatcher = testDispatcher,
+                        dispatcher = testDispatcher,
                         mode = LaunchMode.CANCEL_PREVIOUS,
                     ) {
                         delay(100)

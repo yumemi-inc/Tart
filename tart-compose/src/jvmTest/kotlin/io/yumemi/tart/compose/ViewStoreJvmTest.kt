@@ -180,7 +180,7 @@ class ViewStoreJvmTest {
         val store = Store<UiState, UiAction, UiEvent>(initialState = UiState.Loading) {
             coroutineContext(coroutineContext)
             state<UiState.Loading> {
-                enter(coroutineDispatcher = testDispatcher) {
+                enter(dispatcher = testDispatcher) {
                     enterGate.await()
                     nextState(UiState.Ready(0))
                 }
