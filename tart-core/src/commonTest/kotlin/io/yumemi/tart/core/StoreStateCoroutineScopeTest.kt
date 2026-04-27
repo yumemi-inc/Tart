@@ -7,6 +7,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -39,6 +41,7 @@ class StoreStateCoroutineScopeTest {
     sealed interface AppState : State {
         data object Initial : AppState
         data class Running(val value: Int = 0) : AppState
+        data class Failed(val message: String) : AppState
         data object Final : AppState
     }
 
@@ -168,6 +171,46 @@ class StoreStateCoroutineScopeTest {
 
         // Verify background task was cancelled
         assertTrue(backgroundTaskCancelled, "Background task should have been cancelled")
+    }
+
+    @Test
+    fun enterLaunch_transactionFatalError_isForwardedToExceptionHandler() = runTest(testDispatcher) {
+        var handledThrowable: Throwable? = null
+        val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Initial) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handledThrowable = it })
+
+            state<AppState.Initial> {
+                action<AppAction.Start> {
+                    nextState(AppState.Running())
+                }
+            }
+
+            state<AppState.Running> {
+                enter {
+                    launch {
+                        transaction {
+                            throw AssertionError("fatal enter transaction")
+                        }
+                    }
+                }
+            }
+
+            state<AppState> {
+                error<Throwable> {
+                    nextState(AppState.Failed(error.message ?: "unknown"))
+                }
+            }
+        }
+
+        store.dispatch(AppAction.Start)
+        repeat(3) { kotlinx.coroutines.yield() }
+
+        assertNotNull(handledThrowable)
+        val error = handledThrowable
+        assertIs<AssertionError>(error)
+        assertEquals("fatal enter transaction", error.message)
+        assertEquals(AppState.Running(), store.currentState)
     }
 
 }

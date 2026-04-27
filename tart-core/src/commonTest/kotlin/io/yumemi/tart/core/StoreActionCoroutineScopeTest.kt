@@ -8,6 +8,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -29,14 +31,18 @@ class StoreActionCoroutineScopeTest {
         data object MoveToCompletedThenLaunch : AppAction
         data object LaunchThrow : AppAction
         data object LaunchTransactionThrow : AppAction
+        data object LaunchFatal : AppAction
+        data object LaunchTransactionFatal : AppAction
     }
 
     private fun createTestStore(
         onLongRunningStart: (() -> Unit)? = null,
         onLongRunningCancelled: (() -> Unit)? = null,
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Active()) {
             coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(exceptionHandler)
 
             state<AppState.Active> {
                 action<AppAction.LaunchIncrement> {
@@ -86,10 +92,24 @@ class StoreActionCoroutineScopeTest {
                     }
                 }
 
+                action<AppAction.LaunchFatal> {
+                    launch {
+                        throw AssertionError("fatal launch")
+                    }
+                }
+
                 action<AppAction.LaunchTransactionThrow> {
                     launch {
                         transaction {
                             throw IllegalArgumentException("transaction failed")
+                        }
+                    }
+                }
+
+                action<AppAction.LaunchTransactionFatal> {
+                    launch {
+                        transaction {
+                            throw AssertionError("fatal transaction")
                         }
                     }
                 }
@@ -171,5 +191,39 @@ class StoreActionCoroutineScopeTest {
         repeat(3) { yield() }
 
         assertEquals(AppState.Failed("transaction failed"), store.currentState)
+    }
+
+    @Test
+    fun actionLaunch_fatalError_isForwardedToExceptionHandler() = runTest(testDispatcher) {
+        var handledThrowable: Throwable? = null
+        val store = createTestStore(
+            exceptionHandler = ExceptionHandler { handledThrowable = it },
+        )
+
+        store.dispatch(AppAction.LaunchFatal)
+        repeat(3) { yield() }
+
+        assertNotNull(handledThrowable)
+        val error = handledThrowable
+        assertIs<AssertionError>(error)
+        assertEquals("fatal launch", error.message)
+        assertEquals(AppState.Active(value = 0), store.currentState)
+    }
+
+    @Test
+    fun actionLaunch_transactionFatalError_isForwardedToExceptionHandler() = runTest(testDispatcher) {
+        var handledThrowable: Throwable? = null
+        val store = createTestStore(
+            exceptionHandler = ExceptionHandler { handledThrowable = it },
+        )
+
+        store.dispatch(AppAction.LaunchTransactionFatal)
+        repeat(3) { yield() }
+
+        assertNotNull(handledThrowable)
+        val error = handledThrowable
+        assertIs<AssertionError>(error)
+        assertEquals("fatal transaction", error.message)
+        assertEquals(AppState.Active(value = 0), store.currentState)
     }
 }

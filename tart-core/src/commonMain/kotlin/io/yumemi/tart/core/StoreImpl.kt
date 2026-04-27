@@ -468,9 +468,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             block(launchScope)
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                throw t
-            }
+            rethrowIfFatal(t)
             coroutineScope.launch(coroutineDispatcher) {
                 mutex.withLock {
                     if (stateRuntime.scope.isActive) {
@@ -516,9 +514,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             try {
                                 block(transactionScope)
                             } catch (t: Throwable) {
-                                if (t is CancellationException) {
-                                    throw t
-                                }
+                                rethrowIfFatal(t)
                                 onErrorOccurred(currentState, t)
                                 return@withLock
                             }
@@ -571,9 +567,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             try {
                                 block(transactionScope)
                             } catch (t: Throwable) {
-                                if (t is CancellationException) {
-                                    throw t
-                                }
+                                rethrowIfFatal(t)
                                 onErrorOccurred(currentState, t)
                                 return@withLock
                             }
@@ -683,6 +677,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         launch { middleware.block() }
                     }
                 }
+
                 MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER -> middlewares.forEach { middleware ->
                     middleware.block()
                 }
