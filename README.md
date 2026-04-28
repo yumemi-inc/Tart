@@ -481,35 +481,55 @@ This pattern lets your *Store* react to external data changes automatically, suc
 Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
 
-If you want lightweight control over repeated coroutines launched from an action handler, set the mode directly on `launch(...)`:
+If you want lightweight coordination and explicit cancellation for coroutines launched from an action handler, set the control directly on `launch(...)`:
 
 ```kt
-state<MyState.Active> {
-    action<MyAction.Search> {
-        launch(mode = LaunchMode.CANCEL_PREVIOUS) {
-            delay(300)
-            transaction {
-                nextState(state.copy(isLoading = true))
+val store = Store(MyState.Active()) {
+    val searchLane = object {}
+    val submitLane = object {}
+
+    state<MyState.Active> {
+        action<MyAction.QueryChanged> {
+            nextState(state.copy(query = action.query, isLoading = true))
+
+            launch(control = LaunchControl.Replace(searchLane)) {
+                delay(300)
+                val result = repository.search(action.query)
+                transaction {
+                    nextState(
+                        state.copy(
+                            result = result,
+                            isLoading = false,
+                        ),
+                    )
+                }
             }
         }
 
-        launch(key = "analytics", mode = LaunchMode.DROP_NEW) {
-            analytics.logSearch(action.query)
+        action<MyAction.ClearQuery> {
+            cancelLaunch(searchLane)
+            nextState(
+                state.copy(
+                    query = "",
+                    result = emptyList(),
+                    isLoading = false,
+                ),
+            )
         }
-    }
 
-    action<MyAction.Submit> {
-        launch(mode = LaunchMode.DROP_NEW) {
-            submit()
+        action<MyAction.Submit> {
+            launch(control = LaunchControl.DropNew(submitLane)) {
+                submit()
+            }
         }
     }
 }
 ```
 
-`LaunchMode.CANCEL_PREVIOUS` cancels the previous launch with the same key before starting the next one.
-`LaunchMode.DROP_NEW` ignores new launches with the same key while previous work is still active.
-`LaunchMode.CONCURRENT` keeps the default behavior and runs all launches independently.
-If `key` is omitted, `action::class` is used. Multiple no-key launches for the same action type therefore share one control lane.
+`LaunchControl.Replace(key)` cancels the previous tracked launch in the same lane before starting the next one.
+`LaunchControl.DropNew(key)` ignores new launches while tracked work in the same lane is still active.
+`LaunchControl.Concurrent` keeps the default behavior and runs launches independently.
+`cancelLaunch(key)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.Replace(...)` and `LaunchControl.DropNew(...)`. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
 
 ### Specifying coroutineContext
 

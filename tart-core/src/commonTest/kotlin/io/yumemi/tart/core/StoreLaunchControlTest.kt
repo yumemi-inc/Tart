@@ -11,7 +11,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StoreLaunchModeTest {
+class StoreLaunchControlTest {
+    private companion object {
+        const val SharedLane = "shared"
+    }
 
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
@@ -19,7 +22,7 @@ class StoreLaunchModeTest {
     }
 
     sealed interface AppAction : Action {
-        data class CancelPreviousDefault(val marker: Int) : AppAction
+        data class ReplaceDefault(val marker: Int) : AppAction
         data object KeyedLaunches : AppAction
         data object SharedDefaultKey : AppAction
         data class DropNewAdd(val delta: Int) : AppAction
@@ -29,23 +32,23 @@ class StoreLaunchModeTest {
 
     private fun createStore(
         testDispatcher: TestDispatcher,
-        onCancelPreviousStart: ((Int) -> Unit)? = null,
-        onCancelPreviousCancel: ((Int) -> Unit)? = null,
+        onReplaceStart: ((Int) -> Unit)? = null,
+        onReplaceCancel: ((Int) -> Unit)? = null,
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Active()) {
             coroutineContext(testDispatcher)
 
             state<AppState.Active> {
-                action<AppAction.CancelPreviousDefault> {
+                action<AppAction.ReplaceDefault> {
                     launch(
                         dispatcher = testDispatcher,
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace(AppAction.ReplaceDefault::class),
                     ) {
-                        onCancelPreviousStart?.invoke(action.marker)
+                        onReplaceStart?.invoke(action.marker)
                         try {
                             delay(Long.MAX_VALUE)
                         } finally {
-                            onCancelPreviousCancel?.invoke(action.marker)
+                            onReplaceCancel?.invoke(action.marker)
                         }
                     }
                 }
@@ -53,8 +56,7 @@ class StoreLaunchModeTest {
                 action<AppAction.KeyedLaunches> {
                     launch(
                         dispatcher = testDispatcher,
-                        key = "primary",
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace("primary"),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -62,8 +64,7 @@ class StoreLaunchModeTest {
                     }
                     launch(
                         dispatcher = testDispatcher,
-                        key = "secondary",
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace("secondary"),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -74,7 +75,7 @@ class StoreLaunchModeTest {
                 action<AppAction.SharedDefaultKey> {
                     launch(
                         dispatcher = testDispatcher,
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace(SharedLane),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -82,7 +83,7 @@ class StoreLaunchModeTest {
                     }
                     launch(
                         dispatcher = testDispatcher,
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace(SharedLane),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -93,7 +94,7 @@ class StoreLaunchModeTest {
                 action<AppAction.DropNewAdd> {
                     launch(
                         dispatcher = testDispatcher,
-                        mode = LaunchMode.DROP_NEW,
+                        control = LaunchControl.DropNew(AppAction.DropNewAdd::class),
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -105,7 +106,7 @@ class StoreLaunchModeTest {
                 action<AppAction.LatestAdd> {
                     launch(
                         dispatcher = testDispatcher,
-                        mode = LaunchMode.CANCEL_PREVIOUS,
+                        control = LaunchControl.Replace(AppAction.LatestAdd::class),
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -122,23 +123,23 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_cancelPreviousCancelsMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_replaceCancelsMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
         val store = createStore(
             testDispatcher = testDispatcher,
-            onCancelPreviousStart = { started += it },
-            onCancelPreviousCancel = { cancelled += it },
+            onReplaceStart = { started += it },
+            onReplaceCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.CancelPreviousDefault(marker = 1))
+        store.dispatch(AppAction.ReplaceDefault(marker = 1))
         runCurrent()
 
         assertEquals(listOf(1), started)
         assertEquals(emptyList(), cancelled)
 
-        store.dispatch(AppAction.CancelPreviousDefault(marker = 2))
+        store.dispatch(AppAction.ReplaceDefault(marker = 2))
         runCurrent()
 
         assertEquals(listOf(1, 2), started)
@@ -146,15 +147,15 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_cancelPreviousLaunchIsCancelledOnStateChange() = runTest {
+    fun launchControl_replaceLaunchIsCancelledOnStateChange() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
             testDispatcher = testDispatcher,
-            onCancelPreviousCancel = { cancelled += it },
+            onReplaceCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.CancelPreviousDefault(marker = 1))
+        store.dispatch(AppAction.ReplaceDefault(marker = 1))
         runCurrent()
 
         store.dispatch(AppAction.MoveToCompleted)
@@ -165,7 +166,7 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_distinctKeysKeepLaunchesIndependent() = runTest {
+    fun launchControl_distinctKeysKeepLaunchesIndependent() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -176,7 +177,7 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
+    fun launchControl_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -187,7 +188,7 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -212,7 +213,7 @@ class StoreLaunchModeTest {
     }
 
     @Test
-    fun launchMode_cancelPreviousUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_replaceUsesMatchingKeyAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 

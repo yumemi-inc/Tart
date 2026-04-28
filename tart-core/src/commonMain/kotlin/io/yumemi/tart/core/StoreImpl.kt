@@ -312,17 +312,20 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
+                override fun cancelLaunch(key: Any) {
+                    val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
+                    cancelTrackedActionLaunch(stateRuntime, key)
+                }
+
                 override fun launch(
                     dispatcher: CoroutineDispatcher,
-                    key: Any?,
-                    mode: LaunchMode,
+                    control: LaunchControl,
                     block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
                 ) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
                     launchActionInStateRuntime(
                         stateRuntime = stateRuntime,
-                        key = key ?: action::class,
-                        mode = mode,
+                        control = control,
                         dispatcher = dispatcher,
                         buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
                         block = block,
@@ -395,14 +398,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchActionInStateRuntime(
         stateRuntime: StateRuntime,
-        key: Any,
-        mode: LaunchMode,
+        control: LaunchControl,
         dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
-        when (mode) {
-            LaunchMode.CONCURRENT -> {
+        when (control) {
+            LaunchControl.Concurrent -> {
                 launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     dispatcher = dispatcher,
@@ -411,8 +413,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            LaunchMode.CANCEL_PREVIOUS -> {
-                stateRuntime.actionLaunchJobs[key]?.cancel()
+            is LaunchControl.Replace -> {
+                val key = control.key
+                cancelTrackedActionLaunch(stateRuntime, key)
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
                     key = key,
@@ -422,7 +425,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            LaunchMode.DROP_NEW -> {
+            is LaunchControl.DropNew -> {
+                val key = control.key
                 if (stateRuntime.actionLaunchJobs[key]?.isActive == true) return
                 stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
@@ -456,6 +460,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         }
+    }
+
+    private fun cancelTrackedActionLaunch(stateRuntime: StateRuntime, key: Any) {
+        stateRuntime.actionLaunchJobs.remove(key)?.cancel()
     }
 
     private suspend fun <LS> executeLaunchInStateRuntime(
