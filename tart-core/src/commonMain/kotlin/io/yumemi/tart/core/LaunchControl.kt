@@ -19,14 +19,10 @@ sealed interface LaunchControl {
      * Cancel the previous tracked asynchronous job in the same lane before
      * starting a new one.
      */
-    data class Replace(
-        val key: Any,
-    ) : LaunchControl
+    data class Replace(val key: Any) : LaunchControl
 
     /**
      * Ignore new launches while tracked work in the same lane is still active.
      */
-    data class DropNew(
-        val key: Any,
-    ) : LaunchControl
+    data class DropNew(val key: Any) : LaunchControl
 }
