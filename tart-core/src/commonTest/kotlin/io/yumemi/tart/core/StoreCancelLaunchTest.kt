@@ -11,6 +11,9 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StoreCancelLaunchTest {
+    private val sharedLane = LaunchLane()
+    private val otherLane = LaunchLane()
+    private val missingLane = LaunchLane()
 
     sealed interface AppState : State {
         data object Active : AppState
@@ -49,7 +52,7 @@ class StoreCancelLaunchTest {
                 action<AppAction.StartDropNewShared> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.DropNew("shared"),
+                        control = LaunchControl.DropNew(sharedLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -63,7 +66,7 @@ class StoreCancelLaunchTest {
                 action<AppAction.StartDropNewOther> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.DropNew("other"),
+                        control = LaunchControl.DropNew(otherLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -77,7 +80,7 @@ class StoreCancelLaunchTest {
                 action<AppAction.StartReplaceShared> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace("shared"),
+                        control = LaunchControl.Replace(sharedLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -107,18 +110,18 @@ class StoreCancelLaunchTest {
                 }
 
                 action<AppAction.CancelShared> {
-                    cancelLaunch("shared")
+                    cancelLaunch(sharedLane)
                 }
 
                 action<AppAction.CancelMissing> {
-                    cancelLaunch("missing")
+                    cancelLaunch(missingLane)
                 }
             }
         }
     }
 
     @Test
-    fun cancelLaunch_cancelsDropNewLaunchWithMatchingKey() = runTest {
+    fun cancelLaunch_cancelsDropNewLaunchWithMatchingLane() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
@@ -136,7 +139,7 @@ class StoreCancelLaunchTest {
     }
 
     @Test
-    fun cancelLaunch_cancelsReplaceLaunchWithMatchingKey() = runTest {
+    fun cancelLaunch_cancelsReplaceLaunchWithMatchingLane() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
@@ -177,7 +180,7 @@ class StoreCancelLaunchTest {
     }
 
     @Test
-    fun cancelLaunch_isNoOpWhenKeyDoesNotExist() = runTest {
+    fun cancelLaunch_isNoOpWhenLaneDoesNotExist() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
