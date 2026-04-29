@@ -27,7 +27,7 @@ class StorePendingActionPolicyTest {
 
     private fun createStore(
         testDispatcher: TestDispatcher,
-        pendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT,
+        pendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit,
         onTransitionStarted: CompletableDeferred<Unit>? = null,
         onTransitionCompleted: CompletableDeferred<Unit>? = null,
     ): Store<AppState, AppAction, Nothing> {
@@ -87,7 +87,7 @@ class StorePendingActionPolicyTest {
         val transitionStarted = CompletableDeferred<Unit>()
         val store = createStore(
             testDispatcher = testDispatcher,
-            pendingActionPolicy = PendingActionPolicy.KEEP,
+            pendingActionPolicy = PendingActionPolicy.Keep,
             onTransitionStarted = transitionStarted,
         )
 

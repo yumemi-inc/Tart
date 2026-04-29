@@ -603,13 +603,13 @@ You can also create a `StateSaver` instance with the `StateSaver()` factory func
 ### Clear Pending Actions
 
 By default, Tart clears already queued actions when the store exits the current state and enters a different state variant.
-To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.KEEP)`.
+To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.Keep)`.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    pendingActionPolicy(PendingActionPolicy.KEEP)
+    pendingActionPolicy(PendingActionPolicy.Keep)
 }
 ```
 
@@ -912,13 +912,13 @@ You can also create a `Middleware` instance with the `Middleware()` factory func
 
 Middleware methods are suspending functions. The *Store* waits for middleware processing to complete before proceeding.
 When multiple middleware instances are registered, Tart invokes them concurrently by default.
-If middleware must run one by one in registration order, set `middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)`.
+If middleware must run one by one in registration order, set `middlewareExecutionPolicy(MiddlewareExecutionPolicy.InRegistrationOrder)`.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)
+    middlewareExecutionPolicy(MiddlewareExecutionPolicy.InRegistrationOrder)
 }
 ```
 

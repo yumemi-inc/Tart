@@ -33,7 +33,7 @@ class StorePendingActionCancellationTest {
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Active()) {
             coroutineContext(testDispatcher)
-            pendingActionPolicy(PendingActionPolicy.KEEP)
+            pendingActionPolicy(PendingActionPolicy.Keep)
 
             state<AppState.Active> {
                 action<AppAction.HoldAndCancel>(testDispatcher) {

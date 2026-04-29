@@ -8,10 +8,10 @@ enum class PendingActionPolicy {
      * Clears queued actions after a transition to a different state variant is committed.
      * The currently running store work keeps running.
      */
-    CLEAR_ON_STATE_EXIT,
+    ClearOnStateExit,
 
     /**
      * Keeps queued actions unless they are cleared explicitly from DSL scopes.
      */
-    KEEP,
+    Keep,
 }

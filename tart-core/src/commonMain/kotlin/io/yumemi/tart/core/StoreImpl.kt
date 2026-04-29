@@ -675,7 +675,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
-        if (pendingActionPolicy == PendingActionPolicy.CLEAR_ON_STATE_EXIT) {
+        if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit) {
             clearPendingDispatchJobs()
         }
     }
@@ -691,13 +691,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
         try {
             when (middlewareExecutionPolicy) {
-                MiddlewareExecutionPolicy.CONCURRENT -> coroutineScope {
+                MiddlewareExecutionPolicy.Concurrent -> coroutineScope {
                     middlewares.forEach { middleware ->
                         launch { middleware.block() }
                     }
                 }
 
-                MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER -> middlewares.forEach { middleware ->
+                MiddlewareExecutionPolicy.InRegistrationOrder -> middlewares.forEach { middleware ->
                     middleware.block()
                 }
             }
