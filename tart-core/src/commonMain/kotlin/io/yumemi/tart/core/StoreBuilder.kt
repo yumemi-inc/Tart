@@ -4,13 +4,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 
 @Suppress("unused")
 @TartStoreDsl
 class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeInitialState: S? = null
-    private var storeCoroutineContext: CoroutineContext = EmptyCoroutineContext + Dispatchers.Default
+    private var storeCoroutineContext: CoroutineContext = Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT

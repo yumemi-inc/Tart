@@ -533,7 +533,7 @@ When the lane is omitted, `LaunchControl.Replace()` and `LaunchControl.DropNew()
 
 ### Specifying coroutineContext
 
-The Store operates using Coroutines, and the default CoroutineContext is `EmptyCoroutineContext + Dispatchers.Default`.
+The Store operates using Coroutines, and its default base CoroutineContext is `Dispatchers.Default`.
 Specify it to align the Store's Coroutines lifecycle with another context or to change the execution thread.
 
 ```kt
