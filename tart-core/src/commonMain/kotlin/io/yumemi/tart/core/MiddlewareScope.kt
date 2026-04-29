@@ -2,7 +2,6 @@ package io.yumemi.tart.core
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 
 /**
  * Scope available to middleware components for processing actions.
@@ -19,8 +18,9 @@ interface MiddlewareScope<A : Action> {
     /**
      * Launches a coroutine within the store's scope.
      *
-     * @param dispatcher The dispatcher to use for the coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher Optional CoroutineDispatcher override for the coroutine.
+     * When null, the coroutine inherits the Store's current execution context.
      * @param block The coroutine body to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend CoroutineScope.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend CoroutineScope.() -> Unit)
 }

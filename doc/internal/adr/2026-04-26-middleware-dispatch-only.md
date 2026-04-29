@@ -1,6 +1,6 @@
 # Middleware には直接 state 更新 API を入れない
 
-- 更新日: 2026-04-26
+- 更新日: 2026-04-29
 - 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md)
 
 ## 背景
@@ -13,7 +13,7 @@
 interface MiddlewareScope<A : Action> {
     fun dispatch(action: A)
     fun launch(
-        coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+        dispatcher: CoroutineDispatcher? = null,
         block: suspend CoroutineScope.() -> Unit,
     )
 }
@@ -39,7 +39,7 @@ override suspend fun onStart(middlewareScope: MiddlewareScope<AppAction>, state:
 interface MiddlewareScope<S : State, A : Action, E : Event> {
     fun dispatch(action: A)
     fun launch(
-        coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+        dispatcher: CoroutineDispatcher? = null,
         block: suspend LaunchScope<S, E>.() -> Unit,
     )
 
@@ -47,7 +47,7 @@ interface MiddlewareScope<S : State, A : Action, E : Event> {
         val isActive: Boolean
         suspend fun event(event: E)
         suspend fun transaction(
-            coroutineDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+            dispatcher: CoroutineDispatcher? = null,
             block: suspend TransactionScope<S, E>.() -> Unit,
         )
     }

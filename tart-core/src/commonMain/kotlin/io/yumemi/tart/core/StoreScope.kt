@@ -1,7 +1,6 @@
 package io.yumemi.tart.core
 
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 
 /**
  * Base interface for all store scope types.
@@ -54,10 +53,11 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Launches a coroutine within the context of this state.
      * The coroutine will be automatically cancelled when the state is exited.
      *
-     * @param dispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
+     * When null, the coroutine inherits the Store's current execution context.
      * @param block The suspending block of code to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend LaunchScope<S, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend LaunchScope<S, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine.
@@ -85,10 +85,11 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Executes a transactional operation within the launch scope.
          * This allows state updates to be performed in an atomic, consistent manner.
          *
-         * @param dispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param dispatcher Optional CoroutineDispatcher override for this operation.
+         * When null, the transaction inherits the Store's current execution context.
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend TransactionScope<S, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
@@ -221,12 +222,13 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Launches a coroutine within the context of the current state where this action is processed.
      * The coroutine will be automatically cancelled when this state is exited.
      *
-     * @param dispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
+     * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
+     * When null, the coroutine inherits the Store's current execution context.
      * @param control The launch control used for coordination. Tracked controls
      * may use an explicit [LaunchLane] or the action-local default lane.
      * @param block The suspending block of code to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, control: LaunchControl = LaunchControl.Concurrent, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Concurrent, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine from an action handler.
@@ -259,10 +261,11 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Executes a transactional operation within the launch scope.
          * This allows state updates to be performed in an atomic, consistent manner.
          *
-         * @param dispatcher The CoroutineDispatcher to use for this operation (defaults to Dispatchers.Unconfined)
+         * @param dispatcher Optional CoroutineDispatcher override for this operation.
+         * When null, the transaction inherits the Store's current execution context.
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.

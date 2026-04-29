@@ -550,6 +550,7 @@ Then, processing of all Coroutines will stop.
 #### Specifying CoroutineDispatchers
 
 You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `error{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
+If you omit the dispatcher parameter, Tart keeps using the Store's current execution context for that operation.
 
 ```kt
 enter(Dispatchers.Default) {
@@ -634,6 +635,7 @@ fun CounterStore(
 
 On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
+These callbacks run in the Store's execution context. Tart does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
 
 ## Compose
 

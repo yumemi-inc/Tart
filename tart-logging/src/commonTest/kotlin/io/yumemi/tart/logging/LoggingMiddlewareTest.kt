@@ -18,10 +18,7 @@ class LoggingMiddlewareTest {
     @Test
     fun loggingMiddleware_shouldLogAction() = runTest(testDispatcher) {
         val testLogger = TestLogger()
-        val middleware = simpleLogging<CounterState, CounterAction, Nothing>(
-            logger = testLogger,
-            dispatcher = Dispatchers.Unconfined,
-        )
+        val middleware = simpleLogging<CounterState, CounterAction, Nothing>(logger = testLogger)
 
         val store = createTestStore(CounterState(10), middleware)
 

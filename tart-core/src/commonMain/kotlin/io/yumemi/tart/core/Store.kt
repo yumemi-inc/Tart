@@ -32,14 +32,34 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     fun dispatch(action: A)
 
     /**
-     * Collects state changes.
+     * Collects state changes using a callback.
+     *
+     * This API is intended for platforms where [StateFlow] cannot be consumed directly.
+     *
+     * The callback runs in the Store's execution context.
+     * Tart does not switch to a UI thread automatically and does not guarantee delivery
+     * on the thread that called [collectState].
+     * If your platform requires UI-thread access, move to the appropriate UI thread
+     * before touching UI components from the callback.
+     *
+     * Collection continues until the Store is disposed.
      *
      * @param state Callback called when the state changes
      */
     fun collectState(state: (S) -> Unit)
 
     /**
-     * Collects events.
+     * Collects events using a callback.
+     *
+     * This API is intended for platforms where [Flow] cannot be consumed directly.
+     *
+     * The callback runs in the Store's execution context.
+     * Tart does not switch to a UI thread automatically and does not guarantee delivery
+     * on the thread that called [collectEvent].
+     * If your platform requires UI-thread access, move to the appropriate UI thread
+     * before touching UI components from the callback.
+     *
+     * Collection continues until the Store is disposed.
      *
      * @param event Callback called when an event is emitted
      */
