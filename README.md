@@ -485,8 +485,7 @@ If you want lightweight coordination and explicit cancellation for coroutines la
 
 ```kt
 val store = Store(MyState.Active()) {
-    val searchLane = object {}
-    val submitLane = object {}
+    val searchLane = LaunchLane()
 
     state<MyState.Active> {
         action<MyAction.QueryChanged> {
@@ -518,7 +517,7 @@ val store = Store(MyState.Active()) {
         }
 
         action<MyAction.Submit> {
-            launch(control = LaunchControl.DropNew(submitLane)) {
+            launch(control = LaunchControl.DropNew()) {
                 submit()
             }
         }
@@ -526,10 +525,11 @@ val store = Store(MyState.Active()) {
 }
 ```
 
-`LaunchControl.Replace(key)` cancels the previous tracked launch in the same lane before starting the next one.
-`LaunchControl.DropNew(key)` ignores new launches while tracked work in the same lane is still active.
+`LaunchControl.Replace(lane)` cancels the previous tracked launch in the same lane before starting the next one.
+`LaunchControl.DropNew(lane)` ignores new launches while tracked work in the same lane is still active.
+When the lane is omitted, `LaunchControl.Replace()` and `LaunchControl.DropNew()` use the same internal default lane for that `action {}` block.
 `LaunchControl.Concurrent` keeps the default behavior and runs launches independently.
-`cancelLaunch(key)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.Replace(...)` and `LaunchControl.DropNew(...)`. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
+`cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.Replace(...)` and `LaunchControl.DropNew(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
 
 ### Specifying coroutineContext
 

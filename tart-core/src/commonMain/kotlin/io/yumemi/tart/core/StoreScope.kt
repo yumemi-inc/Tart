@@ -207,15 +207,15 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     suspend fun event(event: E)
 
     /**
-     * Cancels active coroutines launched from action handlers with the given key
+     * Cancels active coroutines launched from action handlers with the given lane
      * in the current state's runtime when those launches are tracked by their launch control
      * such as [LaunchControl.Replace] or [LaunchControl.DropNew].
      *
      * If no matching launch exists, this is a no-op.
      *
-     * @param key The launch key identifying the cancellation group
+     * @param lane The explicit launch lane identifying the cancellation group
      */
-    fun cancelLaunch(key: Any)
+    fun cancelLaunch(lane: LaunchLane)
 
     /**
      * Launches a coroutine within the context of the current state where this action is processed.
@@ -223,7 +223,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      *
      * @param dispatcher The CoroutineDispatcher to use for this coroutine (defaults to Dispatchers.Unconfined)
      * @param control The launch control used for coordination. Tracked controls
-     * require an explicit launch key.
+     * may use an explicit [LaunchLane] or the action-local default lane.
      * @param block The suspending block of code to execute
      */
     fun launch(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined, control: LaunchControl = LaunchControl.Concurrent, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)

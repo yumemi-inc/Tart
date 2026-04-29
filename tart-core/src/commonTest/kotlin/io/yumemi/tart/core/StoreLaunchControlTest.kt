@@ -12,10 +12,6 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StoreLaunchControlTest {
-    private companion object {
-        const val SharedLane = "shared"
-    }
-
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
         data object Completed : AppState
@@ -24,7 +20,8 @@ class StoreLaunchControlTest {
     sealed interface AppAction : Action {
         data class ReplaceDefault(val marker: Int) : AppAction
         data object KeyedLaunches : AppAction
-        data object SharedDefaultKey : AppAction
+        data object SharedDefaultLane : AppAction
+        data object SharedDefaultLaneAcrossControls : AppAction
         data class DropNewAdd(val delta: Int) : AppAction
         data class LatestAdd(val delta: Int) : AppAction
         data object MoveToCompleted : AppAction
@@ -35,6 +32,8 @@ class StoreLaunchControlTest {
         onReplaceStart: ((Int) -> Unit)? = null,
         onReplaceCancel: ((Int) -> Unit)? = null,
     ): Store<AppState, AppAction, Nothing> {
+        val primaryLane = LaunchLane()
+        val secondaryLane = LaunchLane()
         return Store(AppState.Active()) {
             coroutineContext(testDispatcher)
 
@@ -42,7 +41,7 @@ class StoreLaunchControlTest {
                 action<AppAction.ReplaceDefault> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace(AppAction.ReplaceDefault::class),
+                        control = LaunchControl.Replace(),
                     ) {
                         onReplaceStart?.invoke(action.marker)
                         try {
@@ -56,7 +55,7 @@ class StoreLaunchControlTest {
                 action<AppAction.KeyedLaunches> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace("primary"),
+                        control = LaunchControl.Replace(primaryLane),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -64,7 +63,7 @@ class StoreLaunchControlTest {
                     }
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace("secondary"),
+                        control = LaunchControl.Replace(secondaryLane),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -72,10 +71,10 @@ class StoreLaunchControlTest {
                     }
                 }
 
-                action<AppAction.SharedDefaultKey> {
+                action<AppAction.SharedDefaultLane> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace(SharedLane),
+                        control = LaunchControl.Replace(),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 1))
@@ -83,7 +82,27 @@ class StoreLaunchControlTest {
                     }
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace(SharedLane),
+                        control = LaunchControl.Replace(),
+                    ) {
+                        transaction(testDispatcher) {
+                            nextState(state.copy(value = state.value + 10))
+                        }
+                    }
+                }
+
+                action<AppAction.SharedDefaultLaneAcrossControls> {
+                    launch(
+                        dispatcher = testDispatcher,
+                        control = LaunchControl.Replace(),
+                    ) {
+                        delay(100)
+                        transaction(testDispatcher) {
+                            nextState(state.copy(value = state.value + 1))
+                        }
+                    }
+                    launch(
+                        dispatcher = testDispatcher,
+                        control = LaunchControl.DropNew(),
                     ) {
                         transaction(testDispatcher) {
                             nextState(state.copy(value = state.value + 10))
@@ -94,7 +113,7 @@ class StoreLaunchControlTest {
                 action<AppAction.DropNewAdd> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.DropNew(AppAction.DropNewAdd::class),
+                        control = LaunchControl.DropNew(),
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -106,7 +125,7 @@ class StoreLaunchControlTest {
                 action<AppAction.LatestAdd> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace(AppAction.LatestAdd::class),
+                        control = LaunchControl.Replace(),
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
@@ -123,7 +142,7 @@ class StoreLaunchControlTest {
     }
 
     @Test
-    fun launchControl_replaceCancelsMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_replaceCancelsMatchingLaneAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
@@ -166,7 +185,7 @@ class StoreLaunchControlTest {
     }
 
     @Test
-    fun launchControl_distinctKeysKeepLaunchesIndependent() = runTest {
+    fun launchControl_distinctLanesKeepLaunchesIndependent() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -177,18 +196,34 @@ class StoreLaunchControlTest {
     }
 
     @Test
-    fun launchControl_sameKeyCoordinatesLaunchesWithinHandler() = runTest {
+    fun launchControl_sameDefaultLaneCoordinatesLaunchesWithinHandler() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
-        store.dispatch(AppAction.SharedDefaultKey)
+        store.dispatch(AppAction.SharedDefaultLane)
         runCurrent()
 
         assertEquals(AppState.Active(value = 10), store.currentState)
     }
 
     @Test
-    fun launchControl_dropNewUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_defaultLaneIsSharedAcrossControlsWithinHandler() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val store = createStore(testDispatcher)
+
+        store.dispatch(AppAction.SharedDefaultLaneAcrossControls)
+        runCurrent()
+
+        assertEquals(AppState.Active(value = 0), store.currentState)
+
+        advanceTimeBy(100)
+        runCurrent()
+
+        assertEquals(AppState.Active(value = 1), store.currentState)
+    }
+
+    @Test
+    fun launchControl_dropNewUsesMatchingLaneAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 
@@ -213,7 +248,7 @@ class StoreLaunchControlTest {
     }
 
     @Test
-    fun launchControl_replaceUsesMatchingKeyAcrossDispatches() = runTest {
+    fun launchControl_replaceUsesMatchingLaneAcrossDispatches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val store = createStore(testDispatcher)
 

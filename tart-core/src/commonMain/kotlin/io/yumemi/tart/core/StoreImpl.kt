@@ -312,9 +312,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun cancelLaunch(key: Any) {
+                override fun cancelLaunch(lane: LaunchLane) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
-                    cancelTrackedActionLaunch(stateRuntime, key)
+                    cancelTrackedActionLaunch(stateRuntime, lane)
                 }
 
                 override fun launch(
@@ -325,6 +325,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
                     launchActionInStateRuntime(
                         stateRuntime = stateRuntime,
+                        action = action,
                         control = control,
                         dispatcher = dispatcher,
                         buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
@@ -398,6 +399,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchActionInStateRuntime(
         stateRuntime: StateRuntime,
+        action: A,
         control: LaunchControl,
         dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
@@ -414,11 +416,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             }
 
             is LaunchControl.Replace -> {
-                val key = control.key
-                cancelTrackedActionLaunch(stateRuntime, key)
-                stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
+                val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
+                cancelTrackedActionLaunch(stateRuntime, trackedKey)
+                stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
-                    key = key,
+                    trackedKey = trackedKey,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
@@ -426,11 +428,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             }
 
             is LaunchControl.DropNew -> {
-                val key = control.key
-                if (stateRuntime.actionLaunchJobs[key]?.isActive == true) return
-                stateRuntime.actionLaunchJobs[key] = launchTrackedActionInStateRuntime(
+                val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
+                if (stateRuntime.actionLaunchJobs[trackedKey]?.isActive == true) return
+                stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
                     stateRuntime = stateRuntime,
-                    key = key,
+                    trackedKey = trackedKey,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
@@ -441,7 +443,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchTrackedActionInStateRuntime(
         stateRuntime: StateRuntime,
-        key: Any,
+        trackedKey: Any,
         dispatcher: CoroutineDispatcher,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
@@ -455,15 +457,23 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     block = block,
                 )
             } finally {
-                if (stateRuntime.actionLaunchJobs[key] === coroutineContext[Job]) {
-                    stateRuntime.actionLaunchJobs.remove(key)
+                if (stateRuntime.actionLaunchJobs[trackedKey] === coroutineContext[Job]) {
+                    stateRuntime.actionLaunchJobs.remove(trackedKey)
                 }
             }
         }
     }
 
-    private fun cancelTrackedActionLaunch(stateRuntime: StateRuntime, key: Any) {
-        stateRuntime.actionLaunchJobs.remove(key)?.cancel()
+    private fun resolveTrackedActionLaunchKey(action: A, control: LaunchControl): Any {
+        return when (control) {
+            LaunchControl.Concurrent -> error("Concurrent launches do not have a tracked lane")
+            is LaunchControl.Replace -> control.lane ?: action::class
+            is LaunchControl.DropNew -> control.lane ?: action::class
+        }
+    }
+
+    private fun cancelTrackedActionLaunch(stateRuntime: StateRuntime, trackedKey: Any) {
+        stateRuntime.actionLaunchJobs.remove(trackedKey)?.cancel()
     }
 
     private suspend fun <LS> executeLaunchInStateRuntime(

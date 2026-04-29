@@ -5,7 +5,7 @@
 
 ## 背景
 
-`#190` では、`action { launch { ... } }` で開始した仕事を key 単位で明示的に止める `cancelLaunch(key)` を検討している。
+`#190` では、`action { launch { ... } }` で開始した仕事を lane 単位で明示的に止める `cancelLaunch(lane)` を検討している。
 
 一方で、`launch` を使わない通常の `action {}`、`enter {}`、`exit {}`、`error {}`、および `transaction {}` には、いま実行中の処理を途中で止める API はない。
 

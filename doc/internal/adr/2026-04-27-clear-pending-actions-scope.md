@@ -31,7 +31,7 @@
 
 - `clearPendingActions()` が意味を持つのは、「いま何が current store work で、その後ろに何が pending か」が直列 pipeline 上で定まっているときである。
 - `launch {}` 本体は state に所有される非同期処理であり、store の直列 pipeline そのものではない。ここで queue を直接掃除できるようにすると、遅延や I/O の後の任意の時点で pending action を破棄できてしまい、挙動を追いにくくなる。
-- `launch {}` 本体で必要なのは queue 制御よりも、state-owned job の寿命制御である。そちらは `cancelLaunch(key)` のような action-launch cancellation で扱う方が役割分離として自然である。
+- `launch {}` 本体で必要なのは queue 制御よりも、state-owned job の寿命制御である。そちらは `cancelLaunch(lane)` のような action-launch cancellation で扱う方が役割分離として自然である。
 - launched coroutine から `transaction {}` に入った時点では、処理は再び store の直列 pipeline に戻る。そのため、その瞬間に「この結果を採用するなら、古い pending action は不要」と判断して `clearPendingActions()` を呼ぶのは意味が通る。
 - `enter {}`、`exit {}`、`error {}` も技術的には store work であり、そこで pending action を捨てる意味はある。したがって公開面から完全に外す必要まではない。
 - ただし、可読性の観点では `action {}` と `transaction {}` の方が「何を確定させた結果として queue を切るのか」を読み取りやすい。README や KDoc では、この利用の重心を明示した方がよい。
