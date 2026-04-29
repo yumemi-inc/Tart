@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KClass
 
 @OptIn(InternalTartApi::class)
@@ -136,13 +137,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     final override fun collectState(state: (S) -> Unit) {
-        coroutineScope.launch(Dispatchers.Unconfined) {
+        coroutineScope.launch {
             this@StoreImpl.state.collect { state(it) }
         }
     }
 
     final override fun collectEvent(event: (E) -> Unit) {
-        coroutineScope.launch((Dispatchers.Unconfined)) {
+        coroutineScope.launch {
             this@StoreImpl.event.collect { event(it) }
         }
     }
@@ -176,8 +177,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         this@StoreImpl.dispatch(action)
                     }
 
-                    override fun launch(dispatcher: CoroutineDispatcher, block: suspend CoroutineScope.() -> Unit) {
-                        coroutineScope.launch(dispatcher) {
+                    override fun launch(dispatcher: CoroutineDispatcher?, block: suspend CoroutineScope.() -> Unit) {
+                        coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                             block()
                         }
                     }
@@ -318,7 +319,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun launch(
-                    dispatcher: CoroutineDispatcher,
+                    dispatcher: CoroutineDispatcher?,
                     control: LaunchControl,
                     block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
                 ) {
@@ -366,7 +367,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(dispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
+                override fun launch(dispatcher: CoroutineDispatcher?, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
                     launchInStateRuntime(
                         stateRuntime = stateRuntime,
                         dispatcher = dispatcher,
@@ -383,11 +384,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchInStateRuntime(
         stateRuntime: StateRuntime,
-        dispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher?,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch(dispatcher) {
+        return stateRuntime.scope.launch(dispatcher ?: EmptyCoroutineContext) {
             executeLaunchInStateRuntime(
                 stateRuntime = stateRuntime,
                 dispatcher = dispatcher,
@@ -401,7 +402,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateRuntime: StateRuntime,
         action: A,
         control: LaunchControl,
-        dispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher?,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -444,11 +445,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun <LS> launchTrackedActionInStateRuntime(
         stateRuntime: StateRuntime,
         trackedKey: Any,
-        dispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher?,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch(dispatcher) {
+        return stateRuntime.scope.launch(dispatcher ?: EmptyCoroutineContext) {
             try {
                 executeLaunchInStateRuntime(
                     stateRuntime = stateRuntime,
@@ -478,7 +479,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun <LS> executeLaunchInStateRuntime(
         stateRuntime: StateRuntime,
-        dispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher?,
         buildLaunchScope: () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -487,7 +488,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             block(launchScope)
         } catch (t: Throwable) {
             rethrowIfFatal(t)
-            coroutineScope.launch(dispatcher) {
+            coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                 mutex.withLock {
                     if (stateRuntime.scope.isActive) {
                         onErrorOccurred(currentState, t)
@@ -505,8 +506,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
-                val job = coroutineScope.launch(dispatcher) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null
@@ -557,8 +558,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
-                val job = coroutineScope.launch(dispatcher) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
+                val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null
