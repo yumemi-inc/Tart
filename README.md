@@ -109,7 +109,7 @@ val store: Store<CounterState, CounterAction, Nothing> = Store {
 
 Define how *Action*s change *State* using the `state{}` and `action{}` blocks.
 Specify the resulting *State* with `nextState()`.
-If you want to compute and return the next state inside a block, use `nextStateBy { ... }`.
+If you want to compute and return the next state inside a block whose receiver is the current state, use `nextStateBy { ... }`.
 If neither `nextState()` nor `nextStateBy()` is specified, the current state remains unchanged.
 
 ```kt
@@ -138,7 +138,7 @@ For conditional or complex updates, `nextStateBy {}` can make the computation ea
 nextStateBy {
     // ...
     val newCount = ...
-    state.copy(count = newCount)
+    copy(count = newCount)
 }
 ```
 

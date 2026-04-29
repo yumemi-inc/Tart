@@ -301,8 +301,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = state
                 }
 
-                override fun nextStateBy(block: () -> S) {
-                    newState = block()
+                override fun nextStateBy(block: S.() -> S) {
+                    newState = state.block()
                 }
 
                 override fun clearPendingActions() {
@@ -355,8 +355,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = state
                 }
 
-                override fun nextStateBy(block: () -> S) {
-                    newState = block()
+                override fun nextStateBy(block: S.() -> S) {
+                    newState = state.block()
                 }
 
                 override fun clearPendingActions() {
@@ -518,8 +518,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = state
                                 }
 
-                                override fun nextStateBy(block: () -> S) {
-                                    newState = block()
+                                override fun nextStateBy(block: S.() -> S) {
+                                    newState = currentState.block()
                                 }
 
                                 override fun clearPendingActions() {
@@ -571,8 +571,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                     newState = state
                                 }
 
-                                override fun nextStateBy(block: () -> S) {
-                                    newState = block()
+                                override fun nextStateBy(block: S.() -> S) {
+                                    newState = currentState.block()
                                 }
 
                                 override fun clearPendingActions() {
@@ -649,8 +649,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     newState = state
                 }
 
-                override fun nextStateBy(block: () -> S) {
-                    newState = block()
+                override fun nextStateBy(block: S.() -> S) {
+                    newState = state.block()
                 }
 
                 override fun clearPendingActions() {

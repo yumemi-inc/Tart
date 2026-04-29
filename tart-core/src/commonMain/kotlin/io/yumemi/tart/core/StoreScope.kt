@@ -31,9 +31,9 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Updates the current state with a new state value computed from the given block.
      * Used within enter handlers to modify the state with computed values.
      *
-     * @param block A function that computes and returns the new state
+     * @param block A function whose receiver is the current state and that returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextStateBy(block: S2.() -> S)
 
     /**
      * Clears actions that are already queued behind the currently executing store work.
@@ -114,9 +114,9 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
              * Updates the current state with a new state value computed from the given block.
              * Used within transaction blocks to modify the state with computed values.
              *
-             * @param block A function that computes and returns the new state
+             * @param block A function whose receiver is the current state and that returns the new state
              */
-            fun nextStateBy(block: () -> S)
+            fun nextStateBy(block: S2.() -> S)
 
             /**
              * Clears actions that are already queued behind the currently executing store work.
@@ -189,9 +189,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * Updates the current state with a new state value computed from the given block.
      * Used within action handlers to modify the state with computed values.
      *
-     * @param block A function that computes and returns the new state
+     * @param block A function whose receiver is the current state and that returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextStateBy(block: S2.() -> S)
 
     /**
      * Clears actions that are already queued behind the currently executing store work.
@@ -295,9 +295,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
              * Updates the current state with a new state value computed from the given block.
              * Used within transaction blocks to modify the state with computed values.
              *
-             * @param block A function that computes and returns the new state
+             * @param block A function whose receiver is the current state and that returns the new state
              */
-            fun nextStateBy(block: () -> S)
+            fun nextStateBy(block: S2.() -> S)
 
             /**
              * Clears actions that are already queued behind the currently executing store work.
@@ -344,9 +344,9 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
      * Updates the current state with a new state value computed from the given block.
      * Used within error handlers to modify the state with computed values.
      *
-     * @param block A function that computes and returns the new state
+     * @param block A function whose receiver is the current state and that returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextStateBy(block: S2.() -> S)
 
     /**
      * Clears actions that are already queued behind the currently executing store work.

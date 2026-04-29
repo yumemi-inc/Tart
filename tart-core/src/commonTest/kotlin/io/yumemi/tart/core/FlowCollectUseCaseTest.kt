@@ -68,7 +68,7 @@ class FlowCollectUseCaseTest {
                     launch {
                         dataFlow.collect { value ->
                             transaction {
-                                nextStateBy { state.copy(value = value) }
+                                nextStateBy { copy(value = value) }
                             }
                         }
                     }

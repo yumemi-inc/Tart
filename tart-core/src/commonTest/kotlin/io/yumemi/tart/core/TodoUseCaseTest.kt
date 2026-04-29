@@ -166,11 +166,11 @@ class TodoUseCaseTest {
 
                     nextStateBy {
                         // Create updated todo list
-                        val updatedTodoList = state.todos.map {
+                        val updatedTodoList = todos.map {
                             if (it.id == action.todoId) savedTodo else it
                         }
 
-                        state.copy(todos = updatedTodoList)
+                        copy(todos = updatedTodoList)
                     }
                 }
 
@@ -199,7 +199,7 @@ class TodoUseCaseTest {
 
                     nextStateBy {
                         // Create updated todo list with the edited task
-                        val updatedTodoList = state.allTodos.map {
+                        val updatedTodoList = allTodos.map {
                             if (it.id == savedTodo.id) savedTodo else it
                         }
 
