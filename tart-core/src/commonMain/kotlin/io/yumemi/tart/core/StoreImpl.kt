@@ -321,7 +321,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override fun launch(
                     dispatcher: CoroutineDispatcher?,
                     control: LaunchControl,
-                    block: suspend ActionScope.LaunchScope<S, A, E, S>.() -> Unit,
+                    block: suspend ActionLaunchScope<S, A, E, S>.() -> Unit,
                 ) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Tart] State scope is not found"))
                     launchActionInStateRuntime(
@@ -367,7 +367,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(dispatcher: CoroutineDispatcher?, block: suspend EnterScope.LaunchScope<S, E, S>.() -> Unit) {
+                override fun launch(dispatcher: CoroutineDispatcher?, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
                     launchInStateRuntime(
                         stateRuntime = stateRuntime,
                         dispatcher = dispatcher,
@@ -498,20 +498,20 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterScope.LaunchScope<S, E, S> {
-        return object : EnterScope.LaunchScope<S, E, S> {
+    private fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterLaunchScope<S, E, S> {
+        return object : EnterLaunchScope<S, E, S> {
             override val isActive: Boolean get() = stateScope.isActive
 
             override suspend fun event(event: E) {
                 emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterScope.LaunchScope.TransactionScope<S, E, S>.() -> Unit) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
                 val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null
-                            val transactionScope = object : EnterScope.LaunchScope.TransactionScope<S, E, S> {
+                            val transactionScope = object : EnterTransactionScope<S, E, S> {
                                 override val state: S = currentState
 
                                 override fun nextState(state: S) {
@@ -549,8 +549,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private fun buildActionLaunchScope(stateScope: CoroutineScope, launchedAction: A): ActionScope.LaunchScope<S, A, E, S> {
-        return object : ActionScope.LaunchScope<S, A, E, S> {
+    private fun buildActionLaunchScope(stateScope: CoroutineScope, launchedAction: A): ActionLaunchScope<S, A, E, S> {
+        return object : ActionLaunchScope<S, A, E, S> {
             override val isActive: Boolean get() = stateScope.isActive
             override val action: A = launchedAction
 
@@ -558,12 +558,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionScope.LaunchScope.TransactionScope<S, A, E, S>.() -> Unit) {
+            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
                 val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
                         if (stateScope.isActive) {
                             var newState: S? = null
-                            val transactionScope = object : ActionScope.LaunchScope.TransactionScope<S, A, E, S> {
+                            val transactionScope = object : ActionTransactionScope<S, A, E, S> {
                                 override val state: S = currentState
                                 override val action: A = launchedAction
 
