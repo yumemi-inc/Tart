@@ -10,6 +10,8 @@ import kotlinx.coroutines.CoroutineScope
 interface MiddlewareScope<A : Action> {
     /**
      * Dispatches an action to the store.
+     * This enqueues the action and returns immediately.
+     * It does not wait for action handling to complete.
      *
      * @param action The action to dispatch
      */
@@ -17,6 +19,8 @@ interface MiddlewareScope<A : Action> {
 
     /**
      * Launches a coroutine within the store's scope.
+     * The launched coroutine is tied to the Store lifecycle and is cancelled when the Store is disposed.
+     * It is not cancelled automatically when the current state changes.
      *
      * @param dispatcher Optional CoroutineDispatcher override for the coroutine.
      * When null, the coroutine inherits the Store's current execution context.
