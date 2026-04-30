@@ -23,6 +23,11 @@ internal object MessageHub {
  * Extension function for sending messages to the MessageHub.
  * This allows any StoreScope to easily send messages to other components.
  *
+ * Messages are sent to a process-wide shared bus.
+ * All started Stores using `receiveMessages(...)` subscribe to the same bus.
+ * Messages are not replayed, so receivers that are not actively collecting when a message is sent
+ * will not receive that past message.
+ *
  * @param message The message to send
  */
 suspend fun StoreScope.message(message: Message) {
