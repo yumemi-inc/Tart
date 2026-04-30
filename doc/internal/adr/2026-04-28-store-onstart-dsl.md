@@ -1,7 +1,7 @@
 # `Store{}` DSL に state 非依存の `onStart {}` は追加しない
 
-- 更新日: 2026-04-28
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md), [Middleware には直接 state 更新 API を入れない](./2026-04-26-middleware-dispatch-only.md)
+- 更新日: 2026-04-30
+- 関連: [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md), [Middleware には直接 state 更新 API を入れない](./2026-04-26-middleware-dispatch-only.md)
 
 ## 背景
 
