@@ -38,8 +38,8 @@ private sealed interface CounterAction : Action {
 
 private class TestLogger : Logger {
     val logs = mutableListOf<String>()
-    override suspend fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: String) {
-        logs.add(message)
+    override fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: () -> String) {
+        logs.add(message())
     }
 }
 
