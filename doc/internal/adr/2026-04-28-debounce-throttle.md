@@ -1,7 +1,7 @@
 # `debounce` / `throttle` は Store の built-in として入れない
 
-- 更新日: 2026-04-28
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [`action` の async 境界は明示のまま維持する](./2026-04-26-action-async-boundary.md)
+- 更新日: 2026-04-30
+- 関連: [`action` の async 境界は明示のまま維持する](./2026-04-26-action-async-boundary.md)
 
 ## 背景
 

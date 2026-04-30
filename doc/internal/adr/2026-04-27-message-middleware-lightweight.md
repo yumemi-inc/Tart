@@ -1,7 +1,7 @@
 # MessageMiddleware は簡易な built-in に留める
 
-- 更新日: 2026-04-27
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md), [Event 用 MutableSharedFlow の設定方針](./2026-04-23-event-sharedflow-policy.md)
+- 更新日: 2026-04-30
+- 関連: [Event 用 MutableSharedFlow の設定方針](./2026-04-23-event-sharedflow-policy.md)
 
 ## 背景
 

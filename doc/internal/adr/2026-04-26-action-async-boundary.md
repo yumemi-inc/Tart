@@ -1,7 +1,7 @@
 # `action` の async 境界は明示のまま維持する
 
-- 更新日: 2026-04-26
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
+- 更新日: 2026-04-30
+- 関連: [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
 
 ## 背景
 

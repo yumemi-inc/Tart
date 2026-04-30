@@ -1,7 +1,6 @@
 # State 遷移指定 API は `nextState()` と `nextStateBy {}` の 2 本を維持する
 
 - 更新日: 2026-04-30
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md)
 
 ## 背景
 

@@ -1,7 +1,7 @@
 # Middleware には直接 state 更新 API を入れない
 
-- 更新日: 2026-04-29
-- 関連: [Tart の設計原則](../design/2026-04-23-design-principles.md), [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md)
+- 更新日: 2026-04-30
+- 関連: [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md)
 
 ## 背景
 

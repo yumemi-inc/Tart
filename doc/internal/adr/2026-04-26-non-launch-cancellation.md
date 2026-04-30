@@ -1,7 +1,7 @@
 # 非 `launch` 処理には cancellation API を入れない
 
-- 更新日: 2026-04-26
-- 関連: [#190](https://github.com/yumemi-inc/Tart/issues/190), [PendingActionPolicy 拡張案の却下](./2026-04-22-pending-action-policy.md), [Tart の設計原則](../design/2026-04-23-design-principles.md)
+- 更新日: 2026-04-30
+- 関連: [#190](https://github.com/yumemi-inc/Tart/issues/190)
 
 ## 背景
 
