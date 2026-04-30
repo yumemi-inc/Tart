@@ -96,12 +96,12 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         val handler: suspend SC.() -> Unit,
     )
 
-    val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, A, E, S>>>()
+    val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
     val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
     val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E, S>>>()
     val registeredErrorHandlers = mutableListOf<StateHandler<(S, Throwable) -> Boolean, ErrorScope<S, E, S, Throwable>>>()
 
-    private val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = {
+    private val onEnter: suspend EnterScope<S, E, S>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredEnterHandlers.firstOrNull { it.predicate(state) }
         matchingHandler?.handler?.invoke(this) ?: state
     }
@@ -140,7 +140,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             }
         }
 
-        val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, A, E, S2>>>()
+        val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, E, S2>>>()
         val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
         val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
         val stateErrorHandlers = mutableListOf<ThreadedHandler<(Throwable) -> Boolean, ErrorScope<S, E, S2, Throwable>>>()
@@ -154,7 +154,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param dispatcher Optional CoroutineDispatcher override for executing the enter handler
          * @param block The handler function that will be executed when entering this state
          */
-        fun enter(dispatcher: CoroutineDispatcher? = null, block: suspend EnterScope<S, A, E, S2>.() -> Unit) {
+        fun enter(dispatcher: CoroutineDispatcher? = null, block: suspend EnterScope<S, E, S2>.() -> Unit) {
             stateEnterHandlers.add(ThreadedHandler(dispatcher, null, block))
         }
 
@@ -236,7 +236,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { it is S2 },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        enterHandler.invoke(this as EnterScope<S, A, E, S2>)
+                        enterHandler.invoke(this as EnterScope<S, E, S2>)
                     },
                 ),
             )
@@ -290,7 +290,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override val middlewareExecutionPolicy: MiddlewareExecutionPolicy = storeMiddlewareExecutionPolicy
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
-            override val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onEnter
+            override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit = this@StoreBuilder.onError
