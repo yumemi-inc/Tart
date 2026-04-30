@@ -20,8 +20,11 @@ private abstract class MiddlewareImpl<S : State, A : Action, E : Event> : Middle
 
 /**
  * Creates a middleware that receives messages from the MessageHub.
- * This middleware automatically subscribes to the message flow when the store starts 
+ * This middleware automatically subscribes to the message flow when the store starts
  * and processes each message with the provided block.
+ *
+ * The underlying MessageHub is process-wide and shared across all Stores using this middleware.
+ * Messages are delivered only to active subscribers and are not replayed to Stores that start later.
  *
  * @param block The function to process received messages with MiddlewareScope as receiver
  * @return A middleware that processes messages

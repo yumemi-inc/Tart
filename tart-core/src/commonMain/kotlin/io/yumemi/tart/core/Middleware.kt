@@ -4,6 +4,12 @@ package io.yumemi.tart.core
  * Interface for intercepting Store lifecycle events.
  * By implementing Middleware, you can insert processing at various lifecycle points
  * such as action dispatch, state changes, event emission, etc.
+ *
+ * Middleware hooks are suspending functions and are awaited by the Store.
+ * Long-running work in a hook can delay Store startup, action handling, state transitions,
+ * event emission, and error processing.
+ * When work should continue in the background, start it from [onStart] or another hook using
+ * [MiddlewareScope.launch].
  */
 interface Middleware<S : State, A : Action, E : Event> {
     /**

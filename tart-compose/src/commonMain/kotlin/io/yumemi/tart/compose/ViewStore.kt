@@ -57,6 +57,10 @@ class ViewStore<S : State, A : Action, E : Event>(
     /**
      * Handles events of a specified type.
      *
+     * This collects events after the composable enters the composition.
+     * It receives only events emitted while this handler is actively collecting.
+     * Events emitted earlier are not replayed.
+     *
      * @param block Function to process the event
      */
     @Suppress("ComposableNaming")
@@ -73,6 +77,11 @@ class ViewStore<S : State, A : Action, E : Event>(
 /**
  * Composable function that creates and returns a new ViewStore instance from a Store.
  * Monitors state changes in the Store and triggers UI redrawing.
+ *
+ * This starts collecting [Store.state] immediately, so it can start the Store before any
+ * [ViewStore.handle] collector begins observing events.
+ * As a result, startup events such as events emitted from initial `enter {}` processing
+ * may be emitted before handlers in the same composition start collecting them.
  *
  * @param key Key used to remember and retain the Store instance
  * @param autoDispose Whether to dispose the Store when the component is disposed
