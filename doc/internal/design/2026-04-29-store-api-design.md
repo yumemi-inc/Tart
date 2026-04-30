@@ -1,7 +1,7 @@
 # Store surface の設計メモ
 
 - 更新日: 2026-04-29
-- 関連: [Tart の設計原則](./2026-04-23-design-principles.md), [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md), [`Store{}` DSL に state 非依存の `onStart {}` は追加しない](../adr/2026-04-28-store-onstart-dsl.md)
+- 関連: [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md)
 
 ## 背景
 
