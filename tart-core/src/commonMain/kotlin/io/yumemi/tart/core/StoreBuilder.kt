@@ -148,6 +148,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         /**
          * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
          * If no dispatcher is provided, the handler runs in the Store's current execution context.
+         * If multiple `enter {}` handlers can match the current state, the first registered handler is used.
+         * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
          * @param dispatcher Optional CoroutineDispatcher override for executing the enter handler
          * @param block The handler function that will be executed when entering this state
@@ -159,6 +161,9 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         /**
          * Registers a handler for a specific action type in the current state configuration
          * with an optional CoroutineDispatcher.
+         * If multiple `action {}` handlers can match the current state and action,
+         * the first registered handler is used.
+         * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
          * @param dispatcher Optional CoroutineDispatcher override for executing the action handler
          * @param block The handler function that processes the action and updates the state
@@ -179,6 +184,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         /**
          * Registers a handler to be invoked when exiting this state with the specified CoroutineDispatcher.
          * If no dispatcher is provided, the handler runs in the Store's current execution context.
+         * If multiple `exit {}` handlers can match the current state, the first registered handler is used.
+         * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
          * @param dispatcher Optional CoroutineDispatcher override for executing the exit handler
          * @param block The handler function that will be executed when exiting this state
@@ -190,6 +197,9 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         /**
          * Registers a handler for a specific error type in the current state configuration
          * with an optional CoroutineDispatcher.
+         * If multiple `error {}` handlers can match the current state and error,
+         * the first registered handler is used.
+         * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
          * @param dispatcher Optional CoroutineDispatcher override for executing the error handler
          * @param block The handler function that processes the error and updates the state
@@ -212,6 +222,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     /**
      * Configures handlers for actions when the store is in a specific state type.
      * This creates a DSL scope for defining type-specific action handlers.
+     * Handler selection is first-match in registration order.
+     * If both broad and specific handlers can match, place broader handlers later.
      *
      * @param block The configuration block where you can define action handlers using the action() function
      */

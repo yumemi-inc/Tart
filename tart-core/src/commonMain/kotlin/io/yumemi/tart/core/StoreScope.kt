@@ -15,21 +15,26 @@ sealed interface StoreScope
 @TartStoreDsl
 interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
-     * The current state that's being entered
+     * The current state snapshot when this handler is executing.
+     * This value does not change immediately when [nextState] or [nextStateBy] is called.
      */
     val state: S2
 
     /**
-     * Updates the current state with a new state value.
-     * Used within enter handlers to modify the state.
+     * Registers the next state to apply after the current enter handler finishes.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
      *
      * @param state The new state value to update to
      */
     fun nextState(state: S)
 
     /**
-     * Updates the current state with a new state value computed from the given block.
-     * Used within enter handlers to modify the state with computed values.
+     * Registers the next state to apply after the current enter handler finishes
+     * by computing it in the given block.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
+     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
@@ -42,8 +47,8 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     fun clearPendingActions()
 
     /**
-     * Emits an event from the enter handler.
-     * Use this to communicate with the outside world about important occurrences.
+     * Emits an event immediately from the current enter handler.
+     * Emission is not deferred until after a next state registered in this handler is applied.
      *
      * @param event The event to emit
      */
@@ -74,8 +79,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         val isActive: Boolean
 
         /**
-         * Emits an event from the launched coroutine.
-         * Use this to communicate with the outside world about important occurrences.
+         * Emits an event immediately from the launched coroutine.
          *
          * @param event The event to emit
          */
@@ -98,21 +102,26 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         @TartStoreDsl
         interface TransactionScope<S : State, E : Event, S2 : S> : StoreScope {
             /**
-             * The current state when the transaction is being executed
+             * The current state snapshot when this transaction is executing.
+             * This value does not change immediately when [nextState] or [nextStateBy] is called.
              */
             val state: S2
 
             /**
-             * Updates the current state with a new state value.
-             * Used within transaction blocks to modify the state.
+             * Registers the next state to apply after the current transaction finishes.
+             * This does not update [state] immediately.
+             * If called multiple times in the same transaction, the last specified state is used.
              *
              * @param state The new state value to update to
              */
             fun nextState(state: S)
 
             /**
-             * Updates the current state with a new state value computed from the given block.
-             * Used within transaction blocks to modify the state with computed values.
+             * Registers the next state to apply after the current transaction finishes
+             * by computing it in the given block.
+             * This does not update [state] immediately.
+             * If called multiple times in the same transaction, the last specified state is used.
+             * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
              *
              * @param block A function that computes and returns the new state
              */
@@ -125,8 +134,8 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             fun clearPendingActions()
 
             /**
-             * Emits an event from the transaction.
-             * Use this to communicate with the outside world about important occurrences.
+             * Emits an event immediately from the current transaction.
+             * Emission is not deferred until after a next state registered in this transaction is applied.
              *
              * @param event The event to emit
              */
@@ -142,7 +151,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
 @TartStoreDsl
 interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
     /**
-     * The current state that's being exited
+     * The current state snapshot when this handler is executing.
      */
     val state: S2
 
@@ -153,8 +162,7 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
     fun clearPendingActions()
 
     /**
-     * Emits an event from the exit handler.
-     * Use this to communicate with the outside world about important occurrences.
+     * Emits an event immediately from the current exit handler.
      *
      * @param event The event to emit
      */
@@ -168,7 +176,8 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
 @TartStoreDsl
 interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
-     * The current state when the action is being processed
+     * The current state snapshot when this handler is executing.
+     * This value does not change immediately when [nextState] or [nextStateBy] is called.
      */
     val state: S2
 
@@ -178,16 +187,20 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     val action: A
 
     /**
-     * Updates the current state with a new state value.
-     * Used within action handlers to modify the state.
+     * Registers the next state to apply after the current action handler finishes.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
      *
      * @param state The new state value to update to
      */
     fun nextState(state: S)
 
     /**
-     * Updates the current state with a new state value computed from the given block.
-     * Used within action handlers to modify the state with computed values.
+     * Registers the next state to apply after the current action handler finishes
+     * by computing it in the given block.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
+     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
@@ -200,8 +213,8 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     fun clearPendingActions()
 
     /**
-     * Emits an event from the action handler.
-     * Use this to communicate with the outside world about important occurrences.
+     * Emits an event immediately from the current action handler.
+     * Emission is not deferred until after a next state registered in this handler is applied.
      *
      * @param event The event to emit
      */
@@ -250,8 +263,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         val action: A
 
         /**
-         * Emits an event from the launched coroutine.
-         * Use this to communicate with the outside world about important occurrences.
+         * Emits an event immediately from the launched coroutine.
          *
          * @param event The event to emit
          */
@@ -274,7 +286,8 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         @TartStoreDsl
         interface TransactionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             /**
-             * The current state when the transaction is being executed
+             * The current state snapshot when this transaction is executing.
+             * This value does not change immediately when [nextState] or [nextStateBy] is called.
              */
             val state: S2
 
@@ -284,16 +297,20 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             val action: A
 
             /**
-             * Updates the current state with a new state value.
-             * Used within transaction blocks to modify the state.
+             * Registers the next state to apply after the current transaction finishes.
+             * This does not update [state] immediately.
+             * If called multiple times in the same transaction, the last specified state is used.
              *
              * @param state The new state value to update to
              */
             fun nextState(state: S)
 
             /**
-             * Updates the current state with a new state value computed from the given block.
-             * Used within transaction blocks to modify the state with computed values.
+             * Registers the next state to apply after the current transaction finishes
+             * by computing it in the given block.
+             * This does not update [state] immediately.
+             * If called multiple times in the same transaction, the last specified state is used.
+             * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
              *
              * @param block A function that computes and returns the new state
              */
@@ -306,8 +323,8 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             fun clearPendingActions()
 
             /**
-             * Emits an event from the transaction.
-             * Use this to communicate with the outside world about important occurrences.
+             * Emits an event immediately from the current transaction.
+             * Emission is not deferred until after a next state registered in this transaction is applied.
              *
              * @param event The event to emit
              */
@@ -323,7 +340,8 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
 @TartStoreDsl
 interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     /**
-     * The current state when the error occurred
+     * The current state snapshot when this handler is executing.
+     * This value does not change immediately when [nextState] or [nextStateBy] is called.
      */
     val state: S2
 
@@ -333,16 +351,20 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     val error: T
 
     /**
-     * Updates the current state with a new state value.
-     * Used within error handlers to modify the state.
+     * Registers the next state to apply after the current error handler finishes.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
      *
      * @param state The new state value to update to
      */
     fun nextState(state: S)
 
     /**
-     * Updates the current state with a new state value computed from the given block.
-     * Used within error handlers to modify the state with computed values.
+     * Registers the next state to apply after the current error handler finishes
+     * by computing it in the given block.
+     * This does not update [state] immediately.
+     * If called multiple times in the same handler, the last specified state is used.
+     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
@@ -355,8 +377,8 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     fun clearPendingActions()
 
     /**
-     * Emits an event from the error handler.
-     * Use this to communicate with the outside world about important occurrences.
+     * Emits an event immediately from the current error handler.
+     * Emission is not deferred until after a next state registered in this handler is applied.
      *
      * @param event The event to emit
      */
