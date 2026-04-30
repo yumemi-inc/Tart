@@ -75,14 +75,14 @@ class ViewStore<S : State, A : Action, E : Event>(
  * Monitors state changes in the Store and triggers UI redrawing.
  *
  * @param key Key used to remember and retain the Store instance
- * @param autoDispose Whether to dispose the Store when the component is disposed
+ * @param autoClose Whether to close the Store when the composable leaves the composition
  * @param store Composable function to create the source Store instance
  * @return A ViewStore instance
  */
 @Suppress("unused")
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoDispose: Boolean = false, store: @Composable () -> Store<S, A, E>): ViewStore<S, A, E> {
-    val fixedAutoDispose = remember { autoDispose }
+fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoClose: Boolean = false, store: @Composable () -> Store<S, A, E>): ViewStore<S, A, E> {
+    val fixedAutoClose = remember { autoClose }
 
     val holder = remember(key) {
         object {
@@ -95,8 +95,8 @@ fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoD
 
     DisposableEffect(rememberedStore) {
         onDispose {
-            if (fixedAutoDispose) {
-                rememberedStore.dispose()
+            if (fixedAutoClose) {
+                rememberedStore.close()
             }
         }
     }

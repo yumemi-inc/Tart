@@ -544,7 +544,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-If you don’t use an auto-disposed scope like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.dispose()` method explicitly when the *Store* is no longer needed.
+If you don’t use an auto-managed scope like ViewModel's `viewModelScope` or Compose's `rememberCoroutineScope()`, call Store's `.close()` method explicitly when the *Store* is no longer needed.
 Then, processing of all Coroutines will stop.
 
 #### Specifying CoroutineDispatchers
@@ -728,7 +728,7 @@ fun CounterStore(
 fun CounterScreen(
     viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
         CounterStore(
-            coroutineContext = rememberCoroutineScope().coroutineContext, // or, specify the autoDispose option in rememberViewStore {}
+            coroutineContext = rememberCoroutineScope().coroutineContext, // or, specify the autoClose option in rememberViewStore {}
             stateSaver = rememberStateSaver(), // state persistence during screen rotation, etc.
             counterRepository = CounterRepositoryImpl(),
         )

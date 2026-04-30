@@ -90,29 +90,29 @@ class ViewStoreJvmTest {
     }
 
     @Test
-    fun rememberViewStore_disposeBehaviorUsesInitialAutoDisposeValue() = runTest(testDispatcher) {
-        val neverDisposeStore = TestStore(UiState.Ready(0))
-        var autoDispose = mutableStateOf(false)
+    fun rememberViewStore_closeBehaviorUsesInitialAutoCloseValue() = runTest(testDispatcher) {
+        val neverCloseStore = TestStore(UiState.Ready(0))
+        var autoClose = mutableStateOf(false)
 
         withComposition(
             content = {
-                rememberViewStore(autoDispose = autoDispose.value) { neverDisposeStore }
+                rememberViewStore(autoClose = autoClose.value) { neverCloseStore }
             },
             afterSetContent = {
-                autoDispose.value = true
+                autoClose.value = true
             },
         )
 
-        assertEquals(0, neverDisposeStore.disposeCount)
+        assertEquals(0, neverCloseStore.closeCount)
 
-        val disposeStore = TestStore(UiState.Ready(0))
+        val closeStore = TestStore(UiState.Ready(0))
         withComposition(
             content = {
-                rememberViewStore(autoDispose = true) { disposeStore }
+                rememberViewStore(autoClose = true) { closeStore }
             },
         )
 
-        assertEquals(1, disposeStore.disposeCount)
+        assertEquals(1, closeStore.closeCount)
     }
 
     @Test
@@ -143,11 +143,11 @@ class ViewStoreJvmTest {
         )
 
         assertEquals(UiState.Ready(1), store.currentState)
-        store.dispose()
+        store.close()
     }
 
     @Test
-    fun rememberViewStore_withRealStore_autoDisposeStopsFurtherDispatch() = runTest(testDispatcher) {
+    fun rememberViewStore_withRealStore_autoCloseStopsFurtherDispatch() = runTest(testDispatcher) {
         val store = Store<UiState, UiAction, UiEvent>(initialState = UiState.Ready(0)) {
             coroutineContext(coroutineContext)
             state<UiState.Ready> {
@@ -159,7 +159,7 @@ class ViewStoreJvmTest {
 
         withComposition(
             content = {
-                rememberViewStore(autoDispose = true) { store }
+                rememberViewStore(autoClose = true) { store }
             },
             afterSetContent = {
                 store.dispatch(UiAction.Increment)
@@ -191,7 +191,7 @@ class ViewStoreJvmTest {
 
         withComposition(
             content = {
-                viewStore = rememberViewStore(autoDispose = true) { store }
+                viewStore = rememberViewStore(autoClose = true) { store }
             },
             afterSetContent = {
                 assertEquals(UiState.Loading, viewStore.state)
@@ -258,7 +258,7 @@ private class TestStore(
     override val currentState: UiState get() = state.value
 
     val dispatchedActions = mutableListOf<UiAction>()
-    var disposeCount: Int = 0
+    var closeCount: Int = 0
         private set
 
     override fun dispatch(action: UiAction) {
@@ -269,8 +269,8 @@ private class TestStore(
 
     override fun collectEvent(event: (UiEvent) -> Unit) = Unit
 
-    override fun dispose() {
-        disposeCount++
+    override fun close() {
+        closeCount++
     }
 }
 

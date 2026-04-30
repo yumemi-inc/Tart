@@ -237,7 +237,7 @@ class StoreCancelLaunchTest {
 
         assertEquals(emptyList(), cancelled)
 
-        store.dispose()
+        store.close()
     }
 
     @Test
@@ -261,7 +261,7 @@ class StoreCancelLaunchTest {
 
         assertEquals(emptyList(), cancelled)
 
-        store.dispose()
+        store.close()
         runCurrent()
 
         assertEquals(listOf(-1), cancelled)

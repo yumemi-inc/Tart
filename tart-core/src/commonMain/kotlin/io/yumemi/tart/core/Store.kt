@@ -42,7 +42,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * If your platform requires UI-thread access, move to the appropriate UI thread
      * before touching UI components from the callback.
      *
-     * Collection continues until the Store is disposed.
+     * Collection continues until the Store is closed.
      *
      * @param state Callback called when the state changes
      */
@@ -59,7 +59,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * If your platform requires UI-thread access, move to the appropriate UI thread
      * before touching UI components from the callback.
      *
-     * Collection continues until the Store is disposed.
+     * Collection continues until the Store is closed.
      *
      * @param event Callback called when an event is emitted
      */
@@ -68,9 +68,5 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     /**
      * Releases the Store's resources.
      */
-    fun dispose()
-
-    override fun close() {
-        dispose()
-    }
+    override fun close()
 }
