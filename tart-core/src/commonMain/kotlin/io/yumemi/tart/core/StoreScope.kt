@@ -62,7 +62,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * When null, the coroutine inherits the Store's current execution context.
      * @param block The suspending block of code to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend LaunchScope<S, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend EnterLaunchScope<S, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine.
@@ -93,7 +93,7 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * When null, the transaction inherits the Store's current execution context.
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend TransactionScope<S, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend EnterTransactionScope<S, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
@@ -143,6 +143,18 @@ interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         }
     }
 }
+
+/**
+ * Flattened alias for [EnterScope.LaunchScope] to keep public signatures concise in IDE tooltips.
+ *
+ * `S2` remains because it carries the narrowed state type through to the transaction scope's `state`.
+ */
+typealias EnterLaunchScope<S, E, S2> = EnterScope.LaunchScope<S, E, S2>
+
+/**
+ * Flattened alias for [EnterScope.LaunchScope.TransactionScope] to keep public signatures concise in IDE tooltips.
+ */
+typealias EnterTransactionScope<S, E, S2> = EnterScope.LaunchScope.TransactionScope<S, E, S2>
 
 /**
  * Scope available when a state is being exited.
@@ -241,7 +253,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * may use an explicit [LaunchLane] or the action-local default lane.
      * @param block The suspending block of code to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Concurrent, block: suspend LaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Concurrent, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a launched coroutine from an action handler.
@@ -277,7 +289,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * When null, the transaction inherits the Store's current execution context.
          * @param block The suspending block of code to execute as a transaction
          */
-        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend TransactionScope<S, A, E, S2>.() -> Unit)
+        suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend ActionTransactionScope<S, A, E, S2>.() -> Unit)
 
         /**
          * Scope available within a transaction operation.
@@ -332,6 +344,18 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         }
     }
 }
+
+/**
+ * Flattened alias for [ActionScope.LaunchScope] to keep public signatures concise in IDE tooltips.
+ *
+ * `S2` remains because it carries the narrowed state type through to the transaction scope's `state`.
+ */
+typealias ActionLaunchScope<S, A, E, S2> = ActionScope.LaunchScope<S, A, E, S2>
+
+/**
+ * Flattened alias for [ActionScope.LaunchScope.TransactionScope] to keep public signatures concise in IDE tooltips.
+ */
+typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.TransactionScope<S, A, E, S2>
 
 /**
  * Scope available when an error occurs in a state handler.
