@@ -1,10 +1,10 @@
 # PendingActionPolicy 拡張案の却下
 
-- 更新日: 2026-04-22
+- 更新日: 2026-04-29
 
 ## 背景
 
-現在の `PendingActionPolicy.CLEAR_ON_STATE_EXIT` は、別の state variant への遷移が確定したときだけ、すでに待機している action を捨てる。
+現在の `PendingActionPolicy.ClearOnStateExit` は、別の state variant への遷移が確定したときだけ、すでに待機している action を捨てる。
 
 検討対象にしたのは、次の 2 案。
 
@@ -24,7 +24,7 @@
 
 ## 補足
 
-- 現状の `CLEAR_ON_STATE_EXIT` は「state exit ベース」の挙動であり、「state change ベース」ではない。
+- 現状の `ClearOnStateExit` は「state exit ベース」の挙動であり、「state change ベース」ではない。
 - 「state が変更されたら捨てる」は、`state != nextState` を基準にすると効きすぎる。通常の `copy(...)` を含む多くの更新で待機 action が消えるため、一般 policy としては強すぎる。
 - 「state が変更されたら捨てる」は、利用者から見ても挙動が読みづらい。見た目には通常の state 更新でも待機 action が消えるため、どの更新が action 破棄を引き起こすのかを追いにくい。
 - その種の要件は利用頻度も高くなさそうで、汎用機能として持つより、必要な箇所で `clearPendingActions()` を呼ぶか、state の分け方や世代管理で表現するほうが意図が読みやすい。

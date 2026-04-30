@@ -27,7 +27,7 @@ class StoreMiddlewareExecutionPolicyTest {
         firstMiddlewareStarted: CompletableDeferred<Unit>,
         secondMiddlewareStarted: CompletableDeferred<Unit>,
         firstMiddlewareCanFinish: CompletableDeferred<Unit>,
-        setupPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.CONCURRENT,
+        setupPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.Concurrent,
         overrides: Overrides<AppState, AppAction, Nothing> = {},
     ): Store<AppState, AppAction, Nothing> {
         return Store(
@@ -111,7 +111,7 @@ class StoreMiddlewareExecutionPolicyTest {
             firstMiddlewareStarted = firstMiddlewareStarted,
             secondMiddlewareStarted = secondMiddlewareStarted,
             firstMiddlewareCanFinish = firstMiddlewareCanFinish,
-            setupPolicy = MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER,
+            setupPolicy = MiddlewareExecutionPolicy.InRegistrationOrder,
         )
 
         store.dispatch(AppAction.Increment)
@@ -144,9 +144,9 @@ class StoreMiddlewareExecutionPolicyTest {
             firstMiddlewareStarted = firstMiddlewareStarted,
             secondMiddlewareStarted = secondMiddlewareStarted,
             firstMiddlewareCanFinish = firstMiddlewareCanFinish,
-            setupPolicy = MiddlewareExecutionPolicy.CONCURRENT,
+            setupPolicy = MiddlewareExecutionPolicy.Concurrent,
             overrides = {
-                middlewareExecutionPolicy(MiddlewareExecutionPolicy.IN_REGISTRATION_ORDER)
+                middlewareExecutionPolicy(MiddlewareExecutionPolicy.InRegistrationOrder)
             },
         )
 

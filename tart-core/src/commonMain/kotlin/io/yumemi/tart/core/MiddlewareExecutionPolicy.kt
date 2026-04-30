@@ -7,10 +7,10 @@ enum class MiddlewareExecutionPolicy {
     /**
      * Invokes middleware methods concurrently and waits until all of them complete.
      */
-    CONCURRENT,
+    Concurrent,
 
     /**
      * Invokes middleware methods one by one in registration order.
      */
-    IN_REGISTRATION_ORDER,
+    InRegistrationOrder,
 }

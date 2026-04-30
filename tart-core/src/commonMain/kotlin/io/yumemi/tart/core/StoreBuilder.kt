@@ -12,8 +12,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeCoroutineContext: CoroutineContext = Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
-    private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.CLEAR_ON_STATE_EXIT
-    private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.CONCURRENT
+    private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
+    private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.Concurrent
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**

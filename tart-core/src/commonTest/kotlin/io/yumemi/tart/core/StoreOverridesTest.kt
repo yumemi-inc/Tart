@@ -185,11 +185,11 @@ class StoreOverridesTest {
         val store = Store<PendingPolicyState, PendingPolicyAction, Nothing>(
             initialState = PendingPolicyState.Initial,
             overrides = {
-                pendingActionPolicy(PendingActionPolicy.KEEP)
+                pendingActionPolicy(PendingActionPolicy.Keep)
             },
         ) {
             coroutineContext(testDispatcher)
-            pendingActionPolicy(PendingActionPolicy.CLEAR_ON_STATE_EXIT)
+            pendingActionPolicy(PendingActionPolicy.ClearOnStateExit)
 
             state<PendingPolicyState.Initial> {
                 action<PendingPolicyAction.EnterActiveAfterDelay>(testDispatcher) {
