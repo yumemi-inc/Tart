@@ -6,7 +6,7 @@ package io.yumemi.tart.core
  * For most test cases, prefer `StoreRecorder` or `createRecorder()` from `:tart-test`.
  * Implement this interface when you need custom recording or observation behavior.
  */
-interface StoreObserver<S : State, E : Event> {
+interface StoreObserver<in S : State, in E : Event> {
     /**
      * Called when the Store exposes a state snapshot to observers.
      *

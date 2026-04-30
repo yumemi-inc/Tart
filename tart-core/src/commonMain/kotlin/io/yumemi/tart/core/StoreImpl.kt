@@ -76,7 +76,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val middlewares: List<Middleware<S, A, E>>
 
-    protected abstract val onEnter: suspend EnterScope<S, A, E, S>.() -> Unit
+    protected abstract val onEnter: suspend EnterScope<S, E, S>.() -> Unit
 
     protected abstract val onAction: suspend ActionScope<S, A, E, S>.() -> Unit
 
@@ -349,7 +349,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateRuntimes[state::class] = stateRuntime
         var newState: S? = null
         onEnter.invoke(
-            object : EnterScope<S, A, E, S> {
+            object : EnterScope<S, E, S> {
                 override val state = state
                 override fun nextState(state: S) {
                     newState = state
