@@ -1,6 +1,5 @@
 package io.yumemi.tart.logging
 
-import co.touchlab.kermit.Severity
 import co.touchlab.kermit.Logger.Companion as Kermit
 
 /**
@@ -16,16 +15,18 @@ object DefaultLogger : Logger {
      * @param severity The severity of the log
      * @param tag The tag for the log
      * @param throwable Associated exception (if any)
-     * @param message The log message
+     * @param message Provider for the log message
      */
-    override suspend fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: String) {
+    override fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: () -> String) {
         if (isDisabled) return
-        Kermit.log(
-            severity = severity.map(),
-            tag = tag,
-            throwable = throwable,
-            message = message,
-        )
+        when (severity) {
+            Logger.Severity.Verbose -> Kermit.v(tag, throwable, message)
+            Logger.Severity.Debug -> Kermit.d(tag, throwable, message)
+            Logger.Severity.Info -> Kermit.i(tag, throwable, message)
+            Logger.Severity.Warn -> Kermit.w(tag, throwable, message)
+            Logger.Severity.Error -> Kermit.e(tag, throwable, message)
+            Logger.Severity.Assert -> Kermit.a(tag, throwable, message)
+        }
     }
 
     /**
@@ -34,14 +35,5 @@ object DefaultLogger : Logger {
     @Suppress("unused")
     fun disable() {
         isDisabled = true
-    }
-
-    private fun Logger.Severity.map() = when (this) {
-        Logger.Severity.Verbose -> Severity.Verbose
-        Logger.Severity.Debug -> Severity.Debug
-        Logger.Severity.Info -> Severity.Info
-        Logger.Severity.Warn -> Severity.Warn
-        Logger.Severity.Error -> Severity.Error
-        Logger.Severity.Assert -> Severity.Assert
     }
 }

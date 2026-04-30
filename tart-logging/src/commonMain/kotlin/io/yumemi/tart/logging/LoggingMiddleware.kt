@@ -26,7 +26,7 @@ abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
 
     protected fun log(severity: Logger.Severity, tag: String, throwable: Throwable? = null, message: () -> String) {
         middlewareScope.launch(dispatcher) { // launch Coroutines to avoid blocking Store processing in case of heavy logging
-            logger.log(severity = severity, tag = tag, throwable = throwable, message = message())
+            logger.log(severity = severity, tag = tag, throwable = throwable, message = message)
         }
     }
 }

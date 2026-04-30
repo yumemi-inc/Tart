@@ -4,20 +4,20 @@ package io.yumemi.tart.logging
  * Interface that provides logging functionality.
  * Used for logging internal Tart operations and diagnostic information.
  */
-interface Logger {
+fun interface Logger {
     /**
      * Outputs a log with the specified severity.
      *
      * @param severity The severity of the log
      * @param tag The tag for the log
      * @param throwable Associated exception (if any)
-     * @param message The log message
+     * @param message Provider for the log message. It may not be evaluated if logging is skipped.
      */
-    suspend fun log(
+    fun log(
         severity: Severity,
         tag: String,
         throwable: Throwable?,
-        message: String,
+        message: () -> String,
     )
 
     /**
