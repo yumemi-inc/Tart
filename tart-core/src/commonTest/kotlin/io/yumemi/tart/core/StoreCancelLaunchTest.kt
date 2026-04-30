@@ -240,6 +240,25 @@ class StoreCancelLaunchTest {
         store.close()
     }
 
+    @Suppress("DEPRECATION")
+    @Test
+    fun dispose_cancelsStoreLaunchesLikeClose() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val cancelled = mutableListOf<Int>()
+        val store = createStore(
+            testDispatcher = testDispatcher,
+            onCancel = { cancelled += it },
+        )
+
+        store.dispatch(AppAction.StartDropNewShared(marker = 1))
+        runCurrent()
+
+        store.dispose()
+        runCurrent()
+
+        assertEquals(setOf(-1, 1), cancelled.toSet())
+    }
+
     @Test
     fun cancelLaunch_doesNotCancelEnterLaunches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)

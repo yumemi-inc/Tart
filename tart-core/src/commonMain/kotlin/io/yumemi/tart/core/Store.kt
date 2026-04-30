@@ -69,4 +69,14 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * Releases the Store's resources.
      */
     override fun close()
+
+    /**
+     * Releases the Store's resources.
+     *
+     * Kept for backward compatibility. Use [close] instead.
+     */
+    @Deprecated(message = "Use close()", replaceWith = ReplaceWith("close()"))
+    fun dispose() {
+        close()
+    }
 }
