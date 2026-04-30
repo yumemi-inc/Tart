@@ -87,6 +87,36 @@ class StoreObserverTest {
     }
 
     @Test
+    fun attachObserver_acceptsObserverOfBroaderTypes() = runTest(testDispatcher) {
+        val store = createTestStore()
+        val observedStates = mutableListOf<State>()
+        val observedEvents = mutableListOf<Event>()
+        val observer: StoreObserver<State, Event> = object : StoreObserver<State, Event> {
+            override fun onState(state: State) {
+                observedStates.add(state)
+            }
+
+            override fun onEvent(event: Event) {
+                observedEvents.add(event)
+            }
+        }
+
+        store.attachObserverForTest(observer)
+        store.dispatch(AppAction.Increment)
+        store.dispatch(AppAction.EmitEvent)
+
+        assertEquals(
+            listOf<State>(
+                AppState.Loading,
+                AppState.Main(count = 0),
+                AppState.Main(count = 1),
+            ),
+            observedStates,
+        )
+        assertEquals(listOf<Event>(AppEvent.CountUpdated(count = 1)), observedEvents)
+    }
+
+    @Test
     fun attachObserver_isAllowedAfterCollectingEventsBeforeStart() = runTest(testDispatcher) {
         val store = createTestStore()
         val history = ObservationHistory<AppState, AppEvent>()

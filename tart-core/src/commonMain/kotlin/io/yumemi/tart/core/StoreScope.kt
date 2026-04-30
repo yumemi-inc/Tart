@@ -13,7 +13,7 @@ sealed interface StoreScope
  * Used in enter handlers to manage state transitions and side effects.
  */
 @TartStoreDsl
-interface EnterScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
+interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     /**
      * The current state snapshot when this handler is executing.
      * This value does not change immediately when [nextState] or [nextStateBy] is called.
