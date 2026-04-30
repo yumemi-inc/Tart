@@ -161,7 +161,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    final override fun dispose() {
+    final override fun close() {
         coroutineScope.cancel()
     }
 

@@ -19,7 +19,7 @@ interface MiddlewareScope<A : Action> {
 
     /**
      * Launches a coroutine within the store's scope.
-     * The launched coroutine is tied to the Store lifecycle and is cancelled when the Store is disposed.
+     * The launched coroutine is tied to the Store lifecycle and is cancelled when the Store is closed.
      * It is not cancelled automatically when the current state changes.
      *
      * @param dispatcher Optional CoroutineDispatcher override for the coroutine.

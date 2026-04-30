@@ -155,6 +155,6 @@ class StoreRecorderTest {
 
         override fun collectEvent(event: (AppEvent) -> Unit) = Unit
 
-        override fun dispose() = Unit
+        override fun close() = Unit
     }
 }
