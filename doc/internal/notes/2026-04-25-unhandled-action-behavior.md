@@ -1,7 +1,6 @@
 # Unhandled action behavior の整理
 
 - 更新日: 2026-04-25
-- 関連: [#175](https://github.com/yumemi-inc/Tart/issues/175)
 
 ## 背景
 
@@ -209,3 +208,7 @@ fun <S : State, A : Action, E : Event> StoreOverridesBuilder<S, A, E>.unhandledA
 - `dispatchAndWait(expectedMatchCount)` のような assert API を最初から同時に入れるか、routing diagnostics の上に後から載せるかは未決定。
 - README / KDoc では `first match wins` をそのまま用語として出すか、`registration order` 中心に説明するかは未決定。
 - core reporter を入れる場合、reporter が例外を投げたときに `error{}` ではなく `ExceptionHandler` 側へ流す整理でよいかは確認が必要。
+
+## 関連
+
+- [#175](https://github.com/yumemi-inc/Tart/issues/175)

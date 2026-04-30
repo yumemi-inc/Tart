@@ -1,7 +1,6 @@
 # `action` の async 境界は明示のまま維持する
 
 - 更新日: 2026-04-30
-- 関連: [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
 
 ## 背景
 
@@ -32,3 +31,7 @@
 - 一方で、`action {}` 直下で長い suspend や外部 I/O を許すと、Store 全体を塞ぎやすい。この問題は実際に起こりうるが、解決策として default async 化を採るのは副作用が大きい。
 - `action {}` を non-suspend にする案は思想としては筋がよいが、現状の `event()` を含む DSL 形状と衝突しやすく、導入コストに対して runtime 上の利益は限定的である。
 - `launch {}` を安易に増やすと、複数 async job 間の整合性、古い結果の採用防止、event 発火順の読みやすさなどを利用者が管理する負担が増える。したがって、`launch {}` は必要な箇所でだけ明示的に使う escape hatch として残す。
+
+## 関連
+
+- [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)

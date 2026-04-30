@@ -1,7 +1,6 @@
 # `clearPendingActions()` は store work / transaction に閉じる
 
 - 更新日: 2026-04-27
-- 関連: [PendingActionPolicy 拡張案の却下](./2026-04-22-pending-action-policy.md), [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md), [`action` の async 境界は明示のまま維持する](./2026-04-26-action-async-boundary.md)
 
 ## 背景
 
@@ -35,3 +34,9 @@
 - launched coroutine から `transaction {}` に入った時点では、処理は再び store の直列 pipeline に戻る。そのため、その瞬間に「この結果を採用するなら、古い pending action は不要」と判断して `clearPendingActions()` を呼ぶのは意味が通る。
 - `enter {}`、`exit {}`、`error {}` も技術的には store work であり、そこで pending action を捨てる意味はある。したがって公開面から完全に外す必要まではない。
 - ただし、可読性の観点では `action {}` と `transaction {}` の方が「何を確定させた結果として queue を切るのか」を読み取りやすい。README や KDoc では、この利用の重心を明示した方がよい。
+
+## 関連
+
+- [PendingActionPolicy 拡張案の却下](./2026-04-22-pending-action-policy.md)
+- [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
+- [`action` の async 境界は明示のまま維持する](./2026-04-26-action-async-boundary.md)

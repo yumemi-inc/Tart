@@ -1,7 +1,6 @@
 # Tart の設計原則
 
 - 更新日: 2026-04-23
-- 関連: [PendingActionPolicy 拡張案の却下](../adr/2026-04-22-pending-action-policy.md), [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
 
 ## 背景
 
@@ -29,3 +28,8 @@ Tart の設計上の基本方針は次のとおり。
 - middleware の default が並行実行なのは、middleware 同士の順序依存を強い設計前提にしないためである。
 - `overrides` が state/action handler を触れず、設定だけを上書きできるのは、「その Store がどんな state machine か」は identity に近く、テストや debug 用に変える対象ではないという線引きによる。
 - `error{}` と `exceptionHandler` が分かれていて、`Error` や cancellation を state 遷移の材料にしないのは、業務エラーと実行系の失敗を分けるためである。
+
+## 関連
+
+- [PendingActionPolicy 拡張案の却下](../adr/2026-04-22-pending-action-policy.md)
+- [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
