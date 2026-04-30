@@ -1,7 +1,6 @@
 # `receiveMessages<MainMessage>` のような型絞り込み API は追加しない
 
 - 更新日: 2026-04-30
-- 関連: [MessageMiddleware は簡易な built-in に留める](./2026-04-27-message-middleware-lightweight.md)
 
 ## 背景
 
@@ -29,3 +28,7 @@
 - `StoreBuilder` 側に member DSL を生やせれば別の見せ方もありうるが、`tart-message` が別モジュールである以上、その方向は採れない。
 - そのため今回は、「型で絞れること」よりも「top-level factory として無理のない呼び出し形」を優先し、既存 API を維持する。
 - 必要な絞り込みは、引き続き `receiveMessages { message -> when (message) { ... } }` や `if (message is MainMessage) { ... }` で表現する。
+
+## 関連
+
+- [MessageMiddleware は簡易な built-in に留める](./2026-04-27-message-middleware-lightweight.md)

@@ -1,7 +1,6 @@
 # `Store{}` DSL に state 非依存の `onStart {}` は追加しない
 
 - 更新日: 2026-04-30
-- 関連: [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md), [Middleware には直接 state 更新 API を入れない](./2026-04-26-middleware-dispatch-only.md)
 
 ## 背景
 
@@ -33,3 +32,8 @@
 - もし将来、代替としても state を更新しない版の `onStart {}` を用意するなら、実装上は `Middleware(onStart = { ... })` のシンタックスシュガーにするのがもっとも簡単である。
 - ただしその場合は、`overrides {}` 内の `clearMiddlewares()` や `replaceMiddlewares()` とどう整合させるかを先に決める必要がある。`Store{}` DSL の `onStart {}` が middleware の一部として消えるのか、別枠で残るのかが曖昧だと、override semantics が読みづらくなる。
 - もしこの相互作用が不自然になる、または実装上の扱いが複雑になるなら、シンタックスシュガー案は採らず、`StoreImpl` に専用の入口を用意して扱いを明示した方がよい。
+
+## 関連
+
+- [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md)
+- [Middleware には直接 state 更新 API を入れない](./2026-04-26-middleware-dispatch-only.md)

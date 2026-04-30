@@ -1,7 +1,6 @@
 # Middleware には直接 state 更新 API を入れない
 
 - 更新日: 2026-04-30
-- 関連: [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md)
 
 ## 背景
 
@@ -89,3 +88,7 @@ override suspend fun onStart(
 - もし `MiddlewareScope` に直接 state 更新 capability を載せると、middleware は observer や bridge ではなく、Store の追加 writer に近い存在になる。これは現状の設計上の位置づけより一段重い責務である。
 - middleware の default が並行実行である以上、複数 middleware が直接 state 更新を行う設計は、順序依存や責務分担を読みづらくしやすい。更新が互いに依存するなら、1 つの middleware にまとめるか、Store 本体の state/action 設計で表現する方が自然である。
 - 外部 stream や callback bridge を、action を介さずに Store へ反映したい要求が将来強くなった場合は、middleware 拡張としてではなく、別の API として改めて検討する。
+
+## 関連
+
+- [Middleware 実行ポリシーは並行を標準にする](./2026-04-23-middleware-execution-policy.md)
