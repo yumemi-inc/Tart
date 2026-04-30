@@ -30,7 +30,7 @@
 - この場合、transaction 側は state 更新まで進める一方で、外側の launched job だけが cancel される形になりうるため、挙動が直感的でない。
 - さらに、`ActionScope.LaunchScope.TransactionScope` から見て「別 lane を止めたい」のか「自分が属する lane も止めてよい」のかを、現在の `cancelLaunch(lane)` 署名だけでは表現できない。
 - Tart では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。そのうえで、lane cancellation の入口はまず `ActionScope` に閉じていた方が、どの action 判断で停止したのかを読み取りやすい。
-- したがって今回は、候補があることは認めつつも、現在の `cancelLaunch()` をそのまま他 scope に広げる判断は採らない。
+- したがって今回は、候補があることは認めつつも、具体的なユースケースが判明するまでは現在の `cancelLaunch()` を他 scope に広げる判断は採らない。
 
 ## 関連
 
