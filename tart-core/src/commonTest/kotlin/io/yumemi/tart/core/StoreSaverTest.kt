@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class StoreSaverTest {
@@ -20,13 +21,21 @@ class StoreSaverTest {
     private fun createTestStore(
         initialState: AppState,
         stateSaver: StateSaver<AppState>,
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
+        errorStateOnException: AppState? = null,
     ): Store<AppState, AppAction, Nothing> {
         return Store(initialState) {
             coroutineContext(Dispatchers.Unconfined)
             stateSaver(stateSaver)
+            exceptionHandler(exceptionHandler)
             state<AppState> {
                 action<AppAction.Update> {
                     nextState(state.copy(value = action.value))
+                }
+                if (errorStateOnException != null) {
+                    error<Exception> {
+                        nextState(errorStateOnException)
+                    }
                 }
             }
         }
@@ -48,5 +57,26 @@ class StoreSaverTest {
         store.dispatch(AppAction.Update(20))
 
         assertEquals(AppState(20), savedState)
+    }
+
+    @Test
+    fun store_saveException_isHandledWithoutUsingStoreErrorHandling() = runTest(testDispatcher) {
+        var handledException: Throwable? = null
+        val store = createTestStore(
+            initialState = AppState(0),
+            stateSaver = StateSaver(
+                save = { throw IllegalArgumentException("save failed") },
+                restore = { null },
+            ),
+            exceptionHandler = ExceptionHandler { handledException = it },
+            errorStateOnException = AppState(-1),
+        )
+
+        store.dispatch(AppAction.Update(20))
+        testScheduler.runCurrent()
+
+        assertEquals(AppState(20), store.currentState)
+        val error = assertIs<IllegalArgumentException>(handledException)
+        assertEquals("save failed", error.message)
     }
 }

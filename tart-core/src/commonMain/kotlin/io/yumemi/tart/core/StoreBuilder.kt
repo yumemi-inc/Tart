@@ -99,7 +99,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
     val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
     val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E, S>>>()
-    val registeredErrorHandlers = mutableListOf<StateHandler<(S, Throwable) -> Boolean, ErrorScope<S, E, S, Throwable>>>()
+    val registeredErrorHandlers = mutableListOf<StateHandler<(S, Exception) -> Boolean, ErrorScope<S, E, S, Exception>>>()
 
     private val onEnter: suspend EnterScope<S, E, S>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredEnterHandlers.firstOrNull { it.predicate(state) }
@@ -116,7 +116,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         matchingHandler?.handler?.invoke(this)
     }
 
-    private val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit = {
+    private val onError: suspend ErrorScope<S, E, S, Exception>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredErrorHandlers.firstOrNull { it.predicate(state, error) }
         matchingHandler?.handler?.invoke(this) ?: throw error
     }
@@ -143,7 +143,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, E, S2>>>()
         val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
         val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
-        val stateErrorHandlers = mutableListOf<ThreadedHandler<(Throwable) -> Boolean, ErrorScope<S, E, S2, Throwable>>>()
+        val stateErrorHandlers = mutableListOf<ThreadedHandler<(Exception) -> Boolean, ErrorScope<S, E, S2, Exception>>>()
 
         /**
          * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
@@ -195,7 +195,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
 
         /**
-         * Registers a handler for a specific error type in the current state configuration
+         * Registers a handler for a specific exception type in the current state configuration
          * with an optional CoroutineDispatcher.
          * If multiple `error {}` handlers can match the current state and error,
          * the first registered handler is used.
@@ -204,7 +204,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param dispatcher Optional CoroutineDispatcher override for executing the error handler
          * @param block The handler function that processes the error and updates the state
          */
-        inline fun <reified T : Throwable> error(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
+        inline fun <reified T : Exception> error(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
             stateErrorHandlers.add(
                 ThreadedHandler(
                     dispatcher = dispatcher,
@@ -272,7 +272,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                     predicate = { state, throwable -> state is S2 && errorHandler.predicate(throwable) },
                     handler = {
                         @Suppress("UNCHECKED_CAST")
-                        errorHandler.invoke(this as ErrorScope<S, E, S2, Throwable>)
+                        errorHandler.invoke(this as ErrorScope<S, E, S2, Exception>)
                     },
                 ),
             )
@@ -293,7 +293,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
-            override val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit = this@StoreBuilder.onError
+            override val onError: suspend ErrorScope<S, E, S, Exception>.() -> Unit = this@StoreBuilder.onError
         }
     }
 }
