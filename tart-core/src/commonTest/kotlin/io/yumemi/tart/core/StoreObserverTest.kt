@@ -327,7 +327,7 @@ class StoreObserverTest {
 
             if (errorStateOnException != null) {
                 state<AppState> {
-                    error<Throwable> {
+                    error<Exception> {
                         nextState(errorStateOnException)
                     }
                 }

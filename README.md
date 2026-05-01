@@ -390,7 +390,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-This works, but you can also handle errors with the `error{}` block.
+This works, but you can also handle exceptions with the `error{}` block.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -419,10 +419,10 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-Errors can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
-In other words, your business logic errors can be handled in the `error{}` block.
+Exceptions can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
+In other words, your business logic exceptions can be handled in the `error{}` block.
 
-On the other hand, uncaught errors in the entire Store (such as system errors) can be handled with the `exceptionHandler()` specification:
+On the other hand, fatal errors and other uncaught non-`Exception` throwables in the entire Store can be handled with the `exceptionHandler()` specification:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {

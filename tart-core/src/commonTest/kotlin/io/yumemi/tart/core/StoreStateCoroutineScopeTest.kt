@@ -197,7 +197,7 @@ class StoreStateCoroutineScopeTest {
             }
 
             state<AppState> {
-                error<Throwable> {
+                error<Exception> {
                     nextState(AppState.Failed(error.message ?: "unknown"))
                 }
             }

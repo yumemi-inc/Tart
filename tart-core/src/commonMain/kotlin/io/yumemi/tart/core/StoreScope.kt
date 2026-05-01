@@ -357,9 +357,11 @@ typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.Transact
 
 /**
  * Scope available to an `error {}` handler after a non-fatal exception is caught.
+ *
+ * Use this to recover from exceptions or update state accordingly.
  */
 @TartStoreDsl
-interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
+interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     /**
      * The current state snapshot when this handler is executing.
      * This value does not change immediately when [nextState] or [nextStateBy] is called.
@@ -367,7 +369,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Throwable> : StoreScope {
     val state: S2
 
     /**
-     * The error currently being handled.
+     * The exception currently being handled.
      */
     val error: T
 
