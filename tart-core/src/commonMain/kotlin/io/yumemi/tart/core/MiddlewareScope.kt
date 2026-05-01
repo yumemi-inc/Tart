@@ -4,12 +4,15 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * Scope available to middleware components for processing actions.
- * Provides capabilities for action dispatching and coroutine launching.
+ * Scope exposed to [Middleware] hooks.
+ *
+ * Middleware can use this scope to dispatch additional actions or start Store-scoped background
+ * work.
  */
 interface MiddlewareScope<A : Action> {
     /**
-     * Dispatches an action to the store.
+     * Dispatches an action to the Store.
+     *
      * This enqueues the action and returns immediately.
      * It does not wait for action handling to complete.
      *
@@ -18,9 +21,9 @@ interface MiddlewareScope<A : Action> {
     fun dispatch(action: A)
 
     /**
-     * Launches a coroutine within the store's scope.
-     * The launched coroutine is tied to the Store lifecycle and is cancelled when the Store is closed.
-     * It is not cancelled automatically when the current state changes.
+     * Starts background work in the Store's root coroutine scope and returns immediately.
+     *
+     * The launched coroutine survives state changes and is cancelled only when the Store is closed.
      *
      * @param dispatcher Optional CoroutineDispatcher override for the coroutine.
      * When null, the coroutine inherits the Store's current execution context.

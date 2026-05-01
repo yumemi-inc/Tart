@@ -8,7 +8,9 @@ import io.yumemi.tart.core.State
 import kotlinx.coroutines.CoroutineDispatcher
 
 /**
- * Middleware that logs Store operations.
+ * Base middleware for logging Store operations without blocking Store processing.
+ *
+ * Log writes are dispatched from [log] by launching work in [MiddlewareScope].
  *
  * @param logger Logger to use
  * @param dispatcher Optional CoroutineDispatcher override for log processing.
@@ -32,15 +34,13 @@ abstract class LoggingMiddleware<S : State, A : Action, E : Event>(
 }
 
 /**
- * Creates a simple logging middleware that logs Store operations.
- * This middleware logs all action dispatches, state changes, event emissions, and errors
- * with the specified severity level.
+ * Creates a middleware that logs actions, events, committed state changes, and errors.
  *
  * @param tag The tag to use for logging
  * @param severity The severity level for log messages
  * @param logger The logger implementation to use
  * @param dispatcher Optional CoroutineDispatcher override for logging operations
- * @return A middleware that performs logging for all store operations
+ * @return Middleware that logs common Store operations
  */
 fun <S : State, A : Action, E : Event> simpleLogging(
     tag: String = "Tart",

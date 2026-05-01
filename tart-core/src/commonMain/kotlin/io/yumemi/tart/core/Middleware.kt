@@ -1,27 +1,26 @@
 package io.yumemi.tart.core
 
 /**
- * Interface for intercepting Store lifecycle events.
- * By implementing Middleware, you can insert processing at various lifecycle points
- * such as action dispatch, state changes, event emission, etc.
+ * Intercepts Store lifecycle milestones such as startup, action handling, state transitions,
+ * event emission, and error handling.
  *
- * Middleware hooks are suspending functions and are awaited by the Store.
- * Long-running work in a hook can delay Store startup, action handling, state transitions,
- * event emission, and error processing.
+ * Middleware hooks are suspending functions and are awaited by the Store according to
+ * [MiddlewareExecutionPolicy]. Long-running work in a hook can delay startup, action handling,
+ * state transitions, event emission, and error processing.
  * When work should continue in the background, start it from [onStart] or another hook using
  * [MiddlewareScope.launch].
  */
 interface Middleware<S : State, A : Action, E : Event> {
     /**
-     * Lifecycle method called when the store is started.
+     * Called once when the Store starts, before the initial `enter {}` processing runs.
      *
-     * @param middlewareScope The scope that provides access to store functionality
+     * @param middlewareScope Scope for dispatching actions or launching Store-scoped work
      * @param state The current state
      */
     suspend fun onStart(middlewareScope: MiddlewareScope<A>, state: S) {}
 
     /**
-     * Called before an action is dispatched.
+     * Called before an action handler starts processing the dispatched action.
      *
      * @param state The current state
      * @param action The action being dispatched
@@ -29,16 +28,18 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun beforeActionDispatch(state: S, action: A) {}
 
     /**
-     * Called after an action is dispatched.
+     * Called after the matching action handler finishes and its next state is determined.
+     *
+     * This runs before any resulting state exit, state change, or state enter processing occurs.
      *
      * @param state The original state
      * @param action The dispatched action
-     * @param nextState The new state after action processing
+     * @param nextState The next state produced by action processing
      */
     suspend fun afterActionDispatch(state: S, action: A, nextState: S) {}
 
     /**
-     * Called before an event is emitted.
+     * Called before an event is emitted to collectors and observers.
      *
      * @param state The current state
      * @param event The event being emitted
@@ -46,7 +47,7 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun beforeEventEmit(state: S, event: E) {}
 
     /**
-     * Called after an event is emitted.
+     * Called after an event is emitted to collectors and observers.
      *
      * @param state The current state
      * @param event The emitted event
@@ -54,36 +55,36 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun afterEventEmit(state: S, event: E) {}
 
     /**
-     * Called before a new state begins.
+     * Called before the `enter {}` handler for a state runs.
      *
      * @param state The state that is beginning
      */
     suspend fun beforeStateEnter(state: S) {}
 
     /**
-     * Called after a new state has begun.
+     * Called after the `enter {}` handler finishes and its next state is determined.
      *
      * @param state The original state
-     * @param nextState The new state after beginning
+     * @param nextState The next state produced by the enter handler
      */
     suspend fun afterStateEnter(state: S, nextState: S) {}
 
     /**
-     * Called before a state ends.
+     * Called before the `exit {}` handler for a state runs.
      *
      * @param state The state that is ending
      */
     suspend fun beforeStateExit(state: S) {}
 
     /**
-     * Called after a state has ended.
+     * Called after the `exit {}` handler for a state finishes.
      *
      * @param state The state that ended
      */
     suspend fun afterStateExit(state: S) {}
 
     /**
-     * Called before a state changes.
+     * Called before a committed state snapshot is updated and persisted.
      *
      * @param state The current state
      * @param nextState The next state
@@ -91,7 +92,7 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun beforeStateChange(state: S, nextState: S) {}
 
     /**
-     * Called after a state has changed.
+     * Called after a new state snapshot is committed, persisted, and reported to observers.
      *
      * @param state The new state
      * @param prevState The previous state
@@ -99,7 +100,7 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun afterStateChange(state: S, prevState: S) {}
 
     /**
-     * Called before an error occurs.
+     * Called before a matching `error {}` handler runs for a non-fatal exception.
      *
      * @param state The current state
      * @param error The error that occurred
@@ -107,32 +108,36 @@ interface Middleware<S : State, A : Action, E : Event> {
     suspend fun beforeError(state: S, error: Throwable) {}
 
     /**
-     * Called after an error has been processed.
+     * Called after the matching `error {}` handler finishes and its next state is determined.
+     *
+     * This runs before any resulting state exit, state change, or state enter processing occurs.
      *
      * @param state The original state
-     * @param nextState The new state after error handling
+     * @param nextState The next state produced by error handling
      * @param error The error that occurred
      */
     suspend fun afterError(state: S, nextState: S, error: Throwable) {}
 }
 
 /**
- * Factory function to easily create a Middleware instance.
+ * Creates a [Middleware] from individual lifecycle callbacks.
  *
- * @param onStart Function called when the store is started with MiddlewareScope as receiver
- * @param beforeActionDispatch Function called before an action is dispatched
- * @param afterActionDispatch Function called after an action is dispatched
+ * These callbacks are suspending and are awaited by the Store just like a custom
+ * [Middleware] implementation.
+ *
+ * @param onStart Function called when the Store starts
+ * @param beforeActionDispatch Function called before an action handler starts
+ * @param afterActionDispatch Function called after an action handler determines its next state
  * @param beforeEventEmit Function called before an event is emitted
  * @param afterEventEmit Function called after an event is emitted
- * @param beforeStateEnter Function called before a new state begins
- * @param afterStateEnter Function called after a new state has begun
- * @param beforeStateExit Function called before a state ends
- * @param afterStateExit Function called after a state has ended
- * @param beforeStateChange Function called before a state changes
- * @param afterStateChange Function called after a state has changed
- * @param beforeError Function called before an error occurs
- * @param afterError Function called after an error has been processed
- * @return A new Middleware instance
+ * @param beforeStateEnter Function called before an enter handler runs
+ * @param afterStateEnter Function called after an enter handler determines its next state
+ * @param beforeStateExit Function called before an exit handler runs
+ * @param afterStateExit Function called after an exit handler finishes
+ * @param beforeStateChange Function called before a state snapshot is committed
+ * @param afterStateChange Function called after a state snapshot is committed
+ * @param beforeError Function called before an error handler runs
+ * @param afterError Function called after an error handler determines its next state
  */
 fun <S : State, A : Action, E : Event> Middleware(
     onStart: suspend MiddlewareScope<A>.(S) -> Unit = {},

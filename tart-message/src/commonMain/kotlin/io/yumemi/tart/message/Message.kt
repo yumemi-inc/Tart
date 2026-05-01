@@ -5,8 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
- * Marker interface representing notifications or messages within the application.
- * Used to define messages for communication between different modules via Store.
+ * Marker interface for process-wide messages sent through Tart's shared message bus.
  */
 interface Message
 
@@ -20,11 +19,10 @@ internal object MessageHub {
 }
 
 /**
- * Extension function for sending messages to the MessageHub.
- * This allows any StoreScope to easily send messages to other components.
+ * Sends a [Message] to Tart's process-wide shared message bus.
  *
- * Messages are sent to a process-wide shared bus.
- * All started Stores using `receiveMessages(...)` subscribe to the same bus.
+ * Any DSL scope that implements [StoreScope] can call this, including enter, action, exit, error,
+ * launch, and transaction scopes.
  * Messages are not replayed, so receivers that are not actively collecting when a message is sent
  * will not receive that past message.
  *

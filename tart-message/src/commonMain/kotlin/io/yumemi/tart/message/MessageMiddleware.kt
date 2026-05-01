@@ -19,15 +19,16 @@ private abstract class MiddlewareImpl<S : State, A : Action, E : Event> : Middle
 }
 
 /**
- * Creates a middleware that receives messages from the MessageHub.
- * This middleware automatically subscribes to the message flow when the store starts
- * and processes each message with the provided block.
+ * Creates middleware that subscribes to Tart's shared message bus when the Store starts.
  *
- * The underlying MessageHub is process-wide and shared across all Stores using this middleware.
- * Messages are delivered only to active subscribers and are not replayed to Stores that start later.
+ * The subscription stays active until the Store closes and invokes [block] for each received
+ * [Message].
+ * The underlying bus is process-wide and shared across all Stores using this middleware.
+ * Messages are delivered only to active subscribers and are not replayed to Stores that start
+ * later.
  *
- * @param block The function to process received messages with MiddlewareScope as receiver
- * @return A middleware that processes messages
+ * @param block Function to process received messages with [MiddlewareScope] as receiver
+ * @return Middleware that processes shared messages
  */
 fun <S : State, A : Action, E : Event> receiveMessages(block: suspend MiddlewareScope<A>.(Message) -> Unit): Middleware<S, A, E> {
     return object : MiddlewareImpl<S, A, E>() {

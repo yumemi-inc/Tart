@@ -3,14 +3,12 @@ package io.yumemi.tart.core
 import kotlinx.coroutines.CoroutineDispatcher
 
 /**
- * Base interface for all store scope types.
- * Provides a common type for different scopes in the state management flow.
+ * Marker supertype for DSL scopes exposed from Store handlers.
  */
 sealed interface StoreScope
 
 /**
- * Scope available when a state is being entered.
- * Used in enter handlers to manage state transitions and side effects.
+ * Scope available to an `enter {}` handler for the current state.
  */
 @TartStoreDsl
 interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
@@ -41,8 +39,9 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     fun nextStateBy(block: () -> S)
 
     /**
-     * Clears actions that are already queued behind the currently executing store work.
-     * The action/transaction currently in progress keeps running.
+     * Cancels queued actions that have not started executing yet.
+     *
+     * The handler or transaction currently in progress keeps running.
      */
     fun clearPendingActions()
 
@@ -55,8 +54,9 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     suspend fun event(event: E)
 
     /**
-     * Launches a coroutine within the context of this state.
-     * The coroutine will be automatically cancelled when the state is exited.
+     * Starts a state-scoped coroutine and returns immediately.
+     *
+     * The coroutine is cancelled automatically when this state exits.
      *
      * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
      * When null, the coroutine inherits the Store's current execution context.
@@ -65,16 +65,12 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend EnterLaunchScope<S, E, S2>.() -> Unit)
 
     /**
-     * Scope available within a launched coroutine.
-     * Used for long-running operations or side effects within a state.
+     * Scope available within a state-scoped coroutine launched from `enter {}`.
      */
     @TartStoreDsl
     interface LaunchScope<S : State, E : Event, S2 : S> : StoreScope {
         /**
-         * Checks if the coroutine scope is still active.
-         * Use this to verify if the state is still active before performing operations.
-         *
-         * @return True if the scope is still active, false otherwise
+         * Whether the owning state runtime is still active.
          */
         val isActive: Boolean
 
@@ -86,8 +82,11 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
         suspend fun event(event: E)
 
         /**
-         * Executes a transactional operation within the launch scope.
-         * This allows state updates to be performed in an atomic, consistent manner.
+         * Runs a mutually exclusive transaction against the current Store state and suspends until it
+         * completes.
+         *
+         * If the state has already exited by the time the transaction would run, the transaction is
+         * skipped.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.
@@ -96,8 +95,7 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
         suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend EnterTransactionScope<S, E, S2>.() -> Unit)
 
         /**
-         * Scope available within a transaction operation.
-         * Used for atomic state updates with consistency guarantees.
+         * Scope available within a transaction started from an `enter {}` launch.
          */
         @TartStoreDsl
         interface TransactionScope<S : State, E : Event, S2 : S> : StoreScope {
@@ -128,8 +126,9 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
             fun nextStateBy(block: () -> S)
 
             /**
-             * Clears actions that are already queued behind the currently executing store work.
-             * The action/transaction currently in progress keeps running.
+             * Cancels queued actions that have not started executing yet.
+             *
+             * The handler or transaction currently in progress keeps running.
              */
             fun clearPendingActions()
 
@@ -157,8 +156,7 @@ typealias EnterLaunchScope<S, E, S2> = EnterScope.LaunchScope<S, E, S2>
 typealias EnterTransactionScope<S, E, S2> = EnterScope.LaunchScope.TransactionScope<S, E, S2>
 
 /**
- * Scope available when a state is being exited.
- * Used in exit handlers to perform cleanup or side effects when leaving a state.
+ * Scope available to an `exit {}` handler for the current state.
  */
 @TartStoreDsl
 interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
@@ -168,8 +166,9 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
     val state: S2
 
     /**
-     * Clears actions that are already queued behind the currently executing store work.
-     * The action/transaction currently in progress keeps running.
+     * Cancels queued actions that have not started executing yet.
+     *
+     * The handler or transaction currently in progress keeps running.
      */
     fun clearPendingActions()
 
@@ -182,8 +181,7 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
 }
 
 /**
- * Scope available when an action is being processed.
- * Used in action handlers to update state based on an action.
+ * Scope available to an `action {}` handler for the current state and action.
  */
 @TartStoreDsl
 interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
@@ -194,7 +192,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     val state: S2
 
     /**
-     * The action being processed
+     * The action currently being processed.
      */
     val action: A
 
@@ -219,8 +217,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     fun nextStateBy(block: () -> S)
 
     /**
-     * Clears actions that are already queued behind the currently executing store work.
-     * The action/transaction currently in progress keeps running.
+     * Cancels queued actions that have not started executing yet.
+     *
+     * The handler or transaction currently in progress keeps running.
      */
     fun clearPendingActions()
 
@@ -233,39 +232,35 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     suspend fun event(event: E)
 
     /**
-     * Cancels active coroutines launched from action handlers with the given lane
-     * in the current state's runtime when those launches are tracked by their launch control
-     * such as [LaunchControl.Replace] or [LaunchControl.DropNew].
+     * Cancels tracked launches in the current state's runtime for the given explicit lane.
      *
-     * If no matching launch exists, this is a no-op.
+     * Only launches started with [LaunchControl.Replace] or [LaunchControl.DropNew] and the same
+     * explicit [LaunchLane] are affected. If no matching launch exists, this is a no-op.
      *
      * @param lane The explicit launch lane identifying the cancellation group
      */
     fun cancelLaunch(lane: LaunchLane)
 
     /**
-     * Launches a coroutine within the context of the current state where this action is processed.
-     * The coroutine will be automatically cancelled when this state is exited.
+     * Starts a state-scoped coroutine from this action handler and returns immediately.
+     *
+     * The coroutine is cancelled automatically when this state exits.
      *
      * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
      * When null, the coroutine inherits the Store's current execution context.
-     * @param control The launch control used for coordination. Tracked controls
-     * may use an explicit [LaunchLane] or the action-local default lane.
+     * @param control The launch control used for coordination. Tracked controls may use an
+     * explicit [LaunchLane] or the default lane for the current action type.
      * @param block The suspending block of code to execute
      */
     fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Concurrent, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
-     * Scope available within a launched coroutine from an action handler.
-     * Used for long-running operations or side effects within a state.
+     * Scope available within a state-scoped coroutine launched from `action {}`.
      */
     @TartStoreDsl
     interface LaunchScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         /**
-         * Checks if the coroutine scope is still active.
-         * Use this to verify if the state is still active before performing operations.
-         *
-         * @return True if the scope is still active, false otherwise
+         * Whether the owning state runtime is still active.
          */
         val isActive: Boolean
 
@@ -282,8 +277,11 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         suspend fun event(event: E)
 
         /**
-         * Executes a transactional operation within the launch scope.
-         * This allows state updates to be performed in an atomic, consistent manner.
+         * Runs a mutually exclusive transaction against the current Store state and suspends until it
+         * completes.
+         *
+         * If the state has already exited by the time the transaction would run, the transaction is
+         * skipped.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.
@@ -292,8 +290,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         suspend fun transaction(dispatcher: CoroutineDispatcher? = null, block: suspend ActionTransactionScope<S, A, E, S2>.() -> Unit)
 
         /**
-         * Scope available within a transaction operation.
-         * Used for atomic state updates with consistency guarantees.
+         * Scope available within a transaction started from an `action {}` launch.
          */
         @TartStoreDsl
         interface TransactionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
@@ -304,7 +301,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             val state: S2
 
             /**
-             * The action being processed when the launch was started.
+             * The action that started the launch owning this transaction.
              */
             val action: A
 
@@ -329,8 +326,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             fun nextStateBy(block: () -> S)
 
             /**
-             * Clears actions that are already queued behind the currently executing store work.
-             * The action/transaction currently in progress keeps running.
+             * Cancels queued actions that have not started executing yet.
+             *
+             * The handler or transaction currently in progress keeps running.
              */
             fun clearPendingActions()
 
@@ -358,8 +356,9 @@ typealias ActionLaunchScope<S, A, E, S2> = ActionScope.LaunchScope<S, A, E, S2>
 typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.TransactionScope<S, A, E, S2>
 
 /**
- * Scope available when an exception occurs in a state handler.
- * Used in error handlers to recover from exceptions or update state accordingly.
+ * Scope available to an `error {}` handler after a non-fatal exception is caught.
+ *
+ * Use this to recover from exceptions or update state accordingly.
  */
 @TartStoreDsl
 interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
@@ -370,7 +369,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     val state: S2
 
     /**
-     * The exception that occurred
+     * The exception currently being handled.
      */
     val error: T
 
@@ -395,8 +394,9 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     fun nextStateBy(block: () -> S)
 
     /**
-     * Clears actions that are already queued behind the currently executing store work.
-     * The action/transaction currently in progress keeps running.
+     * Cancels queued actions that have not started executing yet.
+     *
+     * The handler or transaction currently in progress keeps running.
      */
     fun clearPendingActions()
 
