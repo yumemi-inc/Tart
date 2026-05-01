@@ -9,6 +9,8 @@ import io.yumemi.tart.core.StoreObserver
 
 /**
  * Default in-memory [StoreObserver] implementation for tests.
+ *
+ * It records every observed state snapshot and event in insertion order.
  */
 @ExperimentalTartApi
 class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
@@ -43,11 +45,11 @@ class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
 }
 
 /**
- * Creates and attaches the default [StoreRecorder] for this Store.
+ * Creates and attaches a [StoreRecorder] for this Store.
  *
  * Prefer this in tests unless you need a custom [StoreObserver] implementation.
  *
- * @param notifyCurrentState Whether to notify the recorder with the current state immediately
+ * @param notifyCurrentState Whether to record the current state snapshot immediately
  * @return The attached [StoreRecorder]
  */
 @ExperimentalTartApi

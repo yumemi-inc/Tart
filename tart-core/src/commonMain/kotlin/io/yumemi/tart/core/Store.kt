@@ -4,32 +4,33 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Core interface of Tart that provides application state management.
- * It has features such as state updates, event emission, action dispatching, etc.
+ * Core Tart interface for reading state, dispatching actions, and observing one-off events.
  *
  * Store startup is lazy.
- * Startup processing begins when the first action is [dispatch]ed, when [state] is collected,
- * or when [collectState] is called.
- * Collecting [event] or calling [collectEvent] alone does not start the Store.
+ * Startup processing begins when the first action is [dispatch]ed, when [state] starts being
+ * collected, or when [collectState] is called.
+ * Collecting [event], calling [collectEvent], or reading [currentState] alone does not start the
+ * Store.
  */
 interface Store<S : State, A : Action, E : Event> : AutoCloseable {
 
     /**
-     * StateFlow representing the current state. You can monitor state changes by subscribing to this.
+     * Hot stream of committed state snapshots.
      *
      * Collecting this flow starts the Store if it has not started yet.
      */
     val state: StateFlow<S>
 
     /**
-     * Flow of events. You can receive events by subscribing to this.
+     * Hot stream of one-off events emitted by the Store.
      *
      * Collecting this flow does not start the Store by itself.
+     * Past events are not replayed to new collectors.
      */
     val event: Flow<E>
 
     /**
-     * The value of the current state. Use this to get the current state without subscribing to the Flow.
+     * Current state snapshot without collecting [state].
      *
      * Reading this property does not start the Store.
      * If a [StateSaver] restores a saved state, this may return that restored snapshot
@@ -38,7 +39,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     val currentState: S
 
     /**
-     * Dispatches an action.
+     * Enqueues an action for processing.
      *
      * This enqueues the action and returns immediately.
      * It does not wait for action handling to complete.
@@ -49,7 +50,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     fun dispatch(action: A)
 
     /**
-     * Collects state changes using a callback.
+     * Collects committed state snapshots using a callback.
      *
      * This API is intended for platforms where [StateFlow] cannot be consumed directly.
      * Calling this method starts the Store if it has not started yet.
@@ -67,7 +68,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     fun collectState(state: (S) -> Unit)
 
     /**
-     * Collects events using a callback.
+     * Collects one-off events using a callback.
      *
      * This API is intended for platforms where [Flow] cannot be consumed directly.
      * Calling this method does not start the Store by itself.
@@ -81,13 +82,16 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * before touching UI components from the callback.
      *
      * Collection continues until the Store is closed.
+     * Events emitted before collection starts are not replayed.
      *
      * @param event Callback called when an event is emitted
      */
     fun collectEvent(event: (E) -> Unit)
 
     /**
-     * Releases the Store's resources.
+     * Cancels the Store and releases its resources.
+     *
+     * Active state-scoped coroutines, middleware coroutines, and callback collectors are cancelled.
      */
     override fun close()
 

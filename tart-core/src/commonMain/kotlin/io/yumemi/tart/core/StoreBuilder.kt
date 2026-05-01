@@ -5,6 +5,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Builder used by the Store DSL to configure runtime behavior and register state-specific
+ * handlers.
+ *
+ * Most users interact with this type through the top-level `Store(...)` factory overloads.
+ */
 @Suppress("unused")
 @TartStoreDsl
 class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
@@ -17,7 +23,10 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
-     * Sets the initial state of the store.
+     * Sets the declared initial state.
+     *
+     * This value is used when no [StateSaver] restores a saved snapshot.
+     * Later calls overwrite earlier ones.
      *
      * @param state The initial state to set
      */
@@ -26,7 +35,9 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets the coroutine context for store operations.
+     * Sets the root coroutine context used by Store processing.
+     *
+     * The default is [Dispatchers.Default].
      *
      * @param coroutineContext The coroutine context to use
      */
@@ -35,7 +46,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets the state saver implementation for persisting state.
+     * Sets the saver used to restore a snapshot before startup and persist committed state changes.
      *
      * @param stateSaver The state saver implementation to use
      */
@@ -44,7 +55,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets the exception handler for error handling.
+     * Sets the handler for non-fatal exceptions raised during Store processing.
      *
      * @param exceptionHandler The exception handler to use
      */
@@ -53,7 +64,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets how queued actions are handled when the store exits the current state.
+     * Sets how queued actions are treated when a committed state change leaves the current state
+     * variant.
      *
      * @param policy The pending action policy to use
      */
@@ -62,7 +74,10 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets how the store invokes middleware when multiple middleware instances are registered.
+     * Sets how the Store invokes middleware when multiple middleware instances are registered.
+     *
+     * Regardless of policy, the Store waits for all matching middleware hooks to complete before it
+     * continues processing.
      *
      * @param policy The middleware execution policy to use
      */
@@ -71,7 +86,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Adds one or more middleware instances to the store.
+     * Appends one or more middleware instances to the Store.
      *
      * @param first The first middleware instance to add
      * @param rest Additional middleware instances to add
@@ -220,12 +235,14 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Configures handlers for actions when the store is in a specific state type.
-     * This creates a DSL scope for defining type-specific action handlers.
+     * Configures handlers for a specific state subtype.
+     *
+     * Inside the block, you can register `enter {}`, `action {}`, `exit {}`, and `error {}`
+     * handlers narrowed to [S2].
      * Handler selection is first-match in registration order.
      * If both broad and specific handlers can match, place broader handlers later.
      *
-     * @param block The configuration block where you can define action handlers using the action() function
+     * @param block Configuration block for handlers that target [S2]
      */
     inline fun <reified S2 : S> state(noinline block: StateHandlerConfig<S, A, E, S2>.() -> Unit) {
         val config = StateHandlerConfig<S, A, E, S2>().apply(block)
@@ -299,20 +316,22 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 }
 
 /**
- * Store DSL setup block.
+ * Main Store DSL block used to configure runtime behavior and register state handlers.
  */
 typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
 
 /**
- * Store overrides block applied after the main Store setup.
- * This block is limited to non-state configuration such as coroutine context,
- * persistence, exception handling, pending action policy, and middleware.
+ * Store overrides block applied after the main [Setup] block.
+ *
+ * This block is limited to non-state configuration such as coroutine context, persistence,
+ * exception handling, pending action policy, and middleware.
  */
 typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
 
 /**
- * DSL for overriding Store configuration after the main setup has been applied.
- * This DSL intentionally does not expose state/action handler APIs.
+ * DSL for overriding non-state Store configuration after the main setup has been applied.
+ *
+ * This DSL intentionally does not expose state or action handler APIs.
  */
 @Suppress("unused")
 @TartStoreDsl
@@ -320,42 +339,43 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
     private val operations = mutableListOf<StoreBuilder<S, A, E>.() -> Unit>()
 
     /**
-     * Overrides the coroutine context for store operations.
+     * Overrides the root coroutine context used by Store processing.
      */
     fun coroutineContext(coroutineContext: CoroutineContext) {
         operations.add { coroutineContext(coroutineContext) }
     }
 
     /**
-     * Overrides the state saver used by the store.
+     * Overrides the saver used to restore and persist state snapshots.
      */
     fun stateSaver(stateSaver: StateSaver<S>) {
         operations.add { stateSaver(stateSaver) }
     }
 
     /**
-     * Overrides the exception handler used by the store.
+     * Overrides the handler used for non-fatal Store exceptions.
      */
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
         operations.add { exceptionHandler(exceptionHandler) }
     }
 
     /**
-     * Overrides how queued actions are handled when the store exits the current state.
+     * Overrides how queued actions are treated when a committed state change leaves the current
+     * state variant.
      */
     fun pendingActionPolicy(policy: PendingActionPolicy) {
         operations.add { pendingActionPolicy(policy) }
     }
 
     /**
-     * Overrides how the store invokes middleware when multiple middleware instances are registered.
+     * Overrides how the Store invokes middleware when multiple middleware instances are registered.
      */
     fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
         operations.add { middlewareExecutionPolicy(policy) }
     }
 
     /**
-     * Adds one or more middleware instances after the main Store setup.
+     * Appends middleware after the main setup block has run.
      */
     fun middleware(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
         val restValues = rest.copyOf()
@@ -363,8 +383,9 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
     }
 
     /**
-     * Replaces all middleware instances configured so far.
-     * This can be used to remove default middleware in tests or debug setups.
+     * Replaces every middleware configured so far.
+     *
+     * This is useful for removing default middleware in tests or debug setups.
      */
     fun replaceMiddlewares(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
         val restValues = rest.copyOf()
@@ -372,8 +393,9 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
     }
 
     /**
-     * Clears all middleware instances configured so far.
-     * This can be used to remove default middleware in tests or debug setups.
+     * Removes every middleware configured so far.
+     *
+     * This is useful for removing default middleware in tests or debug setups.
      */
     fun clearMiddlewares() {
         operations.add { clearMiddlewares() }
@@ -401,8 +423,10 @@ private fun <S : State, A : Action, E : Event> buildStore(
 }
 
 /**
- * Creates a Store instance with setup provided in the block and optional overrides.
- * The initial state must be set within the block using initialState().
+ * Creates a Store from a [Setup] block and optional [Overrides].
+ *
+ * The initial state must be set inside [setup] by calling [StoreBuilder.initialState].
+ * [overrides] runs after [setup], so it can replace non-state configuration declared there.
  *
  * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
@@ -417,10 +441,11 @@ fun <S : State, A : Action, E : Event> Store(
 }
 
 /**
- * Creates a Store instance with the specified initial state and optional overrides.
- * Overrides are applied after the main setup block.
+ * Creates a Store with a declared initial state and optional [Overrides].
  *
- * @param initialState The initial state of the store
+ * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ *
+ * @param initialState The initial state of the Store when no saved snapshot is restored
  * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
  * @return A configured Store instance
@@ -434,12 +459,13 @@ fun <S : State, A : Action, E : Event> Store(
 }
 
 /**
- * Creates a Store instance with the specified coroutine context and optional overrides.
- * The coroutine context parameter is applied before the main setup block.
- * The initial state must be set within the block using initialState().
- * Overrides are applied after the main setup block.
+ * Creates a Store with an explicit root coroutine context and optional [Overrides].
  *
- * @param coroutineContext The coroutine context to use for store operations
+ * The [coroutineContext] parameter is applied before [setup].
+ * The initial state must be set inside [setup] by calling [StoreBuilder.initialState].
+ * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ *
+ * @param coroutineContext The coroutine context to use for Store processing
  * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
  * @return A configured Store instance
@@ -454,12 +480,14 @@ fun <S : State, A : Action, E : Event> Store(
 }
 
 /**
- * Creates a Store instance with the specified initial state and coroutine context.
- * The initial state and coroutine context parameters are applied before the main setup block.
- * Overrides are applied after the main setup block.
+ * Creates a Store with a declared initial state, explicit root coroutine context, and optional
+ * [Overrides].
  *
- * @param initialState The initial state of the store
- * @param coroutineContext The coroutine context to use for store operations
+ * [initialState] and [coroutineContext] are applied before [setup].
+ * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ *
+ * @param initialState The initial state of the Store when no saved snapshot is restored
+ * @param coroutineContext The coroutine context to use for Store processing
  * @param overrides Overrides block for non-state Store configuration
  * @param setup Setup block to customize the store
  * @return A configured Store instance

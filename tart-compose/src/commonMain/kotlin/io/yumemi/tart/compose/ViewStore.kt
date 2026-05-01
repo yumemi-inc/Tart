@@ -16,12 +16,13 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 
 /**
- * Store wrapper class for use with Compose UI.
- * Provides state, action dispatching, and event handling.
+ * Compose-friendly wrapper around a [Store] snapshot.
+ *
+ * It exposes the latest state, a dispatch function, and access to the Store's event stream.
  *
  * @param state The current state
  * @param dispatch Function to dispatch actions
- * @param eventFlow Flow to receive events
+ * @param eventFlow Flow used to receive one-off events
  */
 @Suppress("unused")
 @Stable
@@ -41,9 +42,11 @@ class ViewStore<S : State, A : Action, E : Event>(
     }
 
     /**
-     * Renders UI for a state of a specified type.
+     * Invokes [block] only when the current [state] is of type [S2].
      *
-     * @param block Composable function to perform rendering
+     * Inside [block], this [ViewStore] is narrowed to [S2].
+     *
+     * @param block Composable function to render the narrowed state
      */
     @Suppress("ComposableNaming")
     @Composable
@@ -55,10 +58,9 @@ class ViewStore<S : State, A : Action, E : Event>(
     }
 
     /**
-     * Handles events of a specified type.
+     * Collects only events of type [E2] while this composable is in the composition.
      *
-     * This collects events after the composable enters the composition.
-     * It receives only events emitted while this handler is actively collecting.
+     * Collection starts after the composable enters the composition.
      * Events emitted earlier are not replayed.
      *
      * @param block Function to process the event
@@ -75,13 +77,14 @@ class ViewStore<S : State, A : Action, E : Event>(
 }
 
 /**
- * Composable function that creates and returns a new ViewStore instance from a Store.
- * Monitors state changes in the Store and triggers UI redrawing.
+ * Remembers a [Store], collects its state as Compose state, and exposes it as a [ViewStore].
  *
- * This starts collecting [Store.state] immediately, so it can start the Store before any
- * [ViewStore.handle] collector begins observing events.
- * As a result, startup events such as events emitted from initial `enter {}` processing
- * may be emitted before handlers in the same composition start collecting them.
+ * Collecting [Store.state] starts the Store immediately.
+ * Because [ViewStore.handle] starts collecting later from a [LaunchedEffect], startup events such
+ * as events emitted from an initial `enter {}` handler may be emitted before handlers in the same
+ * composition begin observing them.
+ *
+ * The [store] lambda is used only when a new remembered Store must be created for [key].
  *
  * @param key Key used to remember and retain the Store instance
  * @param autoClose Whether to close the Store when the composable leaves the composition

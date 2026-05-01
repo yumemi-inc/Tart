@@ -1,12 +1,11 @@
 package io.yumemi.tart.logging
 
 /**
- * Interface that provides logging functionality.
- * Used for logging internal Tart operations and diagnostic information.
+ * Logging abstraction used by Tart middleware and diagnostics.
  */
 fun interface Logger {
     /**
-     * Outputs a log with the specified severity.
+     * Emits a log entry at the given severity.
      *
      * @param severity The severity of the log
      * @param tag The tag for the log
@@ -21,8 +20,7 @@ fun interface Logger {
     )
 
     /**
-     * Enumeration representing log severity levels.
-     * Supports common logging levels.
+     * Supported log severity levels.
      */
     enum class Severity {
         /** Very detailed debug information */

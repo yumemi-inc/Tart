@@ -9,12 +9,13 @@ import io.yumemi.tart.core.StoreInternalApi
 import io.yumemi.tart.core.StoreObserver
 
 /**
- * Dispatches an action and suspends until the dispatch work completes.
+ * Dispatches an action and suspends until the Store finishes the dispatch work itself.
  *
- * This waits for the action handling performed as part of the dispatch itself.
- * It does not wait for additional work launched from action/enter handlers.
+ * This waits for startup, the matching action handler, and any resulting synchronous state
+ * transition work triggered by that dispatch.
+ * It does not wait for additional work launched from `enter {}` or `action {}` handlers.
  *
- * This extension is available for Store instances created by Tart DSL.
+ * This extension is available for Store instances created by the Tart DSL.
  *
  * @param action The action to dispatch
  * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
@@ -25,10 +26,13 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(ac
 }
 
 /**
- * Attaches an observer before the store is started.
- * This does not start the store.
+ * Attaches an observer before the Store starts.
  *
- * This extension is available for Store instances created by Tart DSL.
+ * This does not start the Store.
+ * If [notifyCurrentState] is true, the observer receives the current snapshot immediately, which
+ * may be a [io.yumemi.tart.core.StateSaver]-restored value.
+ *
+ * This extension is available for Store instances created by the Tart DSL.
  *
  * @param observer The observer to attach
  * @param notifyCurrentState Whether to notify the observer with the current state immediately

@@ -1,12 +1,14 @@
 package io.yumemi.tart.core
 
 /**
- * Interface for handling exceptions that occur in a Store.
- * Exceptions that occur during Store operation are processed by this handler.
+ * Handles non-fatal exceptions raised while a Store is running.
+ *
+ * This includes exceptions from DSL handlers, middleware, launched coroutines, and state
+ * persistence callbacks.
  */
 interface ExceptionHandler {
     /**
-     * Handles the occurred exception.
+     * Handles the exception after Tart unwraps its internal bookkeeping errors.
      *
      * @param error The exception to handle
      */
@@ -15,18 +17,14 @@ interface ExceptionHandler {
     @Suppress("unused")
     companion object {
         /**
-         * No-op implementation of ExceptionHandler that silently ignores all exceptions.
-         *
-         * @return An ExceptionHandler instance that ignores all exceptions
+         * Ignores all handled exceptions.
          */
         val Noop: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {}
         }
 
         /**
-         * Logging implementation of ExceptionHandler that prints exceptions to standard output.
-         *
-         * @return An ExceptionHandler instance that logs exceptions to standard output
+         * Prints the exception message and stack trace for debugging.
          */
         val Log: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {
@@ -36,9 +34,7 @@ interface ExceptionHandler {
         }
 
         /**
-         * Implementation of ExceptionHandler that leaves exceptions unhandled by rethrowing them.
-         *
-         * @return An ExceptionHandler instance that rethrows all exceptions
+         * Rethrows handled exceptions instead of swallowing them.
          */
         val Unhandled: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {
@@ -49,10 +45,7 @@ interface ExceptionHandler {
 }
 
 /**
- * Factory function to easily create an instance of ExceptionHandler.
- *
- * @param block Callback function to handle exceptions
- * @return A new ExceptionHandler instance
+ * Creates an [ExceptionHandler] from a single callback.
  */
 fun ExceptionHandler(block: (Throwable) -> Unit) = object : ExceptionHandler {
     override fun handle(error: Throwable) {
