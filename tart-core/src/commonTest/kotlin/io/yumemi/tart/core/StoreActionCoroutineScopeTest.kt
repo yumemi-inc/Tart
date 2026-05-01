@@ -16,6 +16,7 @@ import kotlin.test.assertTrue
 class StoreActionCoroutineScopeTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
+    private class DirectThrowable(message: String) : Throwable(message)
 
     sealed interface AppState : State {
         data class Active(val value: Int = 0) : AppState
@@ -33,6 +34,7 @@ class StoreActionCoroutineScopeTest {
         data object LaunchTransactionThrow : AppAction
         data object LaunchFatal : AppAction
         data object LaunchTransactionFatal : AppAction
+        data object LaunchBareThrowable : AppAction
     }
 
     private fun createTestStore(
@@ -98,6 +100,12 @@ class StoreActionCoroutineScopeTest {
                     }
                 }
 
+                action<AppAction.LaunchBareThrowable> {
+                    launch {
+                        throw DirectThrowable("bare throwable")
+                    }
+                }
+
                 action<AppAction.LaunchTransactionThrow> {
                     launch {
                         transaction {
@@ -116,7 +124,7 @@ class StoreActionCoroutineScopeTest {
             }
 
             state<AppState> {
-                error<Throwable> {
+                error<Exception> {
                     nextState(AppState.Failed(error.message ?: "unknown"))
                 }
             }
@@ -207,6 +215,23 @@ class StoreActionCoroutineScopeTest {
         val error = handledThrowable
         assertIs<AssertionError>(error)
         assertEquals("fatal launch", error.message)
+        assertEquals(AppState.Active(value = 0), store.currentState)
+    }
+
+    @Test
+    fun actionLaunch_nonExceptionThrowable_isForwardedToExceptionHandler() = runTest(testDispatcher) {
+        var handledThrowable: Throwable? = null
+        val store = createTestStore(
+            exceptionHandler = ExceptionHandler { handledThrowable = it },
+        )
+
+        store.dispatch(AppAction.LaunchBareThrowable)
+        repeat(3) { yield() }
+
+        assertNotNull(handledThrowable)
+        val error = handledThrowable
+        assertIs<DirectThrowable>(error)
+        assertEquals("bare throwable", error.message)
         assertEquals(AppState.Active(value = 0), store.currentState)
     }
 

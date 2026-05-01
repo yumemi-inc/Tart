@@ -33,7 +33,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 stateSaver.restore() ?: initialState
             } catch (t: Throwable) {
                 handleException(t)
-                initialState
+                if (t is Exception) {
+                    initialState
+                } else {
+                    throw t
+                }
             },
         )
     }
@@ -82,7 +86,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onExit: suspend ExitScope<S, E, S>.() -> Unit
 
-    protected abstract val onError: suspend ErrorScope<S, E, S, Throwable>.() -> Unit
+    protected abstract val onError: suspend ErrorScope<S, E, S, Exception>.() -> Unit
 
     private val coroutineScope by lazy {
         CoroutineScope(
@@ -212,8 +216,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
-            onErrorOccurred(currentState, t)
+            rethrowIfNonRecoverable(t)
+            onErrorOccurred(currentState, t as Exception)
         }
     }
 
@@ -234,8 +238,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState)
             }
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
-            onErrorOccurred(currentState, t)
+            rethrowIfNonRecoverable(t)
+            onErrorOccurred(currentState, t as Exception)
         }
     }
 
@@ -258,17 +262,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = inErrorHandling)
             }
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
+            rethrowIfNonRecoverable(t)
             if (inErrorHandling) {
                 throw InternalError(t)
             }
-            onErrorOccurred(currentState, t)
+            onErrorOccurred(currentState, t as Exception)
         }
     }
 
-    private suspend fun onErrorOccurred(state: S, throwable: Throwable) {
+    private suspend fun onErrorOccurred(state: S, exception: Exception) {
         try {
-            val nextState = processError(state, throwable)
+            val nextState = processError(state, exception)
 
             if (state::class != nextState::class) {
                 processStateExit(state)
@@ -285,7 +289,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 onStateEntered(nextState, inErrorHandling = true)
             }
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
+            rethrowIfNonRecoverable(t)
             throw InternalError(t)
         }
     }
@@ -487,11 +491,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             block(launchScope)
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
+            rethrowIfNonRecoverable(t)
             coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                 mutex.withLock {
                     if (stateRuntime.scope.isActive) {
-                        onErrorOccurred(currentState, t)
+                        onErrorOccurred(currentState, t as Exception)
                     }
                 }
             }
@@ -533,8 +537,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             try {
                                 block(transactionScope)
                             } catch (t: Throwable) {
-                                rethrowIfFatal(t)
-                                onErrorOccurred(currentState, t)
+                                rethrowIfNonRecoverable(t)
+                                onErrorOccurred(currentState, t as Exception)
                                 return@withLock
                             }
                             val nextState = newState ?: currentState
@@ -586,8 +590,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             try {
                                 block(transactionScope)
                             } catch (t: Throwable) {
-                                rethrowIfFatal(t)
-                                onErrorOccurred(currentState, t)
+                                rethrowIfNonRecoverable(t)
+                                onErrorOccurred(currentState, t as Exception)
                                 return@withLock
                             }
                             val nextState = newState ?: currentState
@@ -631,18 +635,18 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             stateSaver.save(nextState)
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
+            rethrowIfNonRecoverable(t)
             throw InternalError(t)
         }
         notifyStateRecorded(nextState)
         processMiddleware { afterStateChange(nextState, state) }
     }
 
-    private suspend fun processError(state: S, throwable: Throwable): S {
+    private suspend fun processError(state: S, throwable: Exception): S {
         processMiddleware { beforeError(state, throwable) }
         var newState: S? = null
         onError.invoke(
-            object : ErrorScope<S, E, S, Throwable> {
+            object : ErrorScope<S, E, S, Exception> {
                 override val state = state
                 override val error = throwable
                 override fun nextState(state: S) {
@@ -702,7 +706,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         } catch (t: Throwable) {
-            rethrowIfFatal(t)
+            rethrowIfNonRecoverable(t)
             throw InternalError(t)
         }
     }
@@ -712,7 +716,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             try {
                 observer.onState(state)
             } catch (t: Throwable) {
-                rethrowIfFatal(t)
+                rethrowIfNonRecoverable(t)
                 throw InternalError(t)
             }
         }
@@ -723,7 +727,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             try {
                 observer.onEvent(event)
             } catch (t: Throwable) {
-                rethrowIfFatal(t)
+                rethrowIfNonRecoverable(t)
                 throw InternalError(t)
             }
         }
@@ -734,8 +738,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         exceptionHandler.handle(handled)
     }
 
-    private fun rethrowIfFatal(t: Throwable) {
-        if (t is CancellationException || t is Error || t is InternalError) {
+    private fun rethrowIfNonRecoverable(t: Throwable) {
+        if (t is CancellationException || t !is Exception) {
             throw t
         }
     }
