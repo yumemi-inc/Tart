@@ -12,9 +12,9 @@ class LaunchLane
  * Controls how `action {}` launches coordinate with other tracked launches in the same lane.
  *
  * [Concurrent] launches are not tracked by lane.
- * [Replace] and [DropNew] create tracked lanes. When [LaunchLane] is omitted, the launch uses a
- * default lane derived from the current action type, so matching launches coordinate across
- * dispatches of that action type.
+ * [CancelPrevious] and [DropIfRunning] create tracked lanes. When [LaunchLane] is omitted, the
+ * launch uses a default lane derived from the current action type, so matching launches
+ * coordinate across dispatches of that action type.
  */
 sealed interface LaunchControl {
 
@@ -26,10 +26,10 @@ sealed interface LaunchControl {
     /**
      * Cancel the previous tracked launch in the same lane before starting a new one.
      */
-    data class Replace(val lane: LaunchLane? = null) : LaunchControl
+    data class CancelPrevious(val lane: LaunchLane? = null) : LaunchControl
 
     /**
      * Ignore a new launch while tracked work in the same lane is still active.
      */
-    data class DropNew(val lane: LaunchLane? = null) : LaunchControl
+    data class DropIfRunning(val lane: LaunchLane? = null) : LaunchControl
 }
