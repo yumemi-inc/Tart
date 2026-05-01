@@ -20,9 +20,9 @@ class StoreCancelLaunchTest {
     }
 
     sealed interface AppAction : Action {
-        data class StartDropNewShared(val marker: Int) : AppAction
-        data class StartDropNewOther(val marker: Int) : AppAction
-        data class StartReplaceShared(val marker: Int) : AppAction
+        data class StartDropIfRunningShared(val marker: Int) : AppAction
+        data class StartDropIfRunningOther(val marker: Int) : AppAction
+        data class StartCancelPreviousShared(val marker: Int) : AppAction
         data class StartConcurrentShared(val marker: Int) : AppAction
         data object StartEnterLaunch : AppAction
         data object CancelShared : AppAction
@@ -49,10 +49,10 @@ class StoreCancelLaunchTest {
                     }
                 }
 
-                action<AppAction.StartDropNewShared> {
+                action<AppAction.StartDropIfRunningShared> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.DropNew(sharedLane),
+                        control = LaunchControl.DropIfRunning(sharedLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -63,10 +63,10 @@ class StoreCancelLaunchTest {
                     }
                 }
 
-                action<AppAction.StartDropNewOther> {
+                action<AppAction.StartDropIfRunningOther> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.DropNew(otherLane),
+                        control = LaunchControl.DropIfRunning(otherLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -77,10 +77,10 @@ class StoreCancelLaunchTest {
                     }
                 }
 
-                action<AppAction.StartReplaceShared> {
+                action<AppAction.StartCancelPreviousShared> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Replace(sharedLane),
+                        control = LaunchControl.CancelPrevious(sharedLane),
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -121,7 +121,7 @@ class StoreCancelLaunchTest {
     }
 
     @Test
-    fun cancelLaunch_cancelsDropNewLaunchWithMatchingLane() = runTest {
+    fun cancelLaunch_cancelsDropIfRunningLaunchWithMatchingLane() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
@@ -129,7 +129,7 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartDropNewShared(marker = 1))
+        store.dispatch(AppAction.StartDropIfRunningShared(marker = 1))
         runCurrent()
 
         store.dispatch(AppAction.CancelShared)
@@ -139,7 +139,7 @@ class StoreCancelLaunchTest {
     }
 
     @Test
-    fun cancelLaunch_cancelsReplaceLaunchWithMatchingLane() = runTest {
+    fun cancelLaunch_cancelsCancelPreviousLaunchWithMatchingLane() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val started = mutableListOf<Int>()
         val cancelled = mutableListOf<Int>()
@@ -149,7 +149,7 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartReplaceShared(marker = 9))
+        store.dispatch(AppAction.StartCancelPreviousShared(marker = 9))
         runCurrent()
 
         assertEquals(listOf(-1, 9), started)
@@ -169,8 +169,8 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartDropNewShared(marker = 1))
-        store.dispatch(AppAction.StartDropNewOther(marker = 100))
+        store.dispatch(AppAction.StartDropIfRunningShared(marker = 1))
+        store.dispatch(AppAction.StartDropIfRunningOther(marker = 100))
         runCurrent()
 
         store.dispatch(AppAction.CancelShared)
@@ -205,10 +205,10 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartDropNewShared(marker = 1))
+        store.dispatch(AppAction.StartDropIfRunningShared(marker = 1))
         runCurrent()
 
-        store.dispatch(AppAction.StartReplaceShared(marker = 9))
+        store.dispatch(AppAction.StartCancelPreviousShared(marker = 9))
         runCurrent()
 
         assertEquals(listOf(-1, 1, 9), started)
@@ -250,7 +250,7 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartDropNewShared(marker = 1))
+        store.dispatch(AppAction.StartDropIfRunningShared(marker = 1))
         runCurrent()
 
         store.dispose()

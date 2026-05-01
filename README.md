@@ -491,7 +491,7 @@ val store = Store(MyState.Active()) {
         action<MyAction.QueryChanged> {
             nextState(state.copy(query = action.query, isLoading = true))
 
-            launch(control = LaunchControl.Replace(searchLane)) {
+            launch(control = LaunchControl.CancelPrevious(searchLane)) {
                 delay(300)
                 val result = repository.search(action.query)
                 transaction {
@@ -517,7 +517,7 @@ val store = Store(MyState.Active()) {
         }
 
         action<MyAction.Submit> {
-            launch(control = LaunchControl.DropNew()) {
+            launch(control = LaunchControl.DropIfRunning()) {
                 submit()
             }
         }
@@ -525,11 +525,11 @@ val store = Store(MyState.Active()) {
 }
 ```
 
-`LaunchControl.Replace(lane)` cancels the previous tracked launch in the same lane before starting the next one.
-`LaunchControl.DropNew(lane)` ignores new launches while tracked work in the same lane is still active.
-When the lane is omitted, `LaunchControl.Replace()` and `LaunchControl.DropNew()` use the same internal default lane for that `action {}` block.
+`LaunchControl.CancelPrevious(lane)` cancels the previous tracked launch in the same lane before starting the next one.
+`LaunchControl.DropIfRunning(lane)` ignores a new launch while tracked work in the same lane is still active.
+When the lane is omitted, `LaunchControl.CancelPrevious()` and `LaunchControl.DropIfRunning()` use the same internal default lane for that `action {}` block.
 `LaunchControl.Concurrent` keeps the default behavior and runs launches independently.
-`cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.Replace(...)` and `LaunchControl.DropNew(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
+`cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.CancelPrevious(...)` and `LaunchControl.DropIfRunning(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
 
 ### Specifying coroutineContext
 

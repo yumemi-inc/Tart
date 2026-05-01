@@ -234,8 +234,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
      * Cancels tracked launches in the current state's runtime for the given explicit lane.
      *
-     * Only launches started with [LaunchControl.Replace] or [LaunchControl.DropNew] and the same
-     * explicit [LaunchLane] are affected. If no matching launch exists, this is a no-op.
+     * Only launches started with [LaunchControl.CancelPrevious] or
+     * [LaunchControl.DropIfRunning] and the same explicit [LaunchLane] are affected.
+     * If no matching launch exists, this is a no-op.
      *
      * @param lane The explicit launch lane identifying the cancellation group
      */

@@ -420,7 +420,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            is LaunchControl.Replace -> {
+            is LaunchControl.CancelPrevious -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 cancelTrackedActionLaunch(stateRuntime, trackedKey)
                 stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
@@ -432,7 +432,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 )
             }
 
-            is LaunchControl.DropNew -> {
+            is LaunchControl.DropIfRunning -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 if (stateRuntime.actionLaunchJobs[trackedKey]?.isActive == true) return
                 stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
@@ -472,8 +472,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun resolveTrackedActionLaunchKey(action: A, control: LaunchControl): Any {
         return when (control) {
             LaunchControl.Concurrent -> error("Concurrent launches do not have a tracked lane")
-            is LaunchControl.Replace -> control.lane ?: action::class
-            is LaunchControl.DropNew -> control.lane ?: action::class
+            is LaunchControl.CancelPrevious -> control.lane ?: action::class
+            is LaunchControl.DropIfRunning -> control.lane ?: action::class
         }
     }
 
