@@ -23,7 +23,8 @@ interface MiddlewareScope<A : Action> {
     /**
      * Starts background work in the Store's root coroutine scope and returns immediately.
      *
-     * The launched coroutine survives state changes and is cancelled only when the Store is closed.
+     * The launched coroutine survives state changes and is cancelled when the Store's root
+     * coroutine scope is cancelled, such as by [Store.close] or parent scope cancellation.
      *
      * @param dispatcher Optional CoroutineDispatcher override for the coroutine.
      * When null, the coroutine inherits the Store's current execution context.
