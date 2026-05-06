@@ -302,8 +302,8 @@ class StoreObserverTest {
             coroutineContext(Dispatchers.Unconfined)
             stateSaver(stateSaver)
             exceptionHandler(exceptionHandler)
-            middleware(
-                Middleware(
+            plugin(
+                Plugin(
                     onStart = {
                         onStart?.invoke()
                     },

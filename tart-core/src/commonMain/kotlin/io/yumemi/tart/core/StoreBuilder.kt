@@ -20,9 +20,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
-    private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.Concurrent
     private var storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
-    private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
 
     /**
      * Sets the declared initial state.
@@ -76,18 +74,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Sets how the Store invokes middleware when multiple middleware instances are registered.
-     *
-     * Regardless of policy, the Store waits for all matching middleware hooks to complete before it
-     * continues processing.
-     *
-     * @param policy The middleware execution policy to use
-     */
-    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
-        storeMiddlewareExecutionPolicy = policy
-    }
-
-    /**
      * Sets how the Store invokes plugins when multiple plugin instances are registered.
      *
      * Regardless of policy, the Store waits for all matching plugin hooks to complete before it
@@ -118,27 +104,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         clearPlugins()
         storePlugins.add(first)
         storePlugins.addAll(rest)
-    }
-
-    /**
-     * Appends one or more middleware instances to the Store.
-     *
-     * @param first The first middleware instance to add
-     * @param rest Additional middleware instances to add
-     */
-    fun middleware(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
-        storeMiddlewares.add(first)
-        storeMiddlewares.addAll(rest)
-    }
-
-    internal fun clearMiddlewares() {
-        storeMiddlewares.clear()
-    }
-
-    internal fun replaceMiddlewares(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
-        clearMiddlewares()
-        storeMiddlewares.add(first)
-        storeMiddlewares.addAll(rest)
     }
 
     class StateHandler<P, SC : StoreScope>(
@@ -341,9 +306,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override val pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
-            override val middlewareExecutionPolicy: MiddlewareExecutionPolicy = storeMiddlewareExecutionPolicy
             override val plugins: List<Plugin<S, A, E>> = storePlugins
-            override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
             override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
@@ -361,7 +324,7 @@ typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
  * Store overrides block applied after the main [Setup] block.
  *
  * This block is limited to non-state configuration such as coroutine context, persistence,
- * exception handling, pending action policy, plugins, and middleware.
+ * exception handling, pending action policy, and plugins.
  */
 typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
 
@@ -405,13 +368,6 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
     }
 
     /**
-     * Overrides how the Store invokes middleware when multiple middleware instances are registered.
-     */
-    fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
-        operations.add { middlewareExecutionPolicy(policy) }
-    }
-
-    /**
      * Overrides how the Store invokes plugins when multiple plugin instances are registered.
      */
     fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
@@ -443,33 +399,6 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
      */
     fun clearPlugins() {
         operations.add { clearPlugins() }
-    }
-
-    /**
-     * Appends middleware after the main setup block has run.
-     */
-    fun middleware(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
-        val restValues = rest.copyOf()
-        operations.add { middleware(first, *restValues) }
-    }
-
-    /**
-     * Replaces every middleware configured so far.
-     *
-     * This is useful for removing default middleware in tests or debug setups.
-     */
-    fun replaceMiddlewares(first: Middleware<S, A, E>, vararg rest: Middleware<S, A, E>) {
-        val restValues = rest.copyOf()
-        operations.add { replaceMiddlewares(first, *restValues) }
-    }
-
-    /**
-     * Removes every middleware configured so far.
-     *
-     * This is useful for removing default middleware in tests or debug setups.
-     */
-    fun clearMiddlewares() {
-        operations.add { clearMiddlewares() }
     }
 
     internal fun applyTo(builder: StoreBuilder<S, A, E>) {

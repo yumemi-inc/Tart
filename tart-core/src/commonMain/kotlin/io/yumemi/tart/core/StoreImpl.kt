@@ -77,11 +77,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val pluginExecutionPolicy: PluginExecutionPolicy
 
-    protected abstract val middlewareExecutionPolicy: MiddlewareExecutionPolicy
-
     protected abstract val plugins: List<Plugin<S, A, E>>
-
-    protected abstract val middlewares: List<Middleware<S, A, E>>
 
     protected abstract val onEnter: suspend EnterScope<S, E, S>.() -> Unit
 
@@ -195,22 +191,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
         isInitialized = true
-        processMiddleware {
-            onStart(
-                object : MiddlewareScope<A> {
-                    override fun dispatch(action: A) {
-                        this@StoreImpl.dispatch(action)
-                    }
-
-                    override fun launch(dispatcher: CoroutineDispatcher?, block: suspend CoroutineScope.() -> Unit) {
-                        coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
-                            block()
-                        }
-                    }
-                },
-                currentState,
-            )
-        }
         processPlugins { onStart(pluginScope, currentState) }
         onStateEntered(currentState)
     }
@@ -317,7 +297,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processActionDispatch(state: S, action: A): S {
-        processMiddleware { beforeActionDispatch(state, action) }
         processPlugins { onAction(pluginScope, state, action) }
         var newState: S? = null
         onAction.invoke(
@@ -362,13 +341,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             },
         )
-        val nextState = newState ?: state
-        processMiddleware { afterActionDispatch(state, action, nextState) }
-        return nextState
+        return newState ?: state
     }
 
     private suspend fun processStateEnter(state: S): S {
-        processMiddleware { beforeStateEnter(state) }
         stateRuntimes[state::class]?.scope?.cancel()
         val stateRuntime = StateRuntime(
             scope = CoroutineScope(coroutineScope.coroutineContext + SupervisorJob(coroutineScope.coroutineContext[Job])),
@@ -404,9 +380,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             },
         )
-        val nextState = newState ?: state
-        processMiddleware { afterStateEnter(state, nextState) }
-        return nextState
+        return newState ?: state
     }
 
     private fun <LS> launchInStateRuntime(
@@ -631,7 +605,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processStateExit(state: S) {
         try {
-            processMiddleware { beforeStateExit(state) }
             onExit.invoke(
                 object : ExitScope<S, E, S> {
                     override val state = state
@@ -645,7 +618,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     }
                 },
             )
-            processMiddleware { afterStateExit(state) }
         } finally {
             stateRuntimes[state::class]?.scope?.cancel()
             stateRuntimes.remove(state::class)
@@ -653,7 +625,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processStateChange(state: S, nextState: S) {
-        processMiddleware { beforeStateChange(state, nextState) }
         _state.update { nextState }
         try {
             stateSaver.save(nextState)
@@ -662,12 +633,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             throw InternalError(t)
         }
         notifyStateRecorded(nextState)
-        processMiddleware { afterStateChange(nextState, state) }
         processPlugins { onState(pluginScope, state, nextState) }
     }
 
     private suspend fun processError(state: S, throwable: Exception): S {
-        processMiddleware { beforeError(state, throwable) }
         var newState: S? = null
         onError.invoke(
             object : ErrorScope<S, E, S, Exception> {
@@ -690,16 +659,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             },
         )
-        val nextState = newState ?: state
-        processMiddleware { afterError(state, nextState, throwable) }
-        return nextState
+        return newState ?: state
     }
 
     private suspend fun processEventEmit(state: S, event: E) {
-        processMiddleware { beforeEventEmit(state, event) }
         _event.emit(event)
         notifyEventRecorded(event)
-        processMiddleware { afterEventEmit(state, event) }
         processPlugins { onEvent(pluginScope, state, event) }
     }
 
@@ -715,25 +680,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         dispatchScopeJob.children
             .filter { it != currentJob && it.isActive }
             .forEach { it.cancel() }
-    }
-
-    private suspend fun processMiddleware(block: suspend Middleware<S, A, E>.() -> Unit) {
-        try {
-            when (middlewareExecutionPolicy) {
-                MiddlewareExecutionPolicy.Concurrent -> coroutineScope {
-                    middlewares.forEach { middleware ->
-                        launch { middleware.block() }
-                    }
-                }
-
-                MiddlewareExecutionPolicy.InRegistrationOrder -> middlewares.forEach { middleware ->
-                    middleware.block()
-                }
-            }
-        } catch (t: Throwable) {
-            rethrowIfNonRecoverable(t)
-            throw InternalError(t)
-        }
     }
 
     private suspend fun processPlugins(block: suspend Plugin<S, A, E>.() -> Unit) {

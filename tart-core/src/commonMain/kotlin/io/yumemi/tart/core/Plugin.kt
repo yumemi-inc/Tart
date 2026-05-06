@@ -2,7 +2,7 @@ package io.yumemi.tart.core
 
 /**
  * Extension point for reacting to Store lifecycle events such as startup, dispatched actions,
- * committed state snapshots, and emitted events.
+ * committed state snapshots and emitted events.
  *
  * Plugin hooks are suspending functions and are awaited by the Store according to the configured
  * [PluginExecutionPolicy] before it continues processing. Long-running work in a hook can delay
