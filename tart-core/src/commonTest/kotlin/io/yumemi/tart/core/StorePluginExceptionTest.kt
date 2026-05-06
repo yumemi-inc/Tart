@@ -75,26 +75,26 @@ class StorePluginExceptionTest {
     }
 
     @Test
-    fun pluginOnErrorException_isHandledWithoutRetryingStoreErrorHandling() = runTest(testDispatcher) {
+    fun pluginOnStateException_isHandledWithoutRetryingStoreErrorHandling() = runTest(testDispatcher) {
         var handledException: Throwable? = null
         val store = createStore(
             plugin = object : Plugin<AppState, AppAction, Nothing> {
-                override suspend fun onError(
+                override suspend fun onState(
                     scope: PluginScope<AppState, AppAction>,
+                    prevState: AppState,
                     state: AppState,
-                    error: Exception,
                 ) {
-                    throw IllegalArgumentException("onError failed")
+                    throw IllegalArgumentException("onState failed")
                 }
             },
             exceptionHandler = ExceptionHandler { handledException = it },
         )
 
-        store.dispatch(AppAction.Throw)
+        store.dispatch(AppAction.Increment)
         testScheduler.runCurrent()
 
-        assertEquals(AppState.Ready(), store.currentState)
+        assertEquals(AppState.Ready(value = 1), store.currentState)
         val error = assertIs<IllegalArgumentException>(handledException)
-        assertEquals("onError failed", error.message)
+        assertEquals("onState failed", error.message)
     }
 }

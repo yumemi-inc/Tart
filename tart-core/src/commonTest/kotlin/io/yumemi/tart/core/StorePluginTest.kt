@@ -58,14 +58,11 @@ class StorePluginTest {
                     onAction = { state, action ->
                         records += "action:$state:$action"
                     },
-                    onStateChanged = { prevState, state ->
-                        records += "state:$prevState->$state:current=$currentState"
+                    onState = { prevState, state ->
+                        records += "state:$prevState->$state"
                     },
                     onEvent = { state, event ->
                         records += "event:$state:$event"
-                    },
-                    onError = { state, error ->
-                        records += "error:$state:${error.message}"
                     },
                 ),
             )
@@ -111,14 +108,13 @@ class StorePluginTest {
         assertEquals(
             listOf(
                 "start:Loading",
-                "state:Loading->Ready(count=0):current=Ready(count=0)",
+                "state:Loading->Ready(count=0)",
                 "action:Ready(count=0):Increment",
-                "state:Ready(count=0)->Ready(count=1):current=Ready(count=1)",
+                "state:Ready(count=0)->Ready(count=1)",
                 "action:Ready(count=1):Emit",
                 "event:Ready(count=1):CountUpdated(count=1)",
                 "action:Ready(count=1):Throw",
-                "error:Ready(count=1):action failed",
-                "state:Ready(count=1)->Failed(message=action failed):current=Failed(message=action failed)",
+                "state:Ready(count=1)->Failed(message=action failed)",
             ),
             records,
         )
@@ -137,13 +133,15 @@ class StorePluginTest {
                     override suspend fun onStart(scope: PluginScope<AppState, AppAction>, state: AppState) {
                         scope.launch {
                             launchGate.await()
-                            records += "launch:${scope.currentState}"
+                            records += "launch:$currentState"
                         }
                     }
 
                     override suspend fun onAction(scope: PluginScope<AppState, AppAction>, state: AppState, action: AppAction) {
                         if (action == AppAction.TriggerPluginDispatch) {
-                            scope.dispatch(AppAction.Increment)
+                            scope.launch {
+                                dispatch(AppAction.Increment)
+                            }
                         }
                     }
                 },
@@ -195,7 +193,7 @@ class StorePluginTest {
                             try {
                                 kotlinx.coroutines.awaitCancellation()
                             } finally {
-                                records += "cleanup:${scope.currentState}"
+                                records += "cleanup:$currentState"
                             }
                         }
                     }

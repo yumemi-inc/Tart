@@ -19,6 +19,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
+    private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
     private var storeMiddlewareExecutionPolicy: MiddlewareExecutionPolicy = MiddlewareExecutionPolicy.Concurrent
     private var storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
     private var storeMiddlewares: MutableList<Middleware<S, A, E>> = mutableListOf()
@@ -87,9 +88,19 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     /**
-     * Appends one or more plugins to the Store.
+     * Sets how the Store invokes plugins when multiple plugin instances are registered.
      *
-     * Plugins are invoked one by one in registration order.
+     * Regardless of policy, the Store waits for all matching plugin hooks to complete before it
+     * continues processing.
+     *
+     * @param policy The plugin execution policy to use
+     */
+    fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
+        storePluginExecutionPolicy = policy
+    }
+
+    /**
+     * Appends one or more plugins to the Store.
      *
      * @param first The first plugin instance to add
      * @param rest Additional plugin instances to add
@@ -329,6 +340,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
+            override val pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
             override val middlewareExecutionPolicy: MiddlewareExecutionPolicy = storeMiddlewareExecutionPolicy
             override val plugins: List<Plugin<S, A, E>> = storePlugins
             override val middlewares: List<Middleware<S, A, E>> = storeMiddlewares
@@ -397,6 +409,13 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
      */
     fun middlewareExecutionPolicy(policy: MiddlewareExecutionPolicy) {
         operations.add { middlewareExecutionPolicy(policy) }
+    }
+
+    /**
+     * Overrides how the Store invokes plugins when multiple plugin instances are registered.
+     */
+    fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
+        operations.add { pluginExecutionPolicy(policy) }
     }
 
     /**
