@@ -1,6 +1,6 @@
 package io.yumemi.tart.message
 
-import io.yumemi.tart.core.Middleware
+import io.yumemi.tart.core.Plugin
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import kotlinx.coroutines.Dispatchers
@@ -10,22 +10,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class MessageMiddlewareTest {
+class MessagePluginTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Test
-    fun messageMiddleware_shouldReceiveMessages() = runTest(testDispatcher) {
+    fun messagePlugin_shouldReceiveMessages() = runTest(testDispatcher) {
         val sendMessage = TestMessage("Hello")
 
         var receivedMessage: TestMessage? = null
-        val middleware = receiveMessages<CounterState, Nothing, Nothing> { message ->
+        val plugin = receiveMessages<CounterState, Nothing, Nothing> { message ->
             if (message is TestMessage) {
                 receivedMessage = message
             }
         }
 
-        val store = createTestStore(CounterState(10), middleware, sendMessage)
+        val store = createTestStore(CounterState(10), plugin, sendMessage)
 
         store.collectState { } // start Store
 
@@ -39,12 +39,12 @@ private data class TestMessage(val value: String) : Message
 
 private fun createTestStore(
     initialState: CounterState,
-    middleware: Middleware<CounterState, Nothing, Nothing>,
+    plugin: Plugin<CounterState, Nothing, Nothing>,
     message: Message,
 ): Store<CounterState, Nothing, Nothing> {
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
-        middleware(middleware)
+        plugin(plugin)
         state<CounterState> {
             enter {
                 message(message)

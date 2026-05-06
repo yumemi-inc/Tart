@@ -1,7 +1,7 @@
 package io.yumemi.tart.logging
 
 import io.yumemi.tart.core.Action
-import io.yumemi.tart.core.Middleware
+import io.yumemi.tart.core.Plugin
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import kotlinx.coroutines.Dispatchers
@@ -11,16 +11,16 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class LoggingMiddlewareTest {
+class LoggingPluginTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Test
-    fun loggingMiddleware_shouldLogAction() = runTest(testDispatcher) {
+    fun loggingPlugin_shouldLogAction() = runTest(testDispatcher) {
         val testLogger = TestLogger()
-        val middleware = simpleLogging<CounterState, CounterAction, Nothing>(logger = testLogger)
+        val plugin = simpleLogging<CounterState, CounterAction, Nothing>(logger = testLogger)
 
-        val store = createTestStore(CounterState(10), middleware)
+        val store = createTestStore(CounterState(10), plugin)
 
         store.dispatch(CounterAction.Increment)
 
@@ -45,11 +45,11 @@ private class TestLogger : Logger {
 
 private fun createTestStore(
     initialState: CounterState,
-    middleware: Middleware<CounterState, CounterAction, Nothing>,
+    plugin: Plugin<CounterState, CounterAction, Nothing>,
 ): Store<CounterState, CounterAction, Nothing> {
     return Store(initialState) {
         coroutineContext(Dispatchers.Unconfined)
-        middleware(middleware)
+        plugin(plugin)
         state<CounterState> {
             action<CounterAction.Increment> {
                 nextState(state.copy(count = state.count + 1))

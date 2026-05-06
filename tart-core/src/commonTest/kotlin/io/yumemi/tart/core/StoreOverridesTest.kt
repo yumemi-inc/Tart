@@ -42,17 +42,6 @@ class StoreOverridesTest {
         override fun restore(): AppState? = restoredState
     }
 
-    private fun recordingMiddleware(
-        name: String,
-        records: MutableList<String>,
-    ): Middleware<AppState, AppAction, Nothing> {
-        return Middleware(
-            afterActionDispatch = { _, _, _ ->
-                records += name
-            },
-        )
-    }
-
     private fun recordingPlugin(
         name: String,
         records: MutableList<String>,
@@ -68,18 +57,18 @@ class StoreOverridesTest {
     fun storeInitialStateOverload_shouldApplyOverridesAfterSetup() {
         val setupSaver = RecordingStateSaver(restoredState = AppState(count = 100))
         val overrideSaver = RecordingStateSaver(restoredState = AppState(count = 10))
-        val middlewareRecords = mutableListOf<String>()
+        val pluginRecords = mutableListOf<String>()
 
         val store = Store(
             initialState = AppState(count = 0),
             overrides = {
                 coroutineContext(Dispatchers.Unconfined)
                 stateSaver(overrideSaver)
-                replaceMiddlewares(recordingMiddleware("override", middlewareRecords))
+                replacePlugins(recordingPlugin("override", pluginRecords))
             },
         ) {
             stateSaver(setupSaver)
-            middleware(recordingMiddleware("setup", middlewareRecords))
+            plugin(recordingPlugin("setup", pluginRecords))
 
             state<AppState> {
                 action<AppAction.Increment> {
@@ -92,28 +81,28 @@ class StoreOverridesTest {
 
         store.dispatch(AppAction.Increment)
 
-        assertEquals(listOf("override"), middlewareRecords)
+        assertEquals(listOf("override"), pluginRecords)
         assertEquals(listOf(AppState(count = 11)), overrideSaver.savedStates)
         assertTrue(setupSaver.savedStates.isEmpty())
     }
 
     @Test
-    fun storeDslInitialStateOverload_shouldApplyOverridesAndAllowMiddlewareAppendAfterReplacement() {
+    fun storeDslInitialStateOverload_shouldApplyOverridesAndAllowPluginAppendAfterReplacement() {
         val setupSaver = RecordingStateSaver(restoredState = AppState(count = 100))
         val overrideSaver = RecordingStateSaver(restoredState = AppState(count = 20))
-        val middlewareRecords = mutableListOf<String>()
+        val pluginRecords = mutableListOf<String>()
 
         val store = Store(
             overrides = {
                 coroutineContext(Dispatchers.Unconfined)
                 stateSaver(overrideSaver)
-                replaceMiddlewares(recordingMiddleware("replacement", middlewareRecords))
-                middleware(recordingMiddleware("extra", middlewareRecords))
+                replacePlugins(recordingPlugin("replacement", pluginRecords))
+                plugin(recordingPlugin("extra", pluginRecords))
             },
         ) {
             initialState(AppState(count = 0))
             stateSaver(setupSaver)
-            middleware(recordingMiddleware("setup", middlewareRecords))
+            plugin(recordingPlugin("setup", pluginRecords))
 
             state<AppState> {
                 action<AppAction.Increment> {
@@ -126,59 +115,9 @@ class StoreOverridesTest {
 
         store.dispatch(AppAction.Increment)
 
-        assertEquals(listOf("extra", "replacement"), middlewareRecords.sorted())
+        assertEquals(listOf("extra", "replacement"), pluginRecords.sorted())
         assertEquals(listOf(AppState(count = 21)), overrideSaver.savedStates)
         assertTrue(setupSaver.savedStates.isEmpty())
-    }
-
-    @Test
-    fun clearMiddlewaresInOverrides_shouldClearPreviouslyConfiguredMiddlewares() {
-        val middlewareRecords = mutableListOf<String>()
-
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                clearMiddlewares()
-            },
-        ) {
-            coroutineContext(Dispatchers.Unconfined)
-            middleware(recordingMiddleware("setup", middlewareRecords))
-
-            state<AppState> {
-                action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
-                }
-            }
-        }
-
-        store.dispatch(AppAction.Increment)
-
-        assertTrue(middlewareRecords.isEmpty())
-    }
-
-    @Test
-    fun replacePluginsInOverrides_shouldReplacePreviouslyConfiguredPlugins() {
-        val pluginRecords = mutableListOf<String>()
-
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                replacePlugins(recordingPlugin("override", pluginRecords))
-            },
-        ) {
-            coroutineContext(Dispatchers.Unconfined)
-            plugin(recordingPlugin("setup", pluginRecords))
-
-            state<AppState> {
-                action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
-                }
-            }
-        }
-
-        store.dispatch(AppAction.Increment)
-
-        assertEquals(listOf("override"), pluginRecords)
     }
 
     @Test
@@ -204,40 +143,6 @@ class StoreOverridesTest {
         store.dispatch(AppAction.Increment)
 
         assertTrue(pluginRecords.isEmpty())
-    }
-
-    @Test
-    fun middleware_shouldAcceptMultipleValuesInSetupAndOverrides() {
-        val middlewareRecords = mutableListOf<String>()
-
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                middleware(
-                    recordingMiddleware("override1", middlewareRecords),
-                    recordingMiddleware("override2", middlewareRecords),
-                )
-            },
-        ) {
-            coroutineContext(Dispatchers.Unconfined)
-            middleware(
-                recordingMiddleware("setup1", middlewareRecords),
-                recordingMiddleware("setup2", middlewareRecords),
-            )
-
-            state<AppState> {
-                action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
-                }
-            }
-        }
-
-        store.dispatch(AppAction.Increment)
-
-        assertEquals(
-            listOf("override1", "override2", "setup1", "setup2"),
-            middlewareRecords.sorted(),
-        )
     }
 
     @Test

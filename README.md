@@ -40,7 +40,7 @@ By combining Kotlin `sealed class`/`sealed interface` with Tart's state machine 
 
 ## Current Scope
 
-Tart currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and middleware-driven extensions such as logging and inter-store messaging.
+Tart currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and plugin-driven extensions such as logging and inter-store messaging.
 It keeps surrounding helper layers intentionally small, so dependencies and feature composition can stay in ordinary Kotlin, while the core Store logic remains portable across platforms.
 
 ## Table of Contents
@@ -66,7 +66,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
   - [Dispatch Actions](#dispatch-actions)
   - [Handling Events](#handling-events)
   - [Mocks for preview and testing](#mocks-for-preview-and-testing)
-- [Middleware](#middleware)
+- [Plugin](#plugin)
   - [Logging](#logging)
   - [Message](#message)
 - [Store Configuration Overrides](#store-configuration-overrides)
@@ -867,102 +867,99 @@ fun LoadingPreview() {
 Therefore, if you prepare only the *State*, it is possible to develop the UI.
 </details>
 
-## Middleware
+## Plugin
 
 <details>
 <summary>contents</summary>
 
 You can create extensions that work with the *Store*.
-To do this, create a class that implements the `Middleware` interface and override the necessary methods.
+To do this, create a class that implements the `Plugin` interface and override the necessary methods.
 
 ```kt
-class YourMiddleware<S : State, A : Action, E : Event> : Middleware<S, A, E> {
-    override suspend fun afterStateChange(state: S, prevState: S) {
+class YourPlugin<S : State, A : Action, E : Event> : Plugin<S, A, E> {
+    override suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {
         // do something..
     }
 }
 ```
 
-Apply the created Middleware as follows:
+Apply the created plugin as follows:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    // add Middleware instance
-    middleware(YourMiddleware())
+    // add Plugin instance
+    plugin(YourPlugin())
 
-    // or, implement Middleware directly here
-    middleware(
-        object : Middleware<CounterState, CounterAction, CounterEvent> {
-            override suspend fun afterStateChange(state: CounterState, prevState: CounterState) {
+    // or, implement Plugin directly here
+    plugin(
+        object : Plugin<CounterState, CounterAction, CounterEvent> {
+            override suspend fun onState(scope: PluginScope<CounterState, CounterAction>, prevState: CounterState, state: CounterState) {
                 // do something..
             }
         },
     )
 
-    // add multiple Middlewares
-    middleware(..., ...)
+    // add multiple Plugins
+    plugin(..., ...)
 }
 ```
 
-Note that *State* is read-only in Middleware.
+Note that *State* is read-only in Plugin hooks.
 
-You can also create a `Middleware` instance with the `Middleware()` factory function.
+You can also create a `Plugin` instance with the `Plugin()` factory function.
 
-Middleware methods are suspending functions. The *Store* waits for middleware processing to complete before proceeding.
-When multiple middleware instances are registered, Tart invokes them concurrently by default.
-If middleware must run one by one in registration order, set `middlewareExecutionPolicy(MiddlewareExecutionPolicy.InRegistrationOrder)`.
+Plugin methods are suspending functions. The *Store* waits for plugin processing to complete before proceeding.
+When multiple plugin instances are registered, Tart invokes them concurrently by default.
+If plugins must run one by one in registration order, set `pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)`.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    middlewareExecutionPolicy(MiddlewareExecutionPolicy.InRegistrationOrder)
+    pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)
 }
 ```
 
-Because a long-running method can block the *Store*, run heavy work in a separate CoroutineScope.
+Because a long-running method can block the *Store*, start background work from the hook with `scope.launch { ... }`.
 
-In the next section, we introduce built-in Middleware.
-The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your Middleware implementation.
+In the next section, we introduce built-in plugins.
+The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your plugin implementation.
 
 ### Logging
 
-Middleware for logging Store operations.
+Plugin for logging Store operations.
 
 ```kt
 implementation("io.yumemi.tart:tart-logging:<latest-release>")
 ```
 
-Apply the `simpleLogging()` middleware factory function to your *Store* to log all actions, events, state changes, and errors.
+Apply the `simpleLogging()` plugin factory function to your *Store* to log actions, events, and state changes.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
     // ...
 
-    middleware(simpleLogging())
+    plugin(simpleLogging())
 }
 ```
 
-You can create custom logging middleware by extending the [LoggingMiddleware](tart-logging/src/commonMain/kotlin/io/yumemi/tart/logging/LoggingMiddleware.kt) class if you need more control over the logging behavior.
+For example, you can pass your own `Logger` to `simpleLogging()`:
 
 ```kt
-middleware(
-    object : LoggingMiddleware<CounterState, CounterAction, CounterEvent>(
-        logger = YourLogger() // specify your logger
-    ) {
-        // override methods
-        override suspend fun beforeStateEnter(state: CounterState) {
-            log(...)
-        }
-    },
+plugin(
+    simpleLogging(
+        logger = YourLogger(),
+    ),
 )
 ```
 
+If you want a different logging plugin shape entirely, implement your own Tart `Plugin` and reuse `Logger` or `DefaultLogger` from this module.
+
 ### Message
 
-Middleware for sending messages between *Stores*.
+Plugin for sending messages between *Stores*.
 
 ```kt
 implementation("io.yumemi.tart:tart-message:<latest-release>")
@@ -977,13 +974,13 @@ sealed interface MainMessage : Message {
 }
 ```
 
-Apply the `receiveMessages()` middleware factory function to the *Store* that receives messages.
+Apply the `receiveMessages()` plugin factory function to the *Store* that receives messages.
 
 ```kt
 val myPageStore: Store<MyPageState, MyPageAction, MyPageEvent> = Store {
     // ...
 
-    middleware(
+    plugin(
         receiveMessages { message ->
             when (message) {
                 MainMessage.LoggedOut -> dispatch(MyPageAction.doLogoutProcess)
@@ -1021,7 +1018,7 @@ fun CounterStore(
     initialState = CounterState(count = 0),
     overrides = overrides,
 ) {
-    middleware(AppLoggingMiddleware())
+    plugin(AppLoggingPlugin())
 
     state<CounterState> {
         // ...
@@ -1032,7 +1029,7 @@ val store = CounterStore()
 
 val testStore = CounterStore(
     overrides = {
-        clearMiddlewares()
+        clearPlugins()
         exceptionHandler(ExceptionHandler.Log)
     },
 )
@@ -1043,16 +1040,16 @@ Inside `overrides` block, you can use these APIs:
 - `coroutineContext(...)`
 - `stateSaver(...)`
 - `exceptionHandler(...)`
-- `middleware(...)`
-- `clearMiddlewares()`
-- `replaceMiddlewares(...)`
+- `plugin(...)`
+- `clearPlugins()`
+- `replacePlugins(...)`
 - `pendingActionPolicy(...)`
-- `middlewareExecutionPolicy(...)`
+- `pluginExecutionPolicy(...)`
 
 Typical uses are:
 
 - changing shared *Store* behavior in tests without rewriting the *Store* definition
-- injecting debug-only middleware or logging
+- injecting debug-only plugins or logging
 
 ## Project-specific AppStore Wrapper
 
@@ -1069,7 +1066,7 @@ fun <S : State, A : Action, E : Event> AppStore(
     overrides = overrides,
 ) {
     // shared Store configuration
-    middleware(AppLoggingMiddleware())
+    plugin(AppLoggingPlugin())
     exceptionHandler(AppExceptionHandler)
 
     setup()
@@ -1096,7 +1093,7 @@ val store = CounterStore(counterRepository = counterRepository)
 val testStore = CounterStore(
     counterRepository = counterRepository,
     overrides = {
-        clearMiddlewares()
+        clearPlugins()
         // ...
     },
 )
