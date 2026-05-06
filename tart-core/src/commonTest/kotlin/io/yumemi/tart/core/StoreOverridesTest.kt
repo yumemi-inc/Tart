@@ -53,6 +53,17 @@ class StoreOverridesTest {
         )
     }
 
+    private fun recordingPlugin(
+        name: String,
+        records: MutableList<String>,
+    ): Plugin<AppState, AppAction, Nothing> {
+        return Plugin(
+            onAction = { _, _ ->
+                records += name
+            },
+        )
+    }
+
     @Test
     fun storeInitialStateOverload_shouldApplyOverridesAfterSetup() {
         val setupSaver = RecordingStateSaver(restoredState = AppState(count = 100))
@@ -146,6 +157,56 @@ class StoreOverridesTest {
     }
 
     @Test
+    fun replacePluginsInOverrides_shouldReplacePreviouslyConfiguredPlugins() {
+        val pluginRecords = mutableListOf<String>()
+
+        val store = Store(
+            initialState = AppState(count = 0),
+            overrides = {
+                replacePlugins(recordingPlugin("override", pluginRecords))
+            },
+        ) {
+            coroutineContext(Dispatchers.Unconfined)
+            plugin(recordingPlugin("setup", pluginRecords))
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.dispatch(AppAction.Increment)
+
+        assertEquals(listOf("override"), pluginRecords)
+    }
+
+    @Test
+    fun clearPluginsInOverrides_shouldClearPreviouslyConfiguredPlugins() {
+        val pluginRecords = mutableListOf<String>()
+
+        val store = Store(
+            initialState = AppState(count = 0),
+            overrides = {
+                clearPlugins()
+            },
+        ) {
+            coroutineContext(Dispatchers.Unconfined)
+            plugin(recordingPlugin("setup", pluginRecords))
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.dispatch(AppAction.Increment)
+
+        assertTrue(pluginRecords.isEmpty())
+    }
+
+    @Test
     fun middleware_shouldAcceptMultipleValuesInSetupAndOverrides() {
         val middlewareRecords = mutableListOf<String>()
 
@@ -176,6 +237,40 @@ class StoreOverridesTest {
         assertEquals(
             listOf("override1", "override2", "setup1", "setup2"),
             middlewareRecords.sorted(),
+        )
+    }
+
+    @Test
+    fun plugin_shouldAcceptMultipleValuesInSetupAndOverrides() {
+        val pluginRecords = mutableListOf<String>()
+
+        val store = Store(
+            initialState = AppState(count = 0),
+            overrides = {
+                plugin(
+                    recordingPlugin("override1", pluginRecords),
+                    recordingPlugin("override2", pluginRecords),
+                )
+            },
+        ) {
+            coroutineContext(Dispatchers.Unconfined)
+            plugin(
+                recordingPlugin("setup1", pluginRecords),
+                recordingPlugin("setup2", pluginRecords),
+            )
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.dispatch(AppAction.Increment)
+
+        assertEquals(
+            listOf("setup1", "setup2", "override1", "override2"),
+            pluginRecords,
         )
     }
 

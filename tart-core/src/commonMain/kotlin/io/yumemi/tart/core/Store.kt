@@ -91,7 +91,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     /**
      * Cancels the Store and releases its resources.
      *
-     * Active state-scoped coroutines, middleware coroutines, and callback collectors are cancelled.
+     * Active state-scoped coroutines, plugin coroutines, middleware coroutines, and callback
+     * collectors are cancelled.
      */
     override fun close()
 
