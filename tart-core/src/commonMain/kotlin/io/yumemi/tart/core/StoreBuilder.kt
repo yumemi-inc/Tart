@@ -18,6 +18,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeCoroutineContext: CoroutineContext = Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
+    private var storeAutoStartPolicy: AutoStartPolicy = AutoStartPolicy.OnDispatchOrStateCollection
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
     private var storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
@@ -61,6 +62,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      */
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
         storeExceptionHandler = exceptionHandler
+    }
+
+    /**
+     * Sets which implicit triggers start a lazy Store.
+     *
+     * @param policy The auto-start policy to use
+     */
+    fun autoStartPolicy(policy: AutoStartPolicy) {
+        storeAutoStartPolicy = policy
     }
 
     /**
@@ -304,6 +314,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val coroutineContext: CoroutineContext = storeCoroutineContext
             override val stateSaver: StateSaver<S> = storeStateSaver
             override val exceptionHandler: ExceptionHandler = storeExceptionHandler
+            override val autoStartPolicy: AutoStartPolicy = storeAutoStartPolicy
             override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override val pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
             override val plugins: List<Plugin<S, A, E>> = storePlugins
@@ -324,7 +335,7 @@ typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
  * Store overrides block applied after the main [Setup] block.
  *
  * This block is limited to non-state configuration such as coroutine context, persistence,
- * exception handling, pending action policy, and plugins.
+ * exception handling, auto-start policy, pending action policy, and plugins.
  */
 typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
 
@@ -357,6 +368,13 @@ class StoreOverridesBuilder<S : State, A : Action, E : Event> internal construct
      */
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
         operations.add { exceptionHandler(exceptionHandler) }
+    }
+
+    /**
+     * Overrides which implicit triggers start a lazy Store.
+     */
+    fun autoStartPolicy(policy: AutoStartPolicy) {
+        operations.add { autoStartPolicy(policy) }
     }
 
     /**

@@ -50,7 +50,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 launch {
                     _state.collect(collector)
                 }
-                launchStartup()
+                if (autoStartPolicy == AutoStartPolicy.OnDispatchOrStateCollection) {
+                    launchStartup()
+                }
                 awaitCancellation()
             }
         }
@@ -68,6 +70,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     protected abstract val stateSaver: StateSaver<S>
 
     protected abstract val exceptionHandler: ExceptionHandler
+
+    protected abstract val autoStartPolicy: AutoStartPolicy
 
     protected abstract val pendingActionPolicy: PendingActionPolicy
 
@@ -130,6 +134,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     final override fun dispatch(action: A) {
         launchDispatch(action)
+    }
+
+    final override fun start() {
+        launchStartup()
     }
 
     final override suspend fun startAndWait() {
@@ -678,7 +686,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
-        if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized)) {
+        // Previous behavior: protect only dispatch-triggered startup from pending dispatch cleanup.
+        // if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized)) {
+        if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && isInitialized) {
             clearPendingDispatchJobs()
         }
     }

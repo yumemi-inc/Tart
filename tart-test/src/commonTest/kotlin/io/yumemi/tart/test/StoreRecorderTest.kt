@@ -163,6 +163,8 @@ class StoreRecorderTest {
         override val event: Flow<AppEvent> = emptyFlow()
         override val currentState: AppState = AppState.Loading
 
+        override fun start() = Unit
+
         override fun dispatch(action: AppAction) = Unit
 
         override fun collectState(state: (AppState) -> Unit) = Unit

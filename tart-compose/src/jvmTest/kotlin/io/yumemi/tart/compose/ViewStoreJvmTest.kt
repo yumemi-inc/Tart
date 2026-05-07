@@ -261,6 +261,8 @@ private class TestStore(
     var closeCount: Int = 0
         private set
 
+    override fun start() = Unit
+
     override fun dispatch(action: UiAction) {
         dispatchedActions += action
     }

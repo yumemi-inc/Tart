@@ -11,8 +11,8 @@ enum class PendingActionPolicy {
     /**
      * Clears already queued actions after a transition to a different state variant is committed.
      * The currently running store work keeps running; only pending queued actions are discarded.
-     * Dispatches queued before a dispatch-triggered startup finishes are treated as post-start
-     * dispatches and are not discarded by that startup transition.
+     * Dispatches queued before startup finishes are treated as post-start dispatches and are not
+     * discarded by that startup transition, regardless of what triggered startup.
      */
     ClearOnStateExit,
 
