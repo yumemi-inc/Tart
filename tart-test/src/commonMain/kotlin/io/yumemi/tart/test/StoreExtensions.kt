@@ -9,10 +9,27 @@ import io.yumemi.tart.core.StoreInternalApi
 import io.yumemi.tart.core.StoreObserver
 
 /**
+ * Starts the Store and suspends until the startup work completes.
+ *
+ * Prefer this for tests that need to observe startup behavior before the first dispatched action.
+ *
+ * This waits for plugin `onStart` hooks and the synchronous `enter {}` chain triggered by startup.
+ * It does not wait for additional work launched from `enter {}` handlers.
+ *
+ * This extension is available for Store instances created by the Tart DSL.
+ *
+ * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
+ */
+@OptIn(InternalTartApi::class)
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndWait() {
+    requireStoreInternalApi().startAndWait()
+}
+
+/**
  * Dispatches an action and suspends until the Store finishes the dispatch work itself.
  *
- * This waits for startup, the matching action handler, and any resulting synchronous state
- * transition work triggered by that dispatch.
+ * This waits for startup when needed, the matching action handler, and any resulting synchronous
+ * state transition work triggered by that dispatch.
  * It does not wait for additional work launched from `enter {}` or `action {}` handlers.
  *
  * This extension is available for Store instances created by the Tart DSL.
