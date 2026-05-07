@@ -7,8 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
  * Core Tart interface for reading state, dispatching actions, and observing one-off events.
  *
  * Store startup is lazy.
- * Startup processing begins when an action is [dispatch]ed, when [state] starts being collected,
- * or when [collectState] is called.
+ * Startup processing begins when [start] is called, when an action is [dispatch]ed, and,
+ * with [AutoStartPolicy.OnDispatchOrStateCollection], when [state] starts being collected
+ * or [collectState] is called.
  * Collecting [event], calling [collectEvent], or reading [currentState] alone does not start the
  * Store.
  */
@@ -17,7 +18,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     /**
      * Hot stream of committed state snapshots.
      *
-     * Collecting this flow starts the Store if it has not started yet.
+     * Collecting this flow starts the Store if it has not started yet and the configured
+     * [AutoStartPolicy] includes state collection as a trigger.
      */
     val state: StateFlow<S>
 
@@ -39,6 +41,15 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
     val currentState: S
 
     /**
+     * Starts the Store if it has not started yet.
+     *
+     * This method returns immediately after requesting startup processing.
+     * It does not wait for startup to finish.
+     * Calling this method more than once has no additional effect after the first startup begins.
+     */
+    fun start()
+
+    /**
      * Enqueues an action for processing.
      *
      * This enqueues the action and returns immediately.
@@ -54,7 +65,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * Collects committed state snapshots using a callback.
      *
      * This API is intended for platforms where [StateFlow] cannot be consumed directly.
-     * Calling this method starts the Store if it has not started yet.
+     * Calling this method starts the Store if it has not started yet and the configured
+     * [AutoStartPolicy] includes state collection as a trigger.
      *
      * The callback runs in the Store's execution context.
      * Tart does not switch to a UI thread automatically and does not guarantee delivery
@@ -73,8 +85,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      *
      * This API is intended for platforms where [Flow] cannot be consumed directly.
      * Calling this method does not start the Store by itself.
-     * If you need startup processing to run, also trigger startup through [dispatch], [state],
-     * or [collectState].
+     * If you need startup processing to run, also trigger startup through [start], [dispatch],
+     * [state], or [collectState].
      *
      * The callback runs in the Store's execution context.
      * Tart does not switch to a UI thread automatically and does not guarantee delivery

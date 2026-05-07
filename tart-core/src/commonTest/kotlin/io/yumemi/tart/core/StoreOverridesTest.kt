@@ -215,4 +215,31 @@ class StoreOverridesTest {
 
         assertEquals(PendingPolicyState.Active(value = 2), store.currentState)
     }
+
+    @Test
+    fun autoStartPolicyInOverrides_shouldOverrideSetupConfiguration() {
+        val store = Store<AppState, AppAction, Nothing>(
+            initialState = AppState(count = 0),
+            overrides = {
+                autoStartPolicy(AutoStartPolicy.OnDispatch)
+            },
+        ) {
+            coroutineContext(Dispatchers.Unconfined)
+            autoStartPolicy(AutoStartPolicy.OnDispatchOrStateCollection)
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.collectState { }
+
+        assertEquals(AppState(count = 0), store.currentState)
+
+        store.dispatch(AppAction.Increment)
+
+        assertEquals(AppState(count = 1), store.currentState)
+    }
 }

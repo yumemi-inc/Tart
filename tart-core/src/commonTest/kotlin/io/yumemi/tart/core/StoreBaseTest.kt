@@ -33,9 +33,11 @@ class StoreBaseTest {
 
     private fun createTestStore(
         initialState: AppState,
+        autoStartPolicy: AutoStartPolicy = AutoStartPolicy.OnDispatchOrStateCollection,
     ): Store<AppState, AppAction, AppEvent> {
         return Store(initialState) {
             coroutineContext(Dispatchers.Unconfined)
+            autoStartPolicy(autoStartPolicy)
             state<AppState.Loading> {
                 enter {
                     nextState(AppState.Main(count = 0))
@@ -87,12 +89,40 @@ class StoreBaseTest {
     }
 
     @Test
+    fun tartStore_withDispatchOnlyAutoStart_shouldNotProcessInitialEnterWhenCollectingState() = runTest(testDispatcher) {
+        val store = createTestStore(
+            initialState = AppState.Loading,
+            autoStartPolicy = AutoStartPolicy.OnDispatch,
+        )
+        var observedState: AppState? = null
+
+        store.collectState { state ->
+            observedState = state
+        }
+
+        assertEquals(AppState.Loading, observedState)
+        assertIs<AppState.Loading>(store.currentState)
+    }
+
+    @Test
     fun tartStore_dispatchBeforeStart_shouldInitializeAndHandleAction() = runTest(testDispatcher) {
         val store = createTestStore(AppState.Loading)
 
         store.dispatch(AppAction.Increment)
 
         assertEquals(AppState.Main(1), store.currentState)
+    }
+
+    @Test
+    fun tartStore_start_shouldInitializeWithoutDispatch() = runTest(testDispatcher) {
+        val store = createTestStore(
+            initialState = AppState.Loading,
+            autoStartPolicy = AutoStartPolicy.OnDispatch,
+        )
+
+        store.start()
+
+        assertEquals(AppState.Main(count = 0), store.currentState)
     }
 
     @Test
@@ -182,7 +212,7 @@ class StoreBaseTest {
     }
 
     @Test
-    fun tartStore_dispatchQueuedDuringStateCollectionStartup_shouldBeDroppedOnStateExit() = runTest(testDispatcher) {
+    fun tartStore_dispatchQueuedDuringStateCollectionStartup_shouldSurviveStateExit() = runTest(testDispatcher) {
         val startupEntered = CompletableDeferred<Unit>()
         val startupGate = CompletableDeferred<Unit>()
         val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
@@ -194,7 +224,11 @@ class StoreBaseTest {
                     nextState(AppState.Main(count = 0))
                 }
             }
-            state<AppState.Main> {}
+            state<AppState.Main> {
+                action<AppAction.Increment> {
+                    nextState(state.copy(count = state.count + 1))
+                }
+            }
         }
 
         val collectingJob = launch {
@@ -213,7 +247,44 @@ class StoreBaseTest {
         dispatchJob.join()
         collectingJob.cancel()
 
-        assertEquals(AppState.Main(0), store.currentState)
+        assertEquals(AppState.Main(1), store.currentState)
+    }
+
+    @Test
+    fun tartStore_dispatchQueuedDuringExplicitStartup_shouldSurviveStateExit() = runTest(testDispatcher) {
+        val startupEntered = CompletableDeferred<Unit>()
+        val startupGate = CompletableDeferred<Unit>()
+        val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
+            coroutineContext(Dispatchers.Unconfined)
+            autoStartPolicy(AutoStartPolicy.OnDispatch)
+            state<AppState.Loading> {
+                enter {
+                    startupEntered.complete(Unit)
+                    startupGate.await()
+                    nextState(AppState.Main(count = 0))
+                }
+            }
+            state<AppState.Main> {
+                action<AppAction.Increment> {
+                    nextState(state.copy(count = state.count + 1))
+                }
+            }
+        }
+
+        store.start()
+        startupEntered.await()
+
+        val dispatchJob = launch {
+            store.dispatchAndWaitForTest(AppAction.Increment)
+        }
+
+        assertFalse(dispatchJob.isCompleted)
+        assertIs<AppState.Loading>(store.currentState)
+
+        startupGate.complete(Unit)
+        dispatchJob.join()
+
+        assertEquals(AppState.Main(1), store.currentState)
     }
 
     @Test

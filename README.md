@@ -637,6 +637,9 @@ On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be co
 If the *State* or *Event* changes, you will be notified through these callbacks.
 These callbacks run in the Store's execution context. Tart does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
 
+Store startup is lazy. By default, the Store starts on the first `.dispatch(...)` or when state collection begins through `.state` or `.collectState()`.
+If you want state collection not to start the Store automatically, set `autoStartPolicy(AutoStartPolicy.OnDispatch)` and call `.start()` when you want to trigger startup explicitly.
+
 ## Compose
 
 <details>
@@ -1040,6 +1043,7 @@ Inside `overrides` block, you can use these APIs:
 - `coroutineContext(...)`
 - `stateSaver(...)`
 - `exceptionHandler(...)`
+- `autoStartPolicy(...)`
 - `plugin(...)`
 - `clearPlugins()`
 - `replacePlugins(...)`
