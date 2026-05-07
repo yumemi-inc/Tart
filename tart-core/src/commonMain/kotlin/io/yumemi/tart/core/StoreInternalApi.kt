@@ -33,6 +33,7 @@ interface StoreObserver<in S : State, in E : Event> {
  */
 @InternalTartApi
 interface StoreInternalApi<S : State, A : Action, E : Event> {
+    suspend fun startAndWait()
     suspend fun dispatchAndWait(action: A)
     fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean = true)
 }

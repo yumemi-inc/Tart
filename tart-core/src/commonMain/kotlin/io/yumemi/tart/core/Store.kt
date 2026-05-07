@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Core Tart interface for reading state, dispatching actions, and observing one-off events.
  *
  * Store startup is lazy.
- * Startup processing begins when the first action is [dispatch]ed, when [state] starts being
- * collected, or when [collectState] is called.
+ * Startup processing begins when an action is [dispatch]ed, when [state] starts being collected,
+ * or when [collectState] is called.
  * Collecting [event], calling [collectEvent], or reading [currentState] alone does not start the
  * Store.
  */
@@ -43,7 +43,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      *
      * This enqueues the action and returns immediately.
      * It does not wait for action handling to complete.
-     * If the Store has not started yet, this also triggers startup processing before the action runs.
+     * If the Store has not started yet, this also triggers startup processing before the action
+     * runs.
      *
      * @param action The action to dispatch
      */

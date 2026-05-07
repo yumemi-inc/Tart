@@ -50,11 +50,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 launch {
                     _state.collect(collector)
                 }
-                coroutineScope.launch {
-                    mutex.withLock {
-                        initializeIfNeeded()
-                    }
-                }
+                launchStartup()
                 awaitCancellation()
             }
         }
@@ -136,8 +132,20 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         launchDispatch(action)
     }
 
+    final override suspend fun startAndWait() {
+        launchStartup().join()
+    }
+
     final override suspend fun dispatchAndWait(action: A) {
         launchDispatch(action).join()
+    }
+
+    private fun launchStartup(): Job {
+        return coroutineScope.launch {
+            mutex.withLock {
+                initializeIfNeeded()
+            }
+        }
     }
 
     private fun launchDispatch(action: A): Job {
@@ -188,11 +196,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var isInitialized: Boolean = false
 
+    // Must be called only while holding `mutex`.
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
-        isInitialized = true
         processPlugins { onStart(pluginScope, currentState) }
         onStateEntered(currentState)
+        isInitialized = true
     }
 
     private suspend fun emit(event: E) {
@@ -669,7 +678,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
-        if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit) {
+        if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized)) {
             clearPendingDispatchJobs()
         }
     }

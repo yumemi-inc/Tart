@@ -125,6 +125,15 @@ class StoreRecorderTest {
     }
 
     @Test
+    fun startAndWait_waitsUntilStartupCompletes() = runTest(testDispatcher) {
+        val store = createTestStore()
+
+        store.startAndWait()
+
+        assertEquals(AppState.Main(count = 0), store.currentState)
+    }
+
+    @Test
     fun extensions_throwForStoresThatDoNotImplementTestingInterfaces() = runTest(testDispatcher) {
         val store = FakeStore()
 
@@ -135,6 +144,11 @@ class StoreRecorderTest {
                     override fun onEvent(event: AppEvent) = Unit
                 },
             )
+        }
+        try {
+            store.startAndWait()
+            fail("Expected startAndWait to fail for stores without StoreInternalApi support")
+        } catch (_: IllegalStateException) {
         }
         try {
             store.dispatchAndWait(AppAction.Increment)
