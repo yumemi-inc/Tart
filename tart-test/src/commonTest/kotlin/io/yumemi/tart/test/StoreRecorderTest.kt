@@ -4,6 +4,7 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.ExperimentalTartApi
 import io.yumemi.tart.core.State
+import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreObserver
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,7 @@ class StoreRecorderTest {
 
     private class RecordingStateSaver(
         private val restoredState: AppState?,
-    ) : io.yumemi.tart.core.StateSaver<AppState> {
+    ) : StateSaver<AppState> {
         override fun save(state: AppState) = Unit
 
         override fun restore(): AppState? = restoredState

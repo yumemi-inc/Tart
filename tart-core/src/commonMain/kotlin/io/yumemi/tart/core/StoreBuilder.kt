@@ -305,7 +305,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override var autoStartPolicy: AutoStartPolicy = storeAutoStartPolicy
             override var pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override var pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
-            override val plugins: MutableList<Plugin<S, A, E>> = storePlugins.toMutableList()
+            override val plugins: MutableList<Plugin<S, A, E>> = storePlugins
             override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
