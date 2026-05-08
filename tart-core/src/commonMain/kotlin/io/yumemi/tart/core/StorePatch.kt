@@ -2,7 +2,6 @@ package io.yumemi.tart.core
 
 import kotlin.coroutines.CoroutineContext
 
-@InternalTartApi
 data class StorePatch<S : State, A : Action, E : Event>(
     val coroutineContext: CoroutineContext? = null,
     val stateSaver: StateSaver<S>? = null,
@@ -13,9 +12,77 @@ data class StorePatch<S : State, A : Action, E : Event>(
     val pluginPatches: List<PluginPatch<S, A, E>> = emptyList(),
 )
 
-@InternalTartApi
 sealed interface PluginPatch<S : State, A : Action, E : Event> {
     data class Append<S : State, A : Action, E : Event>(val plugins: List<Plugin<S, A, E>>) : PluginPatch<S, A, E>
     data class Replace<S : State, A : Action, E : Event>(val plugins: List<Plugin<S, A, E>>) : PluginPatch<S, A, E>
-    class Clear<S : State, A : Action, E : Event> : PluginPatch<S, A, E>
+    class Clear<S : State, A : Action, E : Event> : PluginPatch<S, A, E> {
+        override fun equals(other: Any?): Boolean = other is Clear<*, *, *>
+        override fun hashCode(): Int = 0
+        override fun toString(): String = "Clear"
+    }
+}
+
+/**
+ * Builder used to construct a [StorePatch] via a DSL.
+ *
+ * This is the canonical builder shared by `:tart-test`'s public `Store.patch { ... }` extension
+ * and Tart's own internal tests. It only exposes non-state Store configuration.
+ */
+@Suppress("unused")
+class StorePatchBuilder<S : State, A : Action, E : Event> {
+    private var coroutineContextPatch: CoroutineContext? = null
+    private var stateSaverPatch: StateSaver<S>? = null
+    private var exceptionHandlerPatch: ExceptionHandler? = null
+    private var autoStartPolicyPatch: AutoStartPolicy? = null
+    private var pendingActionPolicyPatch: PendingActionPolicy? = null
+    private var pluginExecutionPolicyPatch: PluginExecutionPolicy? = null
+    private val pluginPatches = mutableListOf<PluginPatch<S, A, E>>()
+
+    fun coroutineContext(coroutineContext: CoroutineContext) {
+        coroutineContextPatch = coroutineContext
+    }
+
+    fun stateSaver(stateSaver: StateSaver<S>) {
+        stateSaverPatch = stateSaver
+    }
+
+    fun exceptionHandler(exceptionHandler: ExceptionHandler) {
+        exceptionHandlerPatch = exceptionHandler
+    }
+
+    fun autoStartPolicy(policy: AutoStartPolicy) {
+        autoStartPolicyPatch = policy
+    }
+
+    fun pendingActionPolicy(policy: PendingActionPolicy) {
+        pendingActionPolicyPatch = policy
+    }
+
+    fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
+        pluginExecutionPolicyPatch = policy
+    }
+
+    fun plugin(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
+        pluginPatches += PluginPatch.Append(plugins = listOf(first) + rest)
+    }
+
+    fun replacePlugins(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
+        pluginPatches += PluginPatch.Replace(plugins = listOf(first) + rest)
+    }
+
+    fun clearPlugins() {
+        pluginPatches += PluginPatch.Clear()
+    }
+
+    fun build(): StorePatch<S, A, E> {
+        return StorePatch(
+            coroutineContext = coroutineContextPatch,
+            stateSaver = stateSaverPatch,
+            exceptionHandler = exceptionHandlerPatch,
+            autoStartPolicy = autoStartPolicyPatch,
+            pendingActionPolicy = pendingActionPolicyPatch,
+            pluginExecutionPolicy = pluginExecutionPolicyPatch,
+            pluginPatches = pluginPatches.toList(),
+        )
+    }
 }

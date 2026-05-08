@@ -350,17 +350,6 @@ class StoreObserverTest {
         }
     }
 
-    @OptIn(InternalTartApi::class)
-    private fun Store<AppState, AppAction, AppEvent>.attachObserverForTest(
-        observer: StoreObserver<AppState, AppEvent>,
-        notifyCurrentState: Boolean = true,
-    ) {
-        @Suppress("UNCHECKED_CAST")
-        val storeInternalApi = this as? StoreInternalApi<AppState, AppAction, AppEvent>
-            ?: error("Expected Tart Store to implement StoreInternalApi")
-        storeInternalApi.attachObserver(observer, notifyCurrentState)
-    }
-
     @Test
     fun storeObserver_canObserveState() = runTest(testDispatcher) {
         val observedStates = mutableListOf<AppState>()

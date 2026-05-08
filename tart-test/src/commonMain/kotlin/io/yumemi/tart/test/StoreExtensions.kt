@@ -7,6 +7,7 @@ import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreInternalApi
 import io.yumemi.tart.core.StoreObserver
+import io.yumemi.tart.core.StorePatchBuilder
 
 /**
  * Starts the Store and suspends until the startup work completes.
@@ -60,9 +61,8 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(ac
 fun <S : State, A : Action, E : Event> Store<S, A, E>.patch(
     builder: StorePatchBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    val patchBuilder = StorePatchBuilder<S, A, E>()
-    patchBuilder.builder()
-    return requireStoreInternalApi().patch(patchBuilder.build())
+    val patch = StorePatchBuilder<S, A, E>().apply(builder).build()
+    return requireStoreInternalApi().patch(patch)
 }
 
 /**
