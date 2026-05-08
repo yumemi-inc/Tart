@@ -314,79 +314,27 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 }
 
-private fun <S : State, A : Action, E : Event> buildStore(
+/**
+ * Creates a Store with optional initial state and root coroutine context.
+ *
+ * [initialState] and [context], when non-null, are applied before [builder].
+ * If [initialState] is null, the initial state must be set inside [builder] by calling
+ * [StoreBuilder.initialState].
+ *
+ * @param initialState The initial state of the Store when no saved snapshot is restored
+ * @param context The coroutine context to use for Store processing
+ * @param builder StoreBuilder lambda used to customize the store
+ * @return A configured Store instance
+ * @throws IllegalArgumentException if the initial state is not set
+ */
+fun <S : State, A : Action, E : Event> Store(
     initialState: S? = null,
-    coroutineContext: CoroutineContext? = null,
+    context: CoroutineContext? = null,
     builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
     val storeBuilder = StoreBuilder<S, A, E>()
     initialState?.let(storeBuilder::initialState)
-    coroutineContext?.let(storeBuilder::coroutineContext)
+    context?.let(storeBuilder::coroutineContext)
     storeBuilder.builder()
     return storeBuilder.build()
-}
-
-/**
- * Creates a Store from a [StoreBuilder] builder lambda.
- *
- * The initial state must be set inside [builder] by calling [StoreBuilder.initialState].
- *
- * @param builder StoreBuilder lambda used to customize the store
- * @return A configured Store instance
- * @throws IllegalArgumentException if the initial state is not set in the block
- */
-fun <S : State, A : Action, E : Event> Store(
-    builder: StoreBuilder<S, A, E>.() -> Unit,
-): Store<S, A, E> {
-    return buildStore(builder = builder)
-}
-
-/**
- * Creates a Store with a declared initial state.
- *
- * @param initialState The initial state of the Store when no saved snapshot is restored
- * @param builder StoreBuilder lambda used to customize the store
- * @return A configured Store instance
- */
-fun <S : State, A : Action, E : Event> Store(
-    initialState: S,
-    builder: StoreBuilder<S, A, E>.() -> Unit,
-): Store<S, A, E> {
-    return buildStore(initialState = initialState, builder = builder)
-}
-
-/**
- * Creates a Store with an explicit root coroutine context.
- *
- * The [coroutineContext] parameter is applied before [builder].
- * The initial state must be set inside [builder] by calling [StoreBuilder.initialState].
- *
- * @param coroutineContext The coroutine context to use for Store processing
- * @param builder StoreBuilder lambda used to customize the store
- * @return A configured Store instance
- * @throws IllegalArgumentException if the initial state is not set in the block
- */
-fun <S : State, A : Action, E : Event> Store(
-    coroutineContext: CoroutineContext,
-    builder: StoreBuilder<S, A, E>.() -> Unit,
-): Store<S, A, E> {
-    return buildStore(coroutineContext = coroutineContext, builder = builder)
-}
-
-/**
- * Creates a Store with a declared initial state and explicit root coroutine context.
- *
- * [initialState] and [coroutineContext] are applied before [builder].
- *
- * @param initialState The initial state of the Store when no saved snapshot is restored
- * @param coroutineContext The coroutine context to use for Store processing
- * @param builder StoreBuilder lambda used to customize the store
- * @return A configured Store instance
- */
-fun <S : State, A : Action, E : Event> Store(
-    initialState: S,
-    coroutineContext: CoroutineContext,
-    builder: StoreBuilder<S, A, E>.() -> Unit,
-): Store<S, A, E> {
-    return buildStore(initialState = initialState, coroutineContext = coroutineContext, builder = builder)
 }
