@@ -21,7 +21,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeAutoStartPolicy: AutoStartPolicy = AutoStartPolicy.OnDispatchOrStateCollection
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
-    private var storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
+    private val storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
 
     /**
      * Sets the declared initial state.
@@ -38,7 +38,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     /**
      * Sets the root coroutine context used by Store processing.
      *
-     * The default is [Dispatchers.Default].
+     * The default is `Dispatchers.Default`.
      *
      * @param coroutineContext The coroutine context to use
      */
@@ -102,16 +102,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      * @param rest Additional plugin instances to add
      */
     fun plugin(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
-        storePlugins.add(first)
-        storePlugins.addAll(rest)
-    }
-
-    internal fun clearPlugins() {
-        storePlugins.clear()
-    }
-
-    internal fun replacePlugins(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
-        clearPlugins()
         storePlugins.add(first)
         storePlugins.addAll(rest)
     }
@@ -241,7 +231,6 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                 ),
             )
         }
-
     }
 
     /**
@@ -308,16 +297,15 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
     internal fun build(): Store<S, A, E> {
         val state = requireNotNull(storeInitialState) { "[Tart] InitialState must be set in Store{} DSL" }
-
         return object : StoreImpl<S, A, E>() {
             override val initialState: S = state
-            override val coroutineContext: CoroutineContext = storeCoroutineContext
-            override val stateSaver: StateSaver<S> = storeStateSaver
-            override val exceptionHandler: ExceptionHandler = storeExceptionHandler
-            override val autoStartPolicy: AutoStartPolicy = storeAutoStartPolicy
-            override val pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
-            override val pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
-            override val plugins: List<Plugin<S, A, E>> = storePlugins
+            override var coroutineContext: CoroutineContext = storeCoroutineContext
+            override var stateSaver: StateSaver<S> = storeStateSaver
+            override var exceptionHandler: ExceptionHandler = storeExceptionHandler
+            override var autoStartPolicy: AutoStartPolicy = storeAutoStartPolicy
+            override var pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
+            override var pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
+            override val plugins: MutableList<Plugin<S, A, E>> = storePlugins
             override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
@@ -326,195 +314,79 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 }
 
-/**
- * Main Store DSL block used to configure runtime behavior and register state handlers.
- */
-typealias Setup<S, A, E> = StoreBuilder<S, A, E>.() -> Unit
-
-/**
- * Store overrides block applied after the main [Setup] block.
- *
- * This block is limited to non-state configuration such as coroutine context, persistence,
- * exception handling, auto-start policy, pending action policy, and plugins.
- */
-typealias Overrides<S, A, E> = StoreOverridesBuilder<S, A, E>.() -> Unit
-
-/**
- * DSL for overriding non-state Store configuration after the main setup has been applied.
- *
- * This DSL intentionally does not expose state or action handler APIs.
- */
-@Suppress("unused")
-@TartStoreDsl
-class StoreOverridesBuilder<S : State, A : Action, E : Event> internal constructor() {
-    private val operations = mutableListOf<StoreBuilder<S, A, E>.() -> Unit>()
-
-    /**
-     * Overrides the root coroutine context used by Store processing.
-     */
-    fun coroutineContext(coroutineContext: CoroutineContext) {
-        operations.add { coroutineContext(coroutineContext) }
-    }
-
-    /**
-     * Overrides the saver used to restore and persist state snapshots.
-     */
-    fun stateSaver(stateSaver: StateSaver<S>) {
-        operations.add { stateSaver(stateSaver) }
-    }
-
-    /**
-     * Overrides the handler used for non-fatal Store exceptions.
-     */
-    fun exceptionHandler(exceptionHandler: ExceptionHandler) {
-        operations.add { exceptionHandler(exceptionHandler) }
-    }
-
-    /**
-     * Overrides which implicit triggers start a lazy Store.
-     */
-    fun autoStartPolicy(policy: AutoStartPolicy) {
-        operations.add { autoStartPolicy(policy) }
-    }
-
-    /**
-     * Overrides how queued actions are treated when a committed state change leaves the current
-     * state variant.
-     */
-    fun pendingActionPolicy(policy: PendingActionPolicy) {
-        operations.add { pendingActionPolicy(policy) }
-    }
-
-    /**
-     * Overrides how the Store invokes plugins when multiple plugin instances are registered.
-     */
-    fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
-        operations.add { pluginExecutionPolicy(policy) }
-    }
-
-    /**
-     * Appends plugins after the main setup block has run.
-     */
-    fun plugin(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
-        val restValues = rest.copyOf()
-        operations.add { plugin(first, *restValues) }
-    }
-
-    /**
-     * Replaces every plugin configured so far.
-     *
-     * This is useful for removing default plugins in tests or debug setups.
-     */
-    fun replacePlugins(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
-        val restValues = rest.copyOf()
-        operations.add { replacePlugins(first, *restValues) }
-    }
-
-    /**
-     * Removes every plugin configured so far.
-     *
-     * This is useful for removing default plugins in tests or debug setups.
-     */
-    fun clearPlugins() {
-        operations.add { clearPlugins() }
-    }
-
-    internal fun applyTo(builder: StoreBuilder<S, A, E>) {
-        operations.forEach { operation -> operation(builder) }
-    }
-}
-
 private fun <S : State, A : Action, E : Event> buildStore(
     initialState: S? = null,
     coroutineContext: CoroutineContext? = null,
-    overrides: Overrides<S, A, E>? = null,
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    val builder = StoreBuilder<S, A, E>()
-    initialState?.let(builder::initialState)
-    coroutineContext?.let(builder::coroutineContext)
-    builder.setup()
-    overrides?.let {
-        StoreOverridesBuilder<S, A, E>().apply(it).applyTo(builder)
-    }
-    return builder.build()
+    val storeBuilder = StoreBuilder<S, A, E>()
+    initialState?.let(storeBuilder::initialState)
+    coroutineContext?.let(storeBuilder::coroutineContext)
+    storeBuilder.builder()
+    return storeBuilder.build()
 }
 
 /**
- * Creates a Store from a [Setup] block and optional [Overrides].
+ * Creates a Store from a [StoreBuilder] builder lambda.
  *
- * The initial state must be set inside [setup] by calling [StoreBuilder.initialState].
- * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ * The initial state must be set inside [builder] by calling [StoreBuilder.initialState].
  *
- * @param overrides Overrides block for non-state Store configuration
- * @param setup Setup block to customize the store
+ * @param builder StoreBuilder lambda used to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
-    overrides: Overrides<S, A, E> = {},
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    return buildStore(overrides = overrides, setup = setup)
+    return buildStore(builder = builder)
 }
 
 /**
- * Creates a Store with a declared initial state and optional [Overrides].
- *
- * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ * Creates a Store with a declared initial state.
  *
  * @param initialState The initial state of the Store when no saved snapshot is restored
- * @param overrides Overrides block for non-state Store configuration
- * @param setup Setup block to customize the store
+ * @param builder StoreBuilder lambda used to customize the store
  * @return A configured Store instance
  */
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
-    overrides: Overrides<S, A, E> = {},
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    return buildStore(initialState = initialState, overrides = overrides, setup = setup)
+    return buildStore(initialState = initialState, builder = builder)
 }
 
 /**
- * Creates a Store with an explicit root coroutine context and optional [Overrides].
+ * Creates a Store with an explicit root coroutine context.
  *
- * The [coroutineContext] parameter is applied before [setup].
- * The initial state must be set inside [setup] by calling [StoreBuilder.initialState].
- * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ * The [coroutineContext] parameter is applied before [builder].
+ * The initial state must be set inside [builder] by calling [StoreBuilder.initialState].
  *
  * @param coroutineContext The coroutine context to use for Store processing
- * @param overrides Overrides block for non-state Store configuration
- * @param setup Setup block to customize the store
+ * @param builder StoreBuilder lambda used to customize the store
  * @return A configured Store instance
  * @throws IllegalArgumentException if the initial state is not set in the block
  */
 fun <S : State, A : Action, E : Event> Store(
     coroutineContext: CoroutineContext,
-    overrides: Overrides<S, A, E> = {},
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    return buildStore(coroutineContext = coroutineContext, overrides = overrides, setup = setup)
+    return buildStore(coroutineContext = coroutineContext, builder = builder)
 }
 
 /**
- * Creates a Store with a declared initial state, explicit root coroutine context, and optional
- * [Overrides].
+ * Creates a Store with a declared initial state and explicit root coroutine context.
  *
- * [initialState] and [coroutineContext] are applied before [setup].
- * [overrides] runs after [setup], so it can replace non-state configuration declared there.
+ * [initialState] and [coroutineContext] are applied before [builder].
  *
  * @param initialState The initial state of the Store when no saved snapshot is restored
  * @param coroutineContext The coroutine context to use for Store processing
- * @param overrides Overrides block for non-state Store configuration
- * @param setup Setup block to customize the store
+ * @param builder StoreBuilder lambda used to customize the store
  * @return A configured Store instance
  */
 fun <S : State, A : Action, E : Event> Store(
     initialState: S,
     coroutineContext: CoroutineContext,
-    overrides: Overrides<S, A, E> = {},
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> {
-    return buildStore(initialState = initialState, coroutineContext = coroutineContext, overrides = overrides, setup = setup)
+    return buildStore(initialState = initialState, coroutineContext = coroutineContext, builder = builder)
 }

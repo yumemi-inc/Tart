@@ -4,6 +4,7 @@ import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
 import io.yumemi.tart.core.ExperimentalTartApi
 import io.yumemi.tart.core.State
+import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreObserver
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,14 @@ class StoreRecorderTest {
 
     sealed interface AppEvent : Event {
         data class CountUpdated(val count: Int) : AppEvent
+    }
+
+    private class RecordingStateSaver(
+        private val restoredState: AppState?,
+    ) : StateSaver<AppState> {
+        override fun save(state: AppState) = Unit
+
+        override fun restore(): AppState? = restoredState
     }
 
     private fun createTestStore(): Store<AppState, AppAction, AppEvent> {
@@ -134,6 +143,18 @@ class StoreRecorderTest {
     }
 
     @Test
+    fun patch_shouldReconfigureStoreBeforeFirstUse() {
+        val store = Store<AppState, AppAction, AppEvent>(AppState.Loading) {
+            coroutineContext(Dispatchers.Unconfined)
+            stateSaver(RecordingStateSaver(restoredState = null))
+        }.patch {
+            stateSaver(RecordingStateSaver(restoredState = AppState.Main(count = 7)))
+        }
+
+        assertEquals(AppState.Main(count = 7), store.currentState)
+    }
+
+    @Test
     fun extensions_throwForStoresThatDoNotImplementTestingInterfaces() = runTest(testDispatcher) {
         val store = FakeStore()
 
@@ -153,6 +174,11 @@ class StoreRecorderTest {
         try {
             store.dispatchAndWait(AppAction.Increment)
             fail("Expected dispatchAndWait to fail for stores without StoreInternalApi support")
+        } catch (_: IllegalStateException) {
+        }
+        try {
+            store.patch { }
+            fail("Expected patch to fail for stores without StoreInternalApi support")
         } catch (_: IllegalStateException) {
         }
     }

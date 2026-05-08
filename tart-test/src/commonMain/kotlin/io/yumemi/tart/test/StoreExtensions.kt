@@ -7,6 +7,7 @@ import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreInternalApi
 import io.yumemi.tart.core.StoreObserver
+import io.yumemi.tart.core.StorePatchBuilder
 
 /**
  * Starts the Store and suspends until the startup work completes.
@@ -40,6 +41,28 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndWait() {
 @OptIn(InternalTartApi::class)
 suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(action: A) {
     requireStoreInternalApi().dispatchAndWait(action)
+}
+
+/**
+ * Applies a non-state Store patch before the Store is used.
+ *
+ * This is intended for tests that need to swap persistence, policies, exception handling,
+ * or plugins without rewriting the Store definition itself.
+ * The patch must happen immediately after Store construction and before APIs such as
+ * `currentState`, `collectState()`, `collectEvent()`, `start()`, or `dispatch()` are used.
+ *
+ * This extension is available for Store instances created by the Tart DSL.
+ *
+ * @param builder Builder lambda for a non-state Store patch
+ * @throws IllegalStateException if the Store has already been used or is starting
+ * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
+ */
+@OptIn(InternalTartApi::class)
+fun <S : State, A : Action, E : Event> Store<S, A, E>.patch(
+    builder: StorePatchBuilder<S, A, E>.() -> Unit,
+): Store<S, A, E> {
+    val patch = StorePatchBuilder<S, A, E>().apply(builder).build()
+    return requireStoreInternalApi().patch(patch)
 }
 
 /**

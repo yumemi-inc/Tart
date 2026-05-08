@@ -20,6 +20,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KClass
@@ -27,6 +28,7 @@ import kotlin.reflect.KClass
 @OptIn(InternalTartApi::class)
 internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E>, StoreInternalApi<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
+        freezeConfiguration()
         MutableStateFlow(
             try {
                 stateSaver.restore() ?: initialState
@@ -65,19 +67,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val initialState: S
 
-    protected abstract val coroutineContext: CoroutineContext
+    protected abstract var coroutineContext: CoroutineContext
 
-    protected abstract val stateSaver: StateSaver<S>
+    protected abstract var stateSaver: StateSaver<S>
 
-    protected abstract val exceptionHandler: ExceptionHandler
+    protected abstract var exceptionHandler: ExceptionHandler
 
-    protected abstract val autoStartPolicy: AutoStartPolicy
+    protected abstract var autoStartPolicy: AutoStartPolicy
 
-    protected abstract val pendingActionPolicy: PendingActionPolicy
+    protected abstract var pendingActionPolicy: PendingActionPolicy
 
-    protected abstract val pluginExecutionPolicy: PluginExecutionPolicy
+    protected abstract var pluginExecutionPolicy: PluginExecutionPolicy
 
-    protected abstract val plugins: List<Plugin<S, A, E>>
+    protected abstract val plugins: MutableList<Plugin<S, A, E>>
 
     protected abstract val onEnter: suspend EnterScope<S, E, S>.() -> Unit
 
@@ -88,6 +90,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     protected abstract val onError: suspend ErrorScope<S, E, S, Exception>.() -> Unit
 
     private val coroutineScope by lazy {
+        freezeConfiguration()
         CoroutineScope(
             coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { _, exception ->
                 handleException(exception)
@@ -127,6 +130,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var activeDispatchJob: Job? = null
 
+    @Volatile
+    private var isConfigurationFrozen: Boolean = false
+
+    private var isInitialized: Boolean = false
+
     private data class StateRuntime(
         val scope: CoroutineScope,
         val actionLaunchJobs: MutableMap<Any, Job> = mutableMapOf(),
@@ -146,6 +154,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     final override suspend fun dispatchAndWait(action: A) {
         launchDispatch(action).join()
+    }
+
+    final override fun patch(patch: StorePatch<S, A, E>): Store<S, A, E> {
+        check(mutex.tryLock()) { "[Tart] Failed to configure the Store because it is starting or already started" }
+        try {
+            check(!isConfigurationFrozen) { "[Tart] Store configuration must be applied before the Store is used" }
+            applyConfigurationPatch(patch)
+            return this
+        } finally {
+            mutex.unlock()
+        }
     }
 
     private fun launchStartup(): Job {
@@ -202,7 +221,30 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         coroutineScope.cancel()
     }
 
-    private var isInitialized: Boolean = false
+    private fun freezeConfiguration() {
+        isConfigurationFrozen = true
+    }
+
+    private fun applyConfigurationPatch(patch: StorePatch<S, A, E>) {
+        patch.coroutineContext?.let { coroutineContext = it }
+        patch.stateSaver?.let { stateSaver = it }
+        patch.exceptionHandler?.let { exceptionHandler = it }
+        patch.autoStartPolicy?.let { autoStartPolicy = it }
+        patch.pendingActionPolicy?.let { pendingActionPolicy = it }
+        patch.pluginExecutionPolicy?.let { pluginExecutionPolicy = it }
+        patch.pluginPatches.forEach { pluginPatch ->
+            when (pluginPatch) {
+                is PluginPatch.Append -> plugins.addAll(pluginPatch.plugins)
+
+                is PluginPatch.Replace -> {
+                    plugins.clear()
+                    plugins.addAll(pluginPatch.plugins)
+                }
+
+                is PluginPatch.Clear -> plugins.clear()
+            }
+        }
+    }
 
     // Must be called only while holding `mutex`.
     private suspend fun initializeIfNeeded() {
