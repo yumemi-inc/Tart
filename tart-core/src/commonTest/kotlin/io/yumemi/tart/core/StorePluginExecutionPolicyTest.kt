@@ -28,12 +28,9 @@ class StorePluginExecutionPolicyTest {
         secondPluginStarted: CompletableDeferred<Unit>,
         firstPluginCanFinish: CompletableDeferred<Unit>,
         setupPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent,
-        overrides: Overrides<AppState, AppAction, Nothing> = {},
+        patchedPolicy: PluginExecutionPolicy? = null,
     ): Store<AppState, AppAction, Nothing> {
-        return Store(
-            initialState = AppState(),
-            overrides = overrides,
-        ) {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState()) {
             coroutineContext(testDispatcher)
             pluginExecutionPolicy(setupPolicy)
 
@@ -61,6 +58,12 @@ class StorePluginExecutionPolicyTest {
                 }
             }
         }
+        if (patchedPolicy != null) {
+            store.patchForTest {
+                pluginExecutionPolicy(patchedPolicy)
+            }
+        }
+        return store
     }
 
     @Test
@@ -132,7 +135,7 @@ class StorePluginExecutionPolicyTest {
     }
 
     @Test
-    fun overrides_canReplacePluginExecutionPolicy() = runTest {
+    fun patch_shouldOverridePluginExecutionPolicy() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val records = mutableListOf<String>()
         val firstPluginStarted = CompletableDeferred<Unit>()
@@ -145,9 +148,7 @@ class StorePluginExecutionPolicyTest {
             secondPluginStarted = secondPluginStarted,
             firstPluginCanFinish = firstPluginCanFinish,
             setupPolicy = PluginExecutionPolicy.Concurrent,
-            overrides = {
-                pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)
-            },
+            patchedPolicy = PluginExecutionPolicy.InRegistrationOrder,
         )
 
         store.dispatch(AppAction.Increment)

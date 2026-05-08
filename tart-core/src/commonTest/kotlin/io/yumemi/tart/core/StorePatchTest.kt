@@ -9,10 +9,11 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
-class StoreOverridesTest {
+@OptIn(InternalTartApi::class, ExperimentalCoroutinesApi::class)
+class StorePatchTest {
 
     data class AppState(val count: Int) : State
 
@@ -54,19 +55,12 @@ class StoreOverridesTest {
     }
 
     @Test
-    fun storeInitialStateOverload_shouldApplyOverridesAfterSetup() {
+    fun storeInitialStateOverload_shouldApplyPatchAfterSetup() {
         val setupSaver = RecordingStateSaver(restoredState = AppState(count = 100))
-        val overrideSaver = RecordingStateSaver(restoredState = AppState(count = 10))
+        val configuredSaver = RecordingStateSaver(restoredState = AppState(count = 10))
         val pluginRecords = mutableListOf<String>()
 
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                coroutineContext(Dispatchers.Unconfined)
-                stateSaver(overrideSaver)
-                replacePlugins(recordingPlugin("override", pluginRecords))
-            },
-        ) {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             stateSaver(setupSaver)
             plugin(recordingPlugin("setup", pluginRecords))
 
@@ -75,6 +69,10 @@ class StoreOverridesTest {
                     nextState(AppState(count = state.count + 1))
                 }
             }
+        }.patchForTest {
+            coroutineContext(Dispatchers.Unconfined)
+            stateSaver(configuredSaver)
+            replacePlugins(recordingPlugin("override", pluginRecords))
         }
 
         assertEquals(AppState(count = 10), store.currentState)
@@ -82,24 +80,17 @@ class StoreOverridesTest {
         store.dispatch(AppAction.Increment)
 
         assertEquals(listOf("override"), pluginRecords)
-        assertEquals(listOf(AppState(count = 11)), overrideSaver.savedStates)
+        assertEquals(listOf(AppState(count = 11)), configuredSaver.savedStates)
         assertTrue(setupSaver.savedStates.isEmpty())
     }
 
     @Test
-    fun storeDslInitialStateOverload_shouldApplyOverridesAndAllowPluginAppendAfterReplacement() {
+    fun storeDslInitialStateOverload_shouldApplyPatchAndAllowPluginAppendAfterReplacement() {
         val setupSaver = RecordingStateSaver(restoredState = AppState(count = 100))
-        val overrideSaver = RecordingStateSaver(restoredState = AppState(count = 20))
+        val configuredSaver = RecordingStateSaver(restoredState = AppState(count = 20))
         val pluginRecords = mutableListOf<String>()
 
-        val store = Store(
-            overrides = {
-                coroutineContext(Dispatchers.Unconfined)
-                stateSaver(overrideSaver)
-                replacePlugins(recordingPlugin("replacement", pluginRecords))
-                plugin(recordingPlugin("extra", pluginRecords))
-            },
-        ) {
+        val store: Store<AppState, AppAction, Nothing> = Store {
             initialState(AppState(count = 0))
             stateSaver(setupSaver)
             plugin(recordingPlugin("setup", pluginRecords))
@@ -109,6 +100,11 @@ class StoreOverridesTest {
                     nextState(AppState(count = state.count + 1))
                 }
             }
+        }.patchForTest {
+            coroutineContext(Dispatchers.Unconfined)
+            stateSaver(configuredSaver)
+            replacePlugins(recordingPlugin("replacement", pluginRecords))
+            plugin(recordingPlugin("extra", pluginRecords))
         }
 
         assertEquals(AppState(count = 20), store.currentState)
@@ -116,20 +112,15 @@ class StoreOverridesTest {
         store.dispatch(AppAction.Increment)
 
         assertEquals(listOf("extra", "replacement"), pluginRecords.sorted())
-        assertEquals(listOf(AppState(count = 21)), overrideSaver.savedStates)
+        assertEquals(listOf(AppState(count = 21)), configuredSaver.savedStates)
         assertTrue(setupSaver.savedStates.isEmpty())
     }
 
     @Test
-    fun clearPluginsInOverrides_shouldClearPreviouslyConfiguredPlugins() {
+    fun clearPluginsInPatch_shouldClearPreviouslyConfiguredPlugins() {
         val pluginRecords = mutableListOf<String>()
 
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                clearPlugins()
-            },
-        ) {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             coroutineContext(Dispatchers.Unconfined)
             plugin(recordingPlugin("setup", pluginRecords))
 
@@ -138,6 +129,8 @@ class StoreOverridesTest {
                     nextState(AppState(count = state.count + 1))
                 }
             }
+        }.patchForTest {
+            clearPlugins()
         }
 
         store.dispatch(AppAction.Increment)
@@ -146,18 +139,10 @@ class StoreOverridesTest {
     }
 
     @Test
-    fun plugin_shouldAcceptMultipleValuesInSetupAndOverrides() {
+    fun plugin_shouldAcceptMultipleValuesInSetupAndPatch() {
         val pluginRecords = mutableListOf<String>()
 
-        val store = Store(
-            initialState = AppState(count = 0),
-            overrides = {
-                plugin(
-                    recordingPlugin("override1", pluginRecords),
-                    recordingPlugin("override2", pluginRecords),
-                )
-            },
-        ) {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             coroutineContext(Dispatchers.Unconfined)
             plugin(
                 recordingPlugin("setup1", pluginRecords),
@@ -169,6 +154,11 @@ class StoreOverridesTest {
                     nextState(AppState(count = state.count + 1))
                 }
             }
+        }.patchForTest {
+            plugin(
+                recordingPlugin("override1", pluginRecords),
+                recordingPlugin("override2", pluginRecords),
+            )
         }
 
         store.dispatch(AppAction.Increment)
@@ -180,14 +170,9 @@ class StoreOverridesTest {
     }
 
     @Test
-    fun pendingActionPolicyInOverrides_shouldOverrideSetupConfiguration() = runTest {
+    fun patch_shouldOverridePendingActionPolicyFromBuilder() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
-        val store = Store<PendingPolicyState, PendingPolicyAction, Nothing>(
-            initialState = PendingPolicyState.Initial,
-            overrides = {
-                pendingActionPolicy(PendingActionPolicy.Keep)
-            },
-        ) {
+        val store = Store<PendingPolicyState, PendingPolicyAction, Nothing>(initialState = PendingPolicyState.Initial) {
             coroutineContext(testDispatcher)
             pendingActionPolicy(PendingActionPolicy.ClearOnStateExit)
 
@@ -203,6 +188,8 @@ class StoreOverridesTest {
                     nextState(state.copy(value = state.value + 1))
                 }
             }
+        }.patchForTest {
+            pendingActionPolicy(PendingActionPolicy.Keep)
         }
 
         store.dispatch(PendingPolicyAction.EnterActiveAfterDelay)
@@ -217,13 +204,8 @@ class StoreOverridesTest {
     }
 
     @Test
-    fun autoStartPolicyInOverrides_shouldOverrideSetupConfiguration() {
-        val store = Store<AppState, AppAction, Nothing>(
-            initialState = AppState(count = 0),
-            overrides = {
-                autoStartPolicy(AutoStartPolicy.OnDispatch)
-            },
-        ) {
+    fun patch_shouldOverrideAutoStartPolicyFromBuilder() {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             coroutineContext(Dispatchers.Unconfined)
             autoStartPolicy(AutoStartPolicy.OnDispatchOrStateCollection)
 
@@ -232,6 +214,8 @@ class StoreOverridesTest {
                     nextState(AppState(count = state.count + 1))
                 }
             }
+        }.patchForTest {
+            autoStartPolicy(AutoStartPolicy.OnDispatch)
         }
 
         store.collectState { }
@@ -242,4 +226,99 @@ class StoreOverridesTest {
 
         assertEquals(AppState(count = 1), store.currentState)
     }
+
+    @Test
+    fun patch_shouldThrowAfterCurrentStateIsRead() {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        assertEquals(AppState(count = 0), store.currentState)
+
+        assertFailsWith<IllegalStateException> {
+            store.patchForTest {
+                exceptionHandler(ExceptionHandler.Log)
+            }
+        }
+    }
+
+    @Test
+    fun patch_shouldThrowAfterAttachObserverWithCurrentState() {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.attachObserverForTest(
+            object : StoreObserver<AppState, Nothing> {
+                override fun onState(state: AppState) = Unit
+                override fun onEvent(event: Nothing) = Unit
+            },
+        )
+
+        assertFailsWith<IllegalStateException> {
+            store.patchForTest {
+                exceptionHandler(ExceptionHandler.Log)
+            }
+        }
+    }
+
+    @Test
+    fun patch_shouldRemainAllowedAfterAttachObserverWithoutCurrentState() {
+        val pluginRecords = mutableListOf<String>()
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            coroutineContext(Dispatchers.Unconfined)
+            plugin(recordingPlugin("setup", pluginRecords))
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.attachObserverForTest(
+            object : StoreObserver<AppState, Nothing> {
+                override fun onState(state: AppState) = Unit
+                override fun onEvent(event: Nothing) = Unit
+            },
+            notifyCurrentState = false,
+        )
+
+        store.patchForTest {
+            clearPlugins()
+        }
+        store.dispatch(AppAction.Increment)
+
+        assertTrue(pluginRecords.isEmpty())
+    }
+
+    @Test
+    fun patch_shouldThrowAfterCollectEvent() {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            coroutineContext(Dispatchers.Unconfined)
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.collectEvent { }
+
+        assertFailsWith<IllegalStateException> {
+            store.patchForTest {
+                exceptionHandler(ExceptionHandler.Log)
+            }
+        }
+    }
+
 }

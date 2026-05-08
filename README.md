@@ -69,7 +69,6 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 - [Plugin](#plugin)
   - [Logging](#logging)
   - [Message](#message)
-- [Store Configuration Overrides](#store-configuration-overrides)
 - [Project-specific AppStore Wrapper](#project-specific-appstore-wrapper)
 - [Testing Store](#testing-store)
 
@@ -220,7 +219,7 @@ class CounterStore(
     counterRepository: CounterRepository,
 ): Store<CounterState, CounterAction, CounterEvent> by Store(
     initialState = CounterState(count = 0),
-    setup = {
+    builder = {
         state<CounterState> {
             // ...
         }
@@ -1009,52 +1008,6 @@ val mainStore: Store<MainState, MainAction, MainEvent> = Store {
 ```
 </details>
 
-## Store Configuration Overrides
-
-`Store{}` DSL accepts an `overrides` block that is applied after the main setup block.
-Use it when you want to override *Store* configuration.
-
-```kt
-fun CounterStore(
-    overrides: Overrides<CounterState, CounterAction, Nothing> = {},
-): Store<CounterState, CounterAction, Nothing> = Store(
-    initialState = CounterState(count = 0),
-    overrides = overrides,
-) {
-    plugin(AppLoggingPlugin())
-
-    state<CounterState> {
-        // ...
-    }
-}
-
-val store = CounterStore()
-
-val testStore = CounterStore(
-    overrides = {
-        clearPlugins()
-        exceptionHandler(ExceptionHandler.Log)
-    },
-)
-```
-
-Inside `overrides` block, you can use these APIs:
-
-- `coroutineContext(...)`
-- `stateSaver(...)`
-- `exceptionHandler(...)`
-- `autoStartPolicy(...)`
-- `plugin(...)`
-- `clearPlugins()`
-- `replacePlugins(...)`
-- `pendingActionPolicy(...)`
-- `pluginExecutionPolicy(...)`
-
-Typical uses are:
-
-- changing shared *Store* behavior in tests without rewriting the *Store* definition
-- injecting debug-only plugins or logging
-
 ## Project-specific AppStore Wrapper
 
 In larger projects, it can be useful to wrap `Store{}` DSL in a project-specific `AppStore{}` that applies app-wide defaults in one place.
@@ -1063,17 +1016,15 @@ This lets you centralize shared *Store* configuration.
 ```kt
 fun <S : State, A : Action, E : Event> AppStore(
     initialState: S,
-    overrides: Overrides<S, A, E> = {},
-    setup: Setup<S, A, E>,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
 ): Store<S, A, E> = Store(
     initialState = initialState,
-    overrides = overrides,
 ) {
     // shared Store configuration
     plugin(AppLoggingPlugin())
     exceptionHandler(AppExceptionHandler)
 
-    setup()
+    builder()
 }
 ```
 
@@ -1082,34 +1033,53 @@ A feature *Store* can then focus on its own state transitions and actions:
 ```kt
 fun CounterStore(
     counterRepository: CounterRepository,
-    overrides: Overrides<CounterState, CounterAction, CounterEvent> = {},
 ): Store<CounterState, CounterAction, CounterEvent> = AppStore( // use AppStore{}
     initialState = CounterState(count = 0),
-    overrides = overrides,
 ) {
     state<CounterState> {
         // ...
     }
 }
-
-val store = CounterStore(counterRepository = counterRepository)
-
-val testStore = CounterStore(
-    counterRepository = counterRepository,
-    overrides = {
-        clearPlugins()
-        // ...
-    },
-)
 ```
 
 ## Testing Store
 
-Add `:tart-test` to your test source set to use Tart's test helpers such as `createRecorder()` and `dispatchAndWait()`.
+Add `:tart-test` to your test source set to use `patch { ... }`, `createRecorder()`, `startAndWait()`, and other Tart test helpers.
 
 ```kt
 commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
 ```
+
+Use `patch { ... }` when you want to replace non-state *Store* configuration in tests without rewriting the *Store* definition.
+
+```kt
+fun CounterStore(): Store<CounterState, CounterAction, Nothing> = Store(
+    initialState = CounterState(count = 0),
+) {
+    plugin(AppLoggingPlugin())
+
+    state<CounterState> {
+        // ...
+    }
+}
+
+val store = CounterStore().patch {
+    clearPlugins()
+    exceptionHandler(ExceptionHandler.Log)
+}
+```
+
+Inside `patch` block, you can use these APIs:
+
+- `coroutineContext(...)`
+- `stateSaver(...)`
+- `exceptionHandler(...)`
+- `autoStartPolicy(...)`
+- `pendingActionPolicy(...)`
+- `pluginExecutionPolicy(...)`
+- `plugin(...)`
+- `clearPlugins()`
+- `replacePlugins(...)`
 
 For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
 
