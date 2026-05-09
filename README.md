@@ -1044,11 +1044,59 @@ fun CounterStore(
 
 ## Testing Store
 
-Add `:tart-test` to your test source set to use `patch { ... }`, `createRecorder()`, `startAndWait()`, and other Tart test helpers.
+Add `:tart-test` to your test source set to use Tart's test helpers.
 
 ```kt
 commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
 ```
+
+Use `dispatchAndWait(action)` to dispatch an *Action* and suspend until the *Store* finishes processing it. It waits for startup (when needed), the matching `action {}` handler, and the resulting synchronous state transition work, but not for additional work launched with `launch {}`.
+
+```kt
+@Test
+fun counterStore_dispatchesAndProcesses() = runTest {
+    // Given
+    val store = CounterStore(...)
+
+    // When
+    store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
+
+    // Then
+    assertEquals(CounterState(count = 1), store.currentState)
+}
+```
+
+If you want to inspect only the startup phase (plugin `onStart` hooks and the synchronous `enter {}` chain) without dispatching an *Action*, use `startAndWait()`.
+
+For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
+
+```kt
+@Test
+fun counterStore_recordsStatesAndEvents() = runTest {
+    // Given
+    val store = CounterStore(...)
+    val recorder = store.createRecorder()
+
+    // When
+    store.dispatchAndWait(CounterAction.Increment)
+
+    // Then
+    assertEquals(
+        listOf(
+            CounterState(count = 0),
+            CounterState(count = 1),
+        ),
+        recorder.states,
+    )
+    assertEquals(
+        listOf(CounterEvent.Incremented(count = 1)),
+        recorder.events,
+    )
+}
+```
+
+If you need custom recording behavior, implement your own `Plugin` and register it via `patch { plugin(...) }`.
+If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.
 
 Use `patch { ... }` when you want to replace non-state *Store* configuration in tests without rewriting the *Store* definition.
 
@@ -1071,6 +1119,7 @@ val store = CounterStore().patch {
 
 Inside `patch` block, you can use these APIs:
 
+- `initialState(...)`
 - `coroutineContext(...)`
 - `stateSaver(...)`
 - `exceptionHandler(...)`
@@ -1080,33 +1129,3 @@ Inside `patch` block, you can use these APIs:
 - `plugin(...)`
 - `clearPlugins()`
 - `replacePlugins(...)`
-
-For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
-
-```kt
-@Test
-fun counterStore_recordsStatesAndEvents() = runTest {
-    // Given
-    val store = CounterStore(...)
-    val recorder = store.createRecorder()
-
-    // When
-    store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
-
-    // Then
-    assertEquals(
-        listOf(
-            CounterState(count = 0),
-            CounterState(count = 1),
-        ),
-        recorder.states,
-    )
-    assertEquals(
-        listOf(CounterEvent.Incremented(count = 1)),
-        recorder.events,
-    )
-}
-```
-
-If you need custom recording behavior, implement your own `StoreObserver` and attach it with `attachObserver()`.
-If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.

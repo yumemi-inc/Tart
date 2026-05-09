@@ -9,13 +9,6 @@ internal fun <S : State, A : Action, E : Event> Store<S, A, E>.patchForTest(
     return requireStoreInternalApi().patch(patch)
 }
 
-internal fun <S : State, A : Action, E : Event> Store<S, A, E>.attachObserverForTest(
-    observer: StoreObserver<S, E>,
-    notifyCurrentState: Boolean = true,
-) {
-    requireStoreInternalApi().attachObserver(observer, notifyCurrentState)
-}
-
 internal suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWaitForTest(action: A) {
     requireStoreInternalApi().dispatchAndWait(action)
 }
