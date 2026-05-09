@@ -7,7 +7,16 @@ import kotlinx.coroutines.CoroutineDispatcher
  *
  * Plugins can use this scope to start Store-scoped background work.
  */
+@TartStoreDsl
 interface PluginScope<S : State, A : Action> {
+    /**
+     * Dispatches an action to the Store.
+     *
+     * This enqueues the action and returns immediately.
+     * It does not wait for action handling to complete.
+     */
+    fun dispatch(action: A)
+
     /**
      * Starts background work in the Store's root coroutine scope and returns immediately.
      *
@@ -19,6 +28,7 @@ interface PluginScope<S : State, A : Action> {
     /**
      * Scope available within background work launched from a [Plugin].
      */
+    @TartStoreDsl
     interface LaunchScope<S : State, A : Action> {
         /**
          * The latest committed state snapshot.

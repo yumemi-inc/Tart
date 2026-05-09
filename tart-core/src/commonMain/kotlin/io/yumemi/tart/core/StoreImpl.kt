@@ -106,6 +106,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val pluginScope by lazy {
         object : PluginScope<S, A> {
+            override fun dispatch(action: A) {
+                this@StoreImpl.dispatch(action)
+            }
+
             override fun launch(dispatcher: CoroutineDispatcher?, block: suspend PluginLaunchScope<S, A>.() -> Unit) {
                 coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     block(
