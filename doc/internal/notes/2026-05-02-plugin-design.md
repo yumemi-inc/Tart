@@ -1,6 +1,6 @@
 # Plugin 設計メモ
 
-- 更新日: 2026-05-06
+- 更新日: 2026-05-09
 
 ## 背景
 
@@ -40,6 +40,8 @@ interface Plugin<S : State, A : Action, E : Event> {
 }
 
 interface PluginScope<S : State, A : Action> {
+    fun dispatch(action: A)
+
     fun launch(
         dispatcher: CoroutineDispatcher? = null,
         block: suspend LaunchScope<S, A>.() -> Unit,
@@ -82,10 +84,13 @@ state type change を見たい場合は、`onState` の中で `prevState::class 
 ### `PluginScope`
 
 `PluginScope` 自体は全 hook で使えるようにする。
-ただし、hook 本体では観測に寄せ、追加の権限は `launch {}` の中に閉じ込める。
+即時に return する fire-and-forget な操作は hook 本体からも呼べるようにし、長時間処理や継続的な購読、最新 state の参照といった「launch を必要とする操作」は `launch {}` の中に閉じ込める。
 
 scope に入れるのは次の最小セットで十分である。
 
+- `dispatch(action)`
+  - hook 本体から補助的な action を enqueue する
+  - `Store.dispatch` は元々 fire-and-forget なので、これだけのために `launch {}` を生やすのは余分な coroutine を作るだけになる
 - `launch { ... }`
   - Store-scoped な background work を開始する
 - `launch {}` 内の `LaunchScope.currentState`
@@ -124,6 +129,20 @@ override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
 
 この形なら、`Store.close()` でも親 scope cancel でも同じ cleanup が走る。
 cleanup の所有者が、その仕事自身の lifetime にぶら下がる点も分かりやすい。
+
+そもそも `Flow.collect` のような継続処理は、本体 Store の coroutine cancellation だけで停止するため、明示的な cleanup を書く機会自体が少ない。
+plugin の用途として代表的なものほど cleanup hook の出番がない、という意味でも、明示 close hook を導入する利得は薄い。
+
+### onError は持たない
+
+`Plugin` に例外通知用の `onError` hook を入れる案も考えられるが、現状では採らない。
+
+理由としては、`Plugin` の責務が観測と外部連携に寄っていることと整合しない為である。
+`onAction` / `onState` / `onEvent` はいずれも Store の **境界** を観測する hook であり、Store の入力（action）か出力（state / event）を見ている。
+一方で例外は Store 内部の error pipeline 上で起きる事象であり、これを hook として公開すると、plugin が Store 内部のロジックを覗き込む形になりやすい。
+
+ただし、将来的に Crashlytics 系プラグインへエラーをレポートするような要件が出てきた際には、再検討を行う価値はある。
+その際 `Store.exceptionHandler` で受けている、Store DSL 上の業務ロジック以外で起きたエラーは `onError` を plugin に足しても拾えない為、何を対象にレポートするかは合わせて検討する必要がある。
 
 ### execution policy は持つ
 
@@ -165,3 +184,4 @@ background work の完了順や、そこで起こした `dispatch()` の interle
 ## 関連
 
 - [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
+- [`error {}` に流さない framework boundary の例外処理は当面現状維持とする](../adr/2026-05-07-framework-boundary-exception-handling.md)
