@@ -3,6 +3,7 @@ package io.yumemi.tart.core
 import kotlin.coroutines.CoroutineContext
 
 data class StorePatch<S : State, A : Action, E : Event>(
+    val initialState: S? = null,
     val coroutineContext: CoroutineContext? = null,
     val stateSaver: StateSaver<S>? = null,
     val exceptionHandler: ExceptionHandler? = null,
@@ -30,6 +31,7 @@ sealed interface PluginPatch<S : State, A : Action, E : Event> {
  */
 @Suppress("unused")
 class StorePatchBuilder<S : State, A : Action, E : Event> {
+    private var initialStatePatch: S? = null
     private var coroutineContextPatch: CoroutineContext? = null
     private var stateSaverPatch: StateSaver<S>? = null
     private var exceptionHandlerPatch: ExceptionHandler? = null
@@ -37,6 +39,10 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
     private var pendingActionPolicyPatch: PendingActionPolicy? = null
     private var pluginExecutionPolicyPatch: PluginExecutionPolicy? = null
     private val pluginPatches = mutableListOf<PluginPatch<S, A, E>>()
+
+    fun initialState(state: S) {
+        initialStatePatch = state
+    }
 
     fun coroutineContext(coroutineContext: CoroutineContext) {
         coroutineContextPatch = coroutineContext
@@ -76,6 +82,7 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
 
     fun build(): StorePatch<S, A, E> {
         return StorePatch(
+            initialState = initialStatePatch,
             coroutineContext = coroutineContextPatch,
             stateSaver = stateSaverPatch,
             exceptionHandler = exceptionHandlerPatch,

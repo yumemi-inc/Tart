@@ -228,7 +228,22 @@ class StorePatchTest {
     }
 
     @Test
-    fun patch_shouldThrowAfterCurrentStateIsRead() {
+    fun patch_shouldOverrideInitialStateFromBuilder() {
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }.patchForTest {
+            initialState(AppState(count = 42))
+        }
+
+        assertEquals(AppState(count = 42), store.currentState)
+    }
+
+    @Test
+    fun patch_shouldRejectInitialStateChangeAfterCurrentStateIsRead() {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             state<AppState> {
                 action<AppAction.Increment> {
@@ -241,13 +256,13 @@ class StorePatchTest {
 
         assertFailsWith<IllegalStateException> {
             store.patchForTest {
-                exceptionHandler(ExceptionHandler.Log)
+                initialState(AppState(count = 42))
             }
         }
     }
 
     @Test
-    fun patch_shouldThrowAfterAttachObserverWithCurrentState() {
+    fun patch_shouldRejectStateSaverChangeAfterCurrentStateIsRead() {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             state<AppState> {
                 action<AppAction.Increment> {
@@ -256,26 +271,20 @@ class StorePatchTest {
             }
         }
 
-        store.attachObserverForTest(
-            object : StoreObserver<AppState, Nothing> {
-                override fun onState(state: AppState) = Unit
-                override fun onEvent(event: Nothing) = Unit
-            },
-        )
+        assertEquals(AppState(count = 0), store.currentState)
 
         assertFailsWith<IllegalStateException> {
             store.patchForTest {
-                exceptionHandler(ExceptionHandler.Log)
+                stateSaver(RecordingStateSaver(restoredState = null))
             }
         }
     }
 
     @Test
-    fun patch_shouldRemainAllowedAfterAttachObserverWithoutCurrentState() {
+    fun patch_shouldAllowOtherChangesAfterCurrentStateIsRead() {
         val pluginRecords = mutableListOf<String>()
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             coroutineContext(Dispatchers.Unconfined)
-            plugin(recordingPlugin("setup", pluginRecords))
 
             state<AppState> {
                 action<AppAction.Increment> {
@@ -284,24 +293,20 @@ class StorePatchTest {
             }
         }
 
-        store.attachObserverForTest(
-            object : StoreObserver<AppState, Nothing> {
-                override fun onState(state: AppState) = Unit
-                override fun onEvent(event: Nothing) = Unit
-            },
-            notifyCurrentState = false,
-        )
+        assertEquals(AppState(count = 0), store.currentState)
 
         store.patchForTest {
-            clearPlugins()
+            exceptionHandler(ExceptionHandler.Log)
+            plugin(recordingPlugin("late", pluginRecords))
         }
+
         store.dispatch(AppAction.Increment)
 
-        assertTrue(pluginRecords.isEmpty())
+        assertEquals(listOf("late"), pluginRecords)
     }
 
     @Test
-    fun patch_shouldThrowAfterCollectEvent() {
+    fun patch_shouldRejectCoroutineContextChangeAfterCollectEvent() {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             coroutineContext(Dispatchers.Unconfined)
 
@@ -316,9 +321,33 @@ class StorePatchTest {
 
         assertFailsWith<IllegalStateException> {
             store.patchForTest {
-                exceptionHandler(ExceptionHandler.Log)
+                coroutineContext(Dispatchers.Unconfined)
             }
         }
     }
 
+    @Test
+    fun patch_shouldAllowOtherChangesAfterCollectEvent() {
+        val pluginRecords = mutableListOf<String>()
+        val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
+            coroutineContext(Dispatchers.Unconfined)
+
+            state<AppState> {
+                action<AppAction.Increment> {
+                    nextState(AppState(count = state.count + 1))
+                }
+            }
+        }
+
+        store.collectEvent { }
+
+        store.patchForTest {
+            exceptionHandler(ExceptionHandler.Log)
+            plugin(recordingPlugin("late", pluginRecords))
+        }
+
+        store.dispatch(AppAction.Increment)
+
+        assertEquals(listOf("late"), pluginRecords)
+    }
 }

@@ -2,11 +2,9 @@ package io.yumemi.tart.test
 
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
-import io.yumemi.tart.core.ExperimentalTartApi
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.StateSaver
 import io.yumemi.tart.core.Store
-import io.yumemi.tart.core.StoreObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +19,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-@OptIn(ExperimentalTartApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class StoreRecorderTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -68,51 +66,8 @@ class StoreRecorderTest {
     }
 
     @Test
-    fun storeRecorder_recordsStateHistoryAndEventHistory() {
-        val recorder = StoreRecorder<AppState, AppEvent>()
-
-        recorder.onState(AppState.Loading)
-        recorder.onState(AppState.Main(count = 0))
-        recorder.onEvent(AppEvent.CountUpdated(count = 0))
-        recorder.onState(AppState.Main(count = 1))
-        recorder.onEvent(AppEvent.CountUpdated(count = 1))
-
-        assertEquals(
-            listOf(
-                AppState.Loading,
-                AppState.Main(count = 0),
-                AppState.Main(count = 1),
-            ),
-            recorder.states,
-        )
-        assertEquals(
-            listOf(
-                AppEvent.CountUpdated(count = 0),
-                AppEvent.CountUpdated(count = 1),
-            ),
-            recorder.events,
-        )
-    }
-
-    @Test
-    fun recorder_clear_resetsRecordedHistory() {
-        val recorder = StoreRecorder<AppState, AppEvent>()
-
-        recorder.onState(AppState.Main(count = 9))
-        recorder.onEvent(AppEvent.CountUpdated(count = 9))
-
-        assertTrue(recorder.states.isNotEmpty())
-        assertTrue(recorder.events.isNotEmpty())
-        recorder.clear()
-
-        assertTrue(recorder.states.isEmpty())
-        assertTrue(recorder.events.isEmpty())
-    }
-
-    @Test
-    fun createRecorder_createsAndAttachesRecorder() = runTest(testDispatcher) {
+    fun createRecorder_recordsStatesAndEvents() = runTest(testDispatcher) {
         val store = createTestStore()
-
         val recorder = store.createRecorder()
         store.dispatchAndWait(AppAction.Increment)
         store.dispatchAndWait(AppAction.EmitEvent)
@@ -131,6 +86,21 @@ class StoreRecorderTest {
             ),
             recorder.events,
         )
+    }
+
+    @Test
+    fun recorder_clear_resetsRecordedHistory() = runTest(testDispatcher) {
+        val store = createTestStore()
+        val recorder = store.createRecorder()
+        store.dispatchAndWait(AppAction.Increment)
+        store.dispatchAndWait(AppAction.EmitEvent)
+
+        assertTrue(recorder.states.isNotEmpty())
+        assertTrue(recorder.events.isNotEmpty())
+        recorder.clear()
+
+        assertTrue(recorder.states.isEmpty())
+        assertTrue(recorder.events.isEmpty())
     }
 
     @Test
@@ -159,12 +129,7 @@ class StoreRecorderTest {
         val store = FakeStore()
 
         assertFailsWith<IllegalStateException> {
-            store.attachObserver(
-                object : StoreObserver<AppState, AppEvent> {
-                    override fun onState(state: AppState) = Unit
-                    override fun onEvent(event: AppEvent) = Unit
-                },
-            )
+            store.createRecorder()
         }
         try {
             store.startAndWait()

@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 @OptIn(InternalTartApi::class)
 internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A, E>, StoreInternalApi<S, A, E> {
     private val _state: MutableStateFlow<S> by lazy {
-        freezeConfiguration()
+        isStateRestored = true
         MutableStateFlow(
             try {
                 stateSaver.restore() ?: initialState
@@ -65,7 +65,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     final override val currentState: S get() = _state.value
 
-    protected abstract val initialState: S
+    protected abstract var initialState: S
 
     protected abstract var coroutineContext: CoroutineContext
 
@@ -90,7 +90,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     protected abstract val onError: suspend ErrorScope<S, E, S, Exception>.() -> Unit
 
     private val coroutineScope by lazy {
-        freezeConfiguration()
+        isCoroutineScopeCreated = true
         CoroutineScope(
             coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { _, exception ->
                 handleException(exception)
@@ -126,12 +126,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val stateRuntimes = mutableMapOf<KClass<out S>, StateRuntime>()
 
-    private val observers = mutableListOf<StoreObserver<S, E>>()
-
     private var activeDispatchJob: Job? = null
 
     @Volatile
-    private var isConfigurationFrozen: Boolean = false
+    private var isStateRestored: Boolean = false
+
+    @Volatile
+    private var isCoroutineScopeCreated: Boolean = false
 
     private var isInitialized: Boolean = false
 
@@ -159,7 +160,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     final override fun patch(patch: StorePatch<S, A, E>): Store<S, A, E> {
         check(mutex.tryLock()) { "[Tart] Failed to configure the Store because it is starting or already started" }
         try {
-            check(!isConfigurationFrozen) { "[Tart] Store configuration must be applied before the Store is used" }
+            check(!isInitialized) { "[Tart] Store configuration must be applied before the Store is started" }
+            if (patch.initialState != null) {
+                check(!isStateRestored) { "[Tart] initialState cannot be patched after the state has been read" }
+            }
+            if (patch.stateSaver != null) {
+                check(!isStateRestored) { "[Tart] stateSaver cannot be patched after the state has been read" }
+            }
+            if (patch.coroutineContext != null) {
+                check(!isCoroutineScopeCreated) { "[Tart] coroutineContext cannot be patched after the Store has begun running coroutines" }
+            }
             applyConfigurationPatch(patch)
             return this
         } finally {
@@ -204,28 +214,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    final override fun attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean) {
-        check(mutex.tryLock()) { "[Tart] Failed to attach observer because the Store is starting or already started" }
-        try {
-            check(!isInitialized) { "[Tart] Observer must be attached before the Store starts" }
-            if (notifyCurrentState) {
-                observer.onState(currentState)
-            }
-            observers.add(observer)
-        } finally {
-            mutex.unlock()
-        }
-    }
-
     final override fun close() {
         coroutineScope.cancel()
     }
 
-    private fun freezeConfiguration() {
-        isConfigurationFrozen = true
-    }
-
     private fun applyConfigurationPatch(patch: StorePatch<S, A, E>) {
+        patch.initialState?.let { initialState = it }
         patch.coroutineContext?.let { coroutineContext = it }
         patch.stateSaver?.let { stateSaver = it }
         patch.exceptionHandler?.let { exceptionHandler = it }
@@ -691,7 +685,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
         }
-        notifyStateRecorded(nextState)
         processPlugins { onState(pluginScope, state, nextState) }
     }
 
@@ -723,7 +716,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processEventEmit(state: S, event: E) {
         _event.emit(event)
-        notifyEventRecorded(event)
         processPlugins { onEvent(pluginScope, state, event) }
     }
 
@@ -759,28 +751,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
-        }
-    }
-
-    private fun notifyStateRecorded(state: S) {
-        observers.forEach { observer ->
-            try {
-                observer.onState(state)
-            } catch (t: Throwable) {
-                rethrowIfNonRecoverable(t)
-                throw InternalError(t)
-            }
-        }
-    }
-
-    private fun notifyEventRecorded(event: E) {
-        observers.forEach { observer ->
-            try {
-                observer.onEvent(event)
-            } catch (t: Throwable) {
-                rethrowIfNonRecoverable(t)
-                throw InternalError(t)
-            }
         }
     }
 

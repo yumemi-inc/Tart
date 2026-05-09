@@ -6,7 +6,6 @@ import io.yumemi.tart.core.InternalTartApi
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
 import io.yumemi.tart.core.StoreInternalApi
-import io.yumemi.tart.core.StoreObserver
 import io.yumemi.tart.core.StorePatchBuilder
 
 /**
@@ -44,17 +43,20 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(ac
 }
 
 /**
- * Applies a non-state Store patch before the Store is used.
+ * Applies a non-state Store patch before the Store is started.
  *
  * This is intended for tests that need to swap persistence, policies, exception handling,
  * or plugins without rewriting the Store definition itself.
- * The patch must happen immediately after Store construction and before APIs such as
- * `currentState`, `collectState()`, `collectEvent()`, `start()`, or `dispatch()` are used.
+ * The patch must happen before APIs such as `start()`, `dispatch()`, `collectState()`, or
+ * `collectEvent()` are used. Once the Store has consumed configuration values (e.g. `stateSaver`
+ * is consumed once `currentState` is read; `coroutineContext` is consumed once a coroutine is
+ * launched), patches that target those values will fail.
  *
  * This extension is available for Store instances created by the Tart DSL.
  *
  * @param builder Builder lambda for a non-state Store patch
- * @throws IllegalStateException if the Store has already been used or is starting
+ * @throws IllegalStateException if the Store has already been started or is starting
+ * @throws IllegalStateException if the patch targets a value that has already been consumed
  * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
  */
 @OptIn(InternalTartApi::class)
@@ -63,25 +65,6 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.patch(
 ): Store<S, A, E> {
     val patch = StorePatchBuilder<S, A, E>().apply(builder).build()
     return requireStoreInternalApi().patch(patch)
-}
-
-/**
- * Attaches an observer before the Store starts.
- *
- * This does not start the Store.
- * If [notifyCurrentState] is true, the observer receives the current snapshot immediately, which
- * may be a [io.yumemi.tart.core.StateSaver]-restored value.
- *
- * This extension is available for Store instances created by the Tart DSL.
- *
- * @param observer The observer to attach
- * @param notifyCurrentState Whether to notify the observer with the current state immediately
- * @throws IllegalStateException if the store is starting or has already started
- * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
- */
-@OptIn(InternalTartApi::class)
-fun <S : State, A : Action, E : Event> Store<S, A, E>.attachObserver(observer: StoreObserver<S, E>, notifyCurrentState: Boolean = true) {
-    requireStoreInternalApi().attachObserver(observer, notifyCurrentState)
 }
 
 @OptIn(InternalTartApi::class)

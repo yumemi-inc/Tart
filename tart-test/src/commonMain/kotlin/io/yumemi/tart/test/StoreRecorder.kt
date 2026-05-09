@@ -2,18 +2,20 @@ package io.yumemi.tart.test
 
 import io.yumemi.tart.core.Action
 import io.yumemi.tart.core.Event
-import io.yumemi.tart.core.ExperimentalTartApi
+import io.yumemi.tart.core.Plugin
+import io.yumemi.tart.core.PluginScope
 import io.yumemi.tart.core.State
 import io.yumemi.tart.core.Store
-import io.yumemi.tart.core.StoreObserver
 
 /**
- * Default in-memory [StoreObserver] implementation for tests.
+ * Default in-memory recorder for tests. Implemented as a [Plugin] so it integrates with the Store
+ * through the same lifecycle hooks as other plugins.
  *
- * It records every observed state snapshot and event in insertion order.
+ * Records the state at Store startup (which is the [io.yumemi.tart.core.StateSaver]-restored value
+ * when present, otherwise the Store's initial state), every committed state transition, and every
+ * emitted event, in insertion order.
  */
-@ExperimentalTartApi
-class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
+class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : Plugin<S, A, E> {
     private val recordedStates = mutableListOf<S>()
     private val recordedEvents = mutableListOf<E>()
 
@@ -35,28 +37,30 @@ class StoreRecorder<S : State, E : Event> : StoreObserver<S, E> {
         recordedEvents.clear()
     }
 
-    override fun onState(state: S) {
+    override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
         recordedStates.add(state)
     }
 
-    override fun onEvent(event: E) {
+    override suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {
+        recordedStates.add(state)
+    }
+
+    override suspend fun onEvent(scope: PluginScope<S, A>, state: S, event: E) {
         recordedEvents.add(event)
     }
 }
 
 /**
- * Creates and attaches a [StoreRecorder] for this Store.
+ * Creates and registers a [StoreRecorder] for this Store.
  *
- * Prefer this in tests unless you need a custom [StoreObserver] implementation.
+ * The recorder is registered as a [Plugin] via [patch], which must happen before the Store is started.
  *
- * @param notifyCurrentState Whether to record the current state snapshot immediately
- * @return The attached [StoreRecorder]
+ * @return The registered [StoreRecorder]
+ * @throws IllegalStateException if the Store has already been started or is starting
+ * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
  */
-@ExperimentalTartApi
-fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(
-    notifyCurrentState: Boolean = true,
-): StoreRecorder<S, E> {
-    val recorder = StoreRecorder<S, E>()
-    attachObserver(recorder, notifyCurrentState)
+fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(): StoreRecorder<S, A, E> {
+    val recorder = StoreRecorder<S, A, E>()
+    patch { plugin(recorder) }
     return recorder
 }

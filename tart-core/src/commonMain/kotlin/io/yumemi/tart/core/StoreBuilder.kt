@@ -298,7 +298,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     internal fun build(): Store<S, A, E> {
         val state = requireNotNull(storeInitialState) { "[Tart] InitialState must be set in Store{} DSL" }
         return object : StoreImpl<S, A, E>() {
-            override val initialState: S = state
+            override var initialState: S = state
             override var coroutineContext: CoroutineContext = storeCoroutineContext
             override var stateSaver: StateSaver<S> = storeStateSaver
             override var exceptionHandler: ExceptionHandler = storeExceptionHandler
