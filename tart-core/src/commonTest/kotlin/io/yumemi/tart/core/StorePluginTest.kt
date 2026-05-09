@@ -180,6 +180,45 @@ class StorePluginTest {
     }
 
     @Test
+    fun pluginScope_shouldAllowDispatchFromHookBody() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        val store = Store<AppState, AppAction, Nothing>(AppState.Loading) {
+            coroutineContext(testDispatcher)
+            plugin(
+                object : Plugin<AppState, AppAction, Nothing> {
+                    override suspend fun onAction(scope: PluginScope<AppState, AppAction>, state: AppState, action: AppAction) {
+                        if (action == AppAction.TriggerPluginDispatch) {
+                            scope.dispatch(AppAction.Increment)
+                        }
+                    }
+                },
+            )
+
+            state<AppState.Loading> {
+                enter {
+                    nextState(AppState.Ready())
+                }
+            }
+
+            state<AppState.Ready> {
+                action<AppAction.TriggerPluginDispatch> {
+                    // no-op
+                }
+
+                action<AppAction.Increment> {
+                    nextState(state.copy(count = state.count + 1))
+                }
+            }
+        }
+
+        store.dispatch(AppAction.TriggerPluginDispatch)
+        advanceUntilIdle()
+
+        assertEquals(AppState.Ready(count = 1), store.currentState)
+    }
+
+    @Test
     fun pluginScopeLaunch_shouldRunFinallyOnStoreClose() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val records = mutableListOf<String>()
