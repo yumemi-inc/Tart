@@ -59,4 +59,4 @@ Store の lifecycle は 2 フェーズに分けられる。
 ## 未解決事項
 
 - 上記「開始処理中の dispatch は ClearOnStateExit から除外する」挙動は、README やリファレンス側で明示されていないため、ドキュメント側に補記するかは要検討。
-- `AutoStartPolicy.Never` を将来追加する場合、start 前 dispatch を「例外」「破棄」「キュー保持」のどれにするかは別途決める必要がある。
+- `AutoStartPolicy.Never` を将来追加する場合、start 前 dispatch の扱い（例外 / 破棄 / キュー保持）に加え、startup 中の dispatch を queue するか、startup 中の state 変更を `ClearOnStateExit` の対象とするかなど、いくつか論点を整理する必要がある。
