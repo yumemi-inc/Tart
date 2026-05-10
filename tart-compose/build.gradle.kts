@@ -38,7 +38,10 @@ kotlin {
     jvm()
     js(IR) {
         browser()
-        nodejs()
+    }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
     }
 
     sourceSets {
