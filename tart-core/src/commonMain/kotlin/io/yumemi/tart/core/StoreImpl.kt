@@ -724,8 +724,6 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
-        // Previous behavior: protect only dispatch-triggered startup from pending dispatch cleanup.
-        // if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized)) {
         if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && isInitialized) {
             clearPendingDispatchJobs()
         }
