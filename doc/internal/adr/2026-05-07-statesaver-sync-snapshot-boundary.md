@@ -65,7 +65,7 @@ fun <S : State, A : Action, E : Event> AsyncStatePersistencePlugin(
 ### 利用イメージ
 
 ```kotlin
-store {
+Store {
     initialState = MyState.Loading
     plugin(
         AsyncStatePersistencePlugin(
