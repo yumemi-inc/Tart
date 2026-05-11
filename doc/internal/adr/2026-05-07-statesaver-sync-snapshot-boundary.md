@@ -32,6 +32,7 @@ network / database / file I/O のような重い persistence の為に `suspend`
 - この判断により、`StateFlow` の初期値と `currentState` の同期性を保てる。
 - `enter {}` 自体が `suspend` なので、非同期 read のために `launch {}` は不要だが、startup を待たせずに並行に進めたい場合は `launch {}` を使う。
 - `Plugin.onState` 自体が `suspend` なので、非同期 write のために `launch {}` は不要だが、write 完了まで Store の進行を待たせたくない場合は `launch {}` を使う。
+- `save()` だけを `suspend` にしたい（restore は同期で良い）場合は、`StateSaver` の責務を割らずに `Plugin.onState` から `suspend` な write を行う Plugin を別途用意すればよい。`StateSaver` の同期境界はそのまま保てる。
 
 ## 非同期 persistence の Plugin による補助案
 
