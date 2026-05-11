@@ -16,6 +16,17 @@
 つまり、dispatch する UI 側から見れば、Store の開始処理が実際にされている/されていないに関わらず、`dispatch()` する時点で「開始処理が終わっている」前提で書ける。
 開始処理が遅延しているせいで自分の dispatch が落ちる、という挙動を UI 側に意識させない。
 
+「開始処理中に積まれた dispatch」には、外部（UI 等）からの dispatch だけでなく、**`Plugin.onStart` 内部から発火された dispatch も含まれる**。`Plugin.onStart` は開始処理の一部として走るため、そこから dispatch されたものも同じレールに乗り、開始処理完了後の state に対して適用される。Plugin 作者側も「onStart で dispatch すると消える / 落ちる」といったエッジケースを意識せずに書ける。
+
+### collect / `Store.start()` 起点の場合
+
+開始処理のトリガーが `dispatch()` 以外の場合も同様の見え方になる。
+
+- `state` / `event` の collect が startup を起こす場合（`OnDispatchOrStateCollection`）: collect が開始処理のトリガーになるだけで、利用者から見たときの前提は dispatch 起点と同じ。
+- `Store.start()` を明示呼び出しする場合: 明示的に開始処理を走らせるだけで、その後の `dispatch()` / collect の挙動は通常通り。
+
+いずれの場合も「`dispatch()` 時点で開始処理が終わっている前提で書ける」のと同じ要領で、開始処理の内部挙動を意識せずに書ける。
+
 ### PendingActionPolicy.ClearOnStateExit との関係
 
 開始処理中に state が変更され、かつ `PendingActionPolicy.ClearOnStateExit` の場合でも、**開始処理中の state class 遷移では本 dispatch および開始処理中の dispatch は削除しない**。
