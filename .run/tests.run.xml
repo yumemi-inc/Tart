@@ -14,6 +14,7 @@
           <option value="testAndroidHostTest" />
           <option value="jvmTest" />
           <option value="jsBrowserTest" />
+          <option value="wasmJsBrowserTest" />
         </list>
       </option>
       <option name="vmOptions" />
