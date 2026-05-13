@@ -141,7 +141,7 @@ class StoreBaseTest {
     }
 
     @Test
-    fun tartStore_dispatchAndWait_shouldSuspendUntilActionHandled() = runTest(testDispatcher) {
+    fun tartStore_dispatchAndAwait_shouldSuspendUntilActionHandled() = runTest(testDispatcher) {
         val gate = CompletableDeferred<Unit>()
         val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
             coroutineContext(Dispatchers.Unconfined)
@@ -159,7 +159,7 @@ class StoreBaseTest {
         }
 
         val dispatchJob = launch {
-            store.dispatchAndWaitForTest(AppAction.Increment)
+            store.dispatchAndAwaitForTest(AppAction.Increment)
         }
 
         assertFalse(dispatchJob.isCompleted)
@@ -192,12 +192,12 @@ class StoreBaseTest {
         }
 
         val firstDispatchJob = launch {
-            store.dispatchAndWaitForTest(AppAction.Increment)
+            store.dispatchAndAwaitForTest(AppAction.Increment)
         }
         startupEntered.await()
 
         val secondDispatchJob = launch {
-            store.dispatchAndWaitForTest(AppAction.Increment)
+            store.dispatchAndAwaitForTest(AppAction.Increment)
         }
 
         assertFalse(firstDispatchJob.isCompleted)
@@ -237,7 +237,7 @@ class StoreBaseTest {
         startupEntered.await()
 
         val dispatchJob = launch {
-            store.dispatchAndWaitForTest(AppAction.Increment)
+            store.dispatchAndAwaitForTest(AppAction.Increment)
         }
 
         assertFalse(dispatchJob.isCompleted)
@@ -275,7 +275,7 @@ class StoreBaseTest {
         startupEntered.await()
 
         val dispatchJob = launch {
-            store.dispatchAndWaitForTest(AppAction.Increment)
+            store.dispatchAndAwaitForTest(AppAction.Increment)
         }
 
         assertFalse(dispatchJob.isCompleted)

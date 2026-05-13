@@ -1050,7 +1050,7 @@ Add `:tart-test` to your test source set to use Tart's test helpers.
 commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
 ```
 
-Use `dispatchAndWait(action)` to dispatch an *Action* and suspend until the *Store* finishes processing it. It waits for startup (when needed), the matching `action {}` handler, and the resulting synchronous state transition work, but not for additional work launched with `launch {}`.
+Use `dispatchAndAwait(action)` to dispatch an *Action* and suspend until the *Store* finishes processing it. It waits for startup (when needed), the matching `action {}` handler, and the resulting synchronous state transition work, but not for additional work launched with `launch {}`.
 
 ```kt
 @Test
@@ -1059,14 +1059,14 @@ fun counterStore_dispatchesAndProcesses() = runTest {
     val store = CounterStore(...)
 
     // When
-    store.dispatchAndWait(CounterAction.Increment) // wait until the dispatched action completes
+    store.dispatchAndAwait(CounterAction.Increment) // wait until the dispatched action completes
 
     // Then
     assertEquals(CounterState(count = 1), store.currentState)
 }
 ```
 
-If you want to inspect only the startup phase (plugin `onStart` hooks and the synchronous `enter {}` chain) without dispatching an *Action*, use `startAndWait()`.
+If you want to inspect only the startup phase (plugin `onStart` hooks and the synchronous `enter {}` chain) without dispatching an *Action*, use `startAndAwait()`.
 
 For most Store tests, use `createRecorder()` to create and attach the default `StoreRecorder`, then assert recorded state and event history.
 
@@ -1078,7 +1078,7 @@ fun counterStore_recordsStatesAndEvents() = runTest {
     val recorder = store.createRecorder()
 
     // When
-    store.dispatchAndWait(CounterAction.Increment)
+    store.dispatchAndAwait(CounterAction.Increment)
 
     // Then
     assertEquals(
@@ -1092,6 +1092,15 @@ fun counterStore_recordsStatesAndEvents() = runTest {
         listOf(CounterEvent.Incremented(count = 1)),
         recorder.events,
     )
+}
+```
+
+Or use `record { recorder -> ... }` to scope a recording session to a block. The *Store* is the receiver, so `dispatchAndAwait()` can be called without a prefix.
+
+```kt
+store.record { recorder ->
+    dispatchAndAwait(CounterAction.Increment)
+    assertEquals(listOf(CounterState(0), CounterState(1)), recorder.states)
 }
 ```
 

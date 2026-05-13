@@ -8,7 +8,7 @@ package io.yumemi.tart.core
  */
 @InternalTartApi
 interface StoreInternalApi<S : State, A : Action, E : Event> {
-    suspend fun startAndWait()
-    suspend fun dispatchAndWait(action: A)
+    suspend fun startAndAwait()
+    suspend fun dispatchAndAwait(action: A)
     fun patch(patch: StorePatch<S, A, E>): Store<S, A, E>
 }

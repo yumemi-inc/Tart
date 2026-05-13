@@ -153,11 +153,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         launchStartup()
     }
 
-    final override suspend fun startAndWait() {
+    final override suspend fun startAndAwait() {
         launchStartup().join()
     }
 
-    final override suspend fun dispatchAndWait(action: A) {
+    final override suspend fun dispatchAndAwait(action: A) {
         launchDispatch(action).join()
     }
 

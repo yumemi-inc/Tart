@@ -64,3 +64,22 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(): StoreRec
     patch { plugin(recorder) }
     return recorder
 }
+
+/**
+ * Creates a [StoreRecorder], registers it, and runs [block] with this Store as the receiver and
+ * the recorder as the argument.
+ *
+ * Intended for tests that want to scope a recording session to a single block. Inside the block,
+ * use [startAndAwait] and [dispatchAndAwait] to drive the Store, then assert against the recorder's
+ * `states` and `events`.
+ *
+ * @param block Test body that receives the registered [StoreRecorder]
+ * @throws IllegalStateException if the Store has already been started or is starting
+ * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
+ */
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.record(
+    block: suspend Store<S, A, E>.(StoreRecorder<S, A, E>) -> Unit,
+) {
+    val recorder = createRecorder()
+    block(recorder)
+}

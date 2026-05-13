@@ -21,8 +21,8 @@ import io.yumemi.tart.core.StorePatchBuilder
  * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
  */
 @OptIn(InternalTartApi::class)
-suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndWait() {
-    requireStoreInternalApi().startAndWait()
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndAwait() {
+    requireStoreInternalApi().startAndAwait()
 }
 
 /**
@@ -38,8 +38,8 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndWait() {
  * @throws IllegalStateException if the Store is not backed by Tart's internal implementation
  */
 @OptIn(InternalTartApi::class)
-suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(action: A) {
-    requireStoreInternalApi().dispatchAndWait(action)
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndAwait(action: A) {
+    requireStoreInternalApi().dispatchAndAwait(action)
 }
 
 /**
