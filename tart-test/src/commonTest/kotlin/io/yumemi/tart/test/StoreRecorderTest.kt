@@ -69,8 +69,8 @@ class StoreRecorderTest {
     fun createRecorder_recordsStatesAndEvents() = runTest(testDispatcher) {
         val store = createTestStore()
         val recorder = store.createRecorder()
-        store.dispatchAndWait(AppAction.Increment)
-        store.dispatchAndWait(AppAction.EmitEvent)
+        store.dispatchAndAwait(AppAction.Increment)
+        store.dispatchAndAwait(AppAction.EmitEvent)
 
         assertEquals(
             listOf(
@@ -92,8 +92,8 @@ class StoreRecorderTest {
     fun recorder_clear_resetsRecordedHistory() = runTest(testDispatcher) {
         val store = createTestStore()
         val recorder = store.createRecorder()
-        store.dispatchAndWait(AppAction.Increment)
-        store.dispatchAndWait(AppAction.EmitEvent)
+        store.dispatchAndAwait(AppAction.Increment)
+        store.dispatchAndAwait(AppAction.EmitEvent)
 
         assertTrue(recorder.states.isNotEmpty())
         assertTrue(recorder.events.isNotEmpty())
@@ -104,10 +104,35 @@ class StoreRecorderTest {
     }
 
     @Test
-    fun startAndWait_waitsUntilStartupCompletes() = runTest(testDispatcher) {
+    fun record_runsBlockWithRecorderAndStoreReceiver() = runTest(testDispatcher) {
         val store = createTestStore()
 
-        store.startAndWait()
+        store.record { recorder ->
+            dispatchAndAwait(AppAction.Increment)
+            dispatchAndAwait(AppAction.EmitEvent)
+
+            assertEquals(
+                listOf(
+                    AppState.Loading,
+                    AppState.Main(count = 0),
+                    AppState.Main(count = 1),
+                ),
+                recorder.states,
+            )
+            assertEquals(
+                listOf(
+                    AppEvent.CountUpdated(count = 1),
+                ),
+                recorder.events,
+            )
+        }
+    }
+
+    @Test
+    fun startAndAwait_waitsUntilStartupCompletes() = runTest(testDispatcher) {
+        val store = createTestStore()
+
+        store.startAndAwait()
 
         assertEquals(AppState.Main(count = 0), store.currentState)
     }
@@ -132,13 +157,13 @@ class StoreRecorderTest {
             store.createRecorder()
         }
         try {
-            store.startAndWait()
-            fail("Expected startAndWait to fail for stores without StoreInternalApi support")
+            store.startAndAwait()
+            fail("Expected startAndAwait to fail for stores without StoreInternalApi support")
         } catch (_: IllegalStateException) {
         }
         try {
-            store.dispatchAndWait(AppAction.Increment)
-            fail("Expected dispatchAndWait to fail for stores without StoreInternalApi support")
+            store.dispatchAndAwait(AppAction.Increment)
+            fail("Expected dispatchAndAwait to fail for stores without StoreInternalApi support")
         } catch (_: IllegalStateException) {
         }
         try {

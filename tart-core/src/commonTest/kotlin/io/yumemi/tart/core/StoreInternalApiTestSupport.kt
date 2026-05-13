@@ -9,12 +9,12 @@ internal fun <S : State, A : Action, E : Event> Store<S, A, E>.patchForTest(
     return requireStoreInternalApi().patch(patch)
 }
 
-internal suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWaitForTest(action: A) {
-    requireStoreInternalApi().dispatchAndWait(action)
+internal suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndAwaitForTest(action: A) {
+    requireStoreInternalApi().dispatchAndAwait(action)
 }
 
-internal suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndWaitForTest() {
-    requireStoreInternalApi().startAndWait()
+internal suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndAwaitForTest() {
+    requireStoreInternalApi().startAndAwait()
 }
 
 @Suppress("UNCHECKED_CAST")
