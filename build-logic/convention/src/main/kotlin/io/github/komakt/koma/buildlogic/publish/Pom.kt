@@ -1,8 +1,8 @@
 package io.github.komakt.koma.buildlogic.publish
 
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import org.gradle.api.publish.maven.MavenPomDeveloperSpec
 import org.gradle.api.publish.maven.MavenPomLicenseSpec
-import org.gradle.api.publish.maven.MavenPomOrganization
 
 internal fun MavenPublishBaseExtension.pom() {
     pom {
@@ -10,7 +10,7 @@ internal fun MavenPublishBaseExtension.pom() {
         description.set("A Kotlin Multiplatform Flux framework.")
         inceptionYear.set("2024")
         url.set("https://github.com/komakt/koma/")
-        organization {
+        developers {
             komakt()
         }
         licenses {
@@ -32,7 +32,10 @@ private fun MavenPomLicenseSpec.mit() {
     }
 }
 
-private fun MavenPomOrganization.komakt() {
-    name.set("komakt")
-    url.set("https://github.com/komakt/")
+private fun MavenPomDeveloperSpec.komakt() {
+    developer {
+        id.set("komakt")
+        name.set("komakt")
+        url.set("https://github.com/komakt/")
+    }
 }
