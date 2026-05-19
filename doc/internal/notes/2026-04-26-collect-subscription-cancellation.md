@@ -57,7 +57,7 @@ interface ObservationHandle {
 ```
 
 どちらにせよ、重要なのは `AutoCloseable` そのものを返すことではなく、
-callback ベース API に対応した Tart 独自の薄いハンドル型として意味を固定することである。
+callback ベース API に対応した Koma 独自の薄いハンドル型として意味を固定することである。
 
 実装方針は単純で、Store 内部 scope に購読ごとの child job を作り、その job を止めるハンドルを返すだけでよい。
 

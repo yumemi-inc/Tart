@@ -27,7 +27,7 @@
 ## 補足
 
 - `action {}` を default async にすると、state transition の順序、`dispatchAndWait()` の完了単位、middleware の前後関係、`PendingActionPolicy` の意味が読みづらくなる。
-- Tart では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。そのため、継続する仕事の入口を `launch {}` として明示する方が設計全体と整合する。
+- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。そのため、継続する仕事の入口を `launch {}` として明示する方が設計全体と整合する。
 - 一方で、`action {}` 直下で長い suspend や外部 I/O を許すと、Store 全体を塞ぎやすい。この問題は実際に起こりうるが、解決策として default async 化を採るのは副作用が大きい。
 - `action {}` を non-suspend にする案は思想としては筋がよいが、現状の `event()` を含む DSL 形状と衝突しやすく、導入コストに対して runtime 上の利益は限定的である。
 - `launch {}` を安易に増やすと、複数 async job 間の整合性、古い結果の採用防止、event 発火順の読みやすさなどを利用者が管理する負担が増える。したがって、`launch {}` は必要な箇所でだけ明示的に使う escape hatch として残す。

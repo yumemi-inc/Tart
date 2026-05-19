@@ -4,7 +4,7 @@
 
 ## 背景
 
-Tart の `error {}` DSL は、state machine の中で発生した失敗を state 遷移として扱うための入口である。
+Koma の `error {}` DSL は、state machine の中で発生した失敗を state 遷移として扱うための入口である。
 一方で Kotlin の `Throwable` には、通常の業務例外として回復を試みるべき `Exception` だけでなく、`AssertionError` などの `Error` 系や、独自 `Throwable` のような非標準の失敗も含まれる。
 
 これまでの実装では、fatal として即再送出していたものを除き、広く `Throwable` を `error {}` 側へ流しうる形になっていた。
@@ -47,4 +47,4 @@ Tart の `error {}` DSL は、state machine の中で発生した失敗を state
 
 ## 関連
 
-- [Tart の設計原則](../design/2026-04-23-design-principles.md)
+- [Koma の設計原則](../design/2026-04-23-design-principles.md)

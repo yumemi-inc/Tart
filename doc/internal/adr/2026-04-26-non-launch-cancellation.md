@@ -22,9 +22,9 @@
 
 - 非 `launch` の store work は、`dispatchAndWait()` の完了単位であり、middleware 実行や state 遷移判定とも同じ直列 pipeline に載っている。途中 cancel を入れると、「どこまで反映済みか」「middleware は完了扱いか」「error はどう扱うか」が読みにくくなる。
 - 通常の handler の中で長い suspend 処理や I/O を直接走らせると、cancel 可否以前に Store 全体を塞ぎやすい。その種の処理は `launch {}` へ移す前提で考える。
-- Tart では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。`launch {}` の仕事が state scope にぶら下がるのはそのためであり、明示 cancellation もまずはその範囲に閉じるのが自然である。
+- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。`launch {}` の仕事が state scope にぶら下がるのはそのためであり、明示 cancellation もまずはその範囲に閉じるのが自然である。
 - したがって `#190` は、一般 cancellation の入口ではなく、`action { launch { ... } }` という既存の state-owned な非同期処理に対する局所的な拡張として扱う。
 
 ## 関連
 
-- [#190](https://github.com/yumemi-inc/Tart/issues/190)
+- [#190](https://github.com/komakt/koma/issues/190)

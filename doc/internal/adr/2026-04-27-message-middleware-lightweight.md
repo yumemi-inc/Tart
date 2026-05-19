@@ -4,7 +4,7 @@
 
 ## 背景
 
-`tart-message` の `MessageMiddleware` は、Store 間で簡易な message をやり取りするための built-in である。
+`koma-message` の `MessageMiddleware` は、Store 間で簡易な message をやり取りするための built-in である。
 現在の実装は、process 内で共有される `MessageHub` と、`replay = 0` の `MutableSharedFlow` を前提にしている。
 
 このため、少なくとも次の 2 点は性質として残る。
@@ -39,7 +39,7 @@
 - `MessageMiddleware` は「軽量で、すぐ使える built-in」であることを優先する。強い配送保証や分離保証まで標準搭載する対象とはみなさない。
 - Store 間連携の要求は、feature 間通知、shared session、background sync、cross-screen coordination などで意味合いが大きく異なる。これらを 1 つの built-in message bus で汎用的に解決しようとすると、かえって前提が曖昧になりやすい。
 - 強い保証が必要な場合は、利用側が「誰と誰を、どの寿命で、どの再送 policy でつなぐか」を明示した専用設計を持つほうが自然である。
-- 今後 `tart-message` の説明を補う場合も、方向性は「制約の明文化」を優先し、汎用メッセージ基盤への拡張は前提にしない。
+- 今後 `koma-message` の説明を補う場合も、方向性は「制約の明文化」を優先し、汎用メッセージ基盤への拡張は前提にしない。
 
 ## 関連
 

@@ -4,7 +4,7 @@ plugins {
     `kotlin-dsl`
 }
 
-group = "io.yumemi.tart.buildlogic"
+group = "io.github.komakt.koma.buildlogic"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -34,7 +34,7 @@ tasks {
 gradlePlugin {
     plugins {
         register("publish") {
-            id = "io.yumemi.tart.publish"
+            id = "io.github.komakt.koma.publish"
             implementationClass = "PublishConventionPlugin"
         }
     }
