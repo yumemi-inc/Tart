@@ -4,7 +4,7 @@
 
 ## 背景
 
-Tart にはすでに `Middleware` があるが、hook 数が多く、`before/after` の internal lifecycle がそのまま public API に出ている。
+Koma にはすでに `Middleware` があるが、hook 数が多く、`before/after` の internal lifecycle がそのまま public API に出ている。
 
 一方で、logging、analytics、message bridge、autosave、sync のような用途では、必ずしも `Middleware` と同じ粒度や性質の hook は要らない。
 そのため、`Middleware` とは別に、より小さい surface を持つ `Plugin` を追加する方向で整理したい。

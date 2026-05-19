@@ -4,7 +4,7 @@
 
 ## 背景
 
-Tart では複数の `Middleware` を登録できる。
+Koma では複数の `Middleware` を登録できる。
 このとき、各 lifecycle hook を registration order で直列に流すか、並行に流すかは仕様として明確にしておきたい。
 
 `Middleware` は logging、message bridge、監視、補助的な dispatch など、Store の本体ロジックから関心事を分離するための拡張ポイントとして使う。

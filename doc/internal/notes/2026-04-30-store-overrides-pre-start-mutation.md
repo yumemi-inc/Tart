@@ -34,7 +34,7 @@ fun Store(initialState: S, coroutineContext: CoroutineContext, overrides: Overri
 これに乗り、`attachObserver()` と同じ流儀で **start 前のみ許可される環境設定の書き換え API** を `StoreInternalApi` に追加する。
 
 ```kt
-@InternalTartApi
+@InternalKomaApi
 interface StoreInternalApi<S,A,E> {
     suspend fun dispatchAndWait(action: A)
     fun attachObserver(observer: StoreObserver<S,E>, notifyCurrentState: Boolean = true)
@@ -42,10 +42,10 @@ interface StoreInternalApi<S,A,E> {
 }
 ```
 
-公開拡張は `tart-core` 側に置く。
+公開拡張は `koma-core` 側に置く。
 
 ```kt
-@OptIn(InternalTartApi::class)
+@OptIn(InternalKomaApi::class)
 fun <S,A,E> Store<S,A,E>.applyOverrides(block: Overrides<S,A,E>): Store<S,A,E> {
     requireStoreInternalApi().applyOverrides(block)
     return this
@@ -101,7 +101,7 @@ val store = createMyStore().also {
 
 - start 判定は既存の `attachObserver` と同じく、`coroutineScope` / `_state` の `lazy` 初期化や `initializeIfNeeded()` 呼び出しを基準にする想定。新たな仕組みは不要。
 - start 後に `applyOverrides` を呼んだ場合は、暗黙適用や silently ignore ではなく `IllegalStateException` で落とす。`attachObserver` の挙動と揃える。
-- 公開拡張の配置は `tart-core` を想定する。debug build / staging 切替などの production 利用も実需としてあり、テスト専用として `tart-test` に閉じ込める必然性は薄い。`Overrides<>` typealias と `StoreOverridesBuilder` も `tart-core` にある並びとも整合する。
+- 公開拡張の配置は `koma-core` を想定する。debug build / staging 切替などの production 利用も実需としてあり、テスト専用として `koma-test` に閉じ込める必然性は薄い。`Overrides<>` typealias と `StoreOverridesBuilder` も `koma-core` にある並びとも整合する。
 - 拡張名は `applyOverrides` を仮置き。`withOverrides` は immutable copy の語感が強く、mutate-in-place の意味とずれる。`overrides` は既存 typealias と被るが短く読みやすい。最終決定は別に行う。
 - AppStore ラッパー側の `overrides` 引数を削除しても、`AppStore(...) { ... }.applyOverrides { ... }` という形でテスト側の差し替えが可能になるため、現行の使い方の意図を失わない。
 
@@ -114,4 +114,4 @@ val store = createMyStore().also {
 
 ## 関連
 
-- [#182](https://github.com/yumemi-inc/Tart/pull/182)
+- [#182](https://github.com/komakt/koma/pull/182)

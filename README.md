@@ -1,21 +1,13 @@
-<img src="doc/logo.svg" width="250">
-<details>
-<summary>Logo Usage (CC0 1.0)</summary>
+# Koma
 
-The Tart logo ([doc/logo.svg](doc/logo.svg)) is licensed under CC0 1.0 Universal.
-You may use it freely for any purpose without attribution.
-See [doc/LOGO_LICENSE](doc/LOGO_LICENSE) for details.
-</details>
-
-[![Maven Central](https://img.shields.io/maven-central/v/io.yumemi.tart/tart-core)](https://central.sonatype.com/artifact/io.yumemi.tart/tart-core)
-![License](https://img.shields.io/github/license/yumemi-inc/Tart)
-[![Java CI with Gradle](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml/badge.svg)](https://github.com/yumemi-inc/Tart/actions/workflows/gradle.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.komakt/koma-core)](https://central.sonatype.com/artifact/io.github.komakt/koma-core)
+![License](https://img.shields.io/github/license/komakt/koma)
+[![Java CI with Gradle](https://github.com/komakt/koma/actions/workflows/gradle.yml/badge.svg)](https://github.com/komakt/koma/actions/workflows/gradle.yml)
 
 > [!IMPORTANT]
-> We are considering moving this repository to a different organization.
-> As part of that move, the library group name may change.
+> Artifacts are published under the `io.github.komakt` group.
 
-Tart is a state management framework for Kotlin Multiplatform.
+Koma is a state management framework for Kotlin Multiplatform.
 
 Key benefits:
 - The data flow is one-way, making it easy to reason about.
@@ -33,19 +25,19 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 </div>
 </br>
 
-## When Tart Fits Best
+## When Koma Fits Best
 
-Tart works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
-By combining Kotlin `sealed class`/`sealed interface` with Tart's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `error{}` behavior close together and make the transition rules easy to follow.
+Koma works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
+By combining Kotlin `sealed class`/`sealed interface` with Koma's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `error{}` behavior close together and make the transition rules easy to follow.
 
 ## Current Scope
 
-Tart currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and plugin-driven extensions such as logging and inter-store messaging.
+Koma currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and plugin-driven extensions such as logging and inter-store messaging.
 It keeps surrounding helper layers intentionally small, so dependencies and feature composition can stay in ordinary Kotlin, while the core Store logic remains portable across platforms.
 
 ## Table of Contents
 
-- [When Tart Fits Best](#when-tart-fits-best)
+- [When Koma Fits Best](#when-koma-fits-best)
 - [Current Scope](#current-scope)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -75,7 +67,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 ## Installation
 
 ```kt
-implementation("io.yumemi.tart:tart-core:<latest-release>")
+implementation("io.github.komakt:koma-core:<latest-release>")
 ```
 
 ## Usage
@@ -306,7 +298,7 @@ fun CounterStore(
 The state diagram is as follows:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/yumemi-inc/Tart/main/doc/diagram.png" width=25% />
+  <img src="https://raw.githubusercontent.com/komakt/koma/main/doc/diagram.png" width=25% />
 </div>
 </br>
 
@@ -549,7 +541,7 @@ Then, processing of all Coroutines will stop.
 #### Specifying CoroutineDispatchers
 
 You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `error{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
-If you omit the dispatcher parameter, Tart keeps using the Store's current execution context for that operation.
+If you omit the dispatcher parameter, Koma keeps using the Store's current execution context for that operation.
 
 ```kt
 enter(Dispatchers.Default) {
@@ -587,7 +579,7 @@ enter {
 
 ### State Persistence
 
-You can prepare a [StateSaver](tart-core/src/commonMain/kotlin/io/yumemi/tart/core/StateSaver.kt) to automatically handle *State* persistence:
+You can prepare a [StateSaver](koma-core/src/commonMain/kotlin/io/github/komakt/koma/core/StateSaver.kt) to automatically handle *State* persistence:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -601,7 +593,7 @@ You can also create a `StateSaver` instance with the `StateSaver()` factory func
 
 ### Clear Pending Actions
 
-By default, Tart clears already queued actions when the store exits the current state and enters a different state variant.
+By default, Koma clears already queued actions when the store exits the current state and enters a different state variant.
 To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.Keep)`.
 
 ```kt
@@ -634,7 +626,7 @@ fun CounterStore(
 
 On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
-These callbacks run in the Store's execution context. Tart does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
+These callbacks run in the Store's execution context. Koma does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
 
 Store startup is lazy. By default, the Store starts on the first `.dispatch(...)` or when state collection begins through `.state` or `.collectState()`.
 If you want state collection not to start the Store automatically, set `autoStartPolicy(AutoStartPolicy.OnDispatch)` and call `.start()` when you want to trigger startup explicitly.
@@ -647,7 +639,7 @@ If you want state collection not to start the Store automatically, set `autoStar
 You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` directly, but we provide a mechanism for Compose.
 
 ```kt
-implementation("io.yumemi.tart:tart-compose:<latest-release>")
+implementation("io.github.komakt:koma-compose:<latest-release>")
 ```
 
 Create an instance of the `ViewStore` from a *Store* using the `rememberViewStore()` function.
@@ -913,7 +905,7 @@ Note that *State* is read-only in Plugin hooks.
 You can also create a `Plugin` instance with the `Plugin()` factory function.
 
 Plugin methods are suspending functions. The *Store* waits for plugin processing to complete before proceeding.
-When multiple plugin instances are registered, Tart invokes them concurrently by default.
+When multiple plugin instances are registered, Koma invokes them concurrently by default.
 If plugins must run one by one in registration order, set `pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)`.
 
 ```kt
@@ -927,14 +919,14 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 Because a long-running method can block the *Store*, start background work from the hook with `scope.launch { ... }`.
 
 In the next section, we introduce built-in plugins.
-The source code is the `:tart-logging` and `:tart-message` modules in this repository, so you can use it as a reference for your plugin implementation.
+The source code is the `:koma-logging` and `:koma-message` modules in this repository, so you can use it as a reference for your plugin implementation.
 
 ### Logging
 
 Plugin for logging Store operations.
 
 ```kt
-implementation("io.yumemi.tart:tart-logging:<latest-release>")
+implementation("io.github.komakt:koma-logging:<latest-release>")
 ```
 
 Apply the `simpleLogging()` plugin factory function to your *Store* to log actions, events, and state changes.
@@ -957,14 +949,14 @@ plugin(
 )
 ```
 
-If you want a different logging plugin shape entirely, implement your own Tart `Plugin` and reuse `Logger` or `DefaultLogger` from this module.
+If you want a different logging plugin shape entirely, implement your own Koma `Plugin` and reuse `Logger` or `DefaultLogger` from this module.
 
 ### Message
 
 Plugin for sending messages between *Stores*.
 
 ```kt
-implementation("io.yumemi.tart:tart-message:<latest-release>")
+implementation("io.github.komakt:koma-message:<latest-release>")
 ```
 
 First, prepare classes for messages.
@@ -1044,10 +1036,10 @@ fun CounterStore(
 
 ## Testing Store
 
-Add `:tart-test` to your test source set to use Tart's test helpers.
+Add `:koma-test` to your test source set to use Koma's test helpers.
 
 ```kt
-commonTestImplementation("io.yumemi.tart:tart-test:<latest-release>")
+commonTestImplementation("io.github.komakt:koma-test:<latest-release>")
 ```
 
 Use `dispatchAndAwait(action)` to dispatch an *Action* and suspend until the *Store* finishes processing it. It waits for startup (when needed), the matching `action {}` handler, and the resulting synchronous state transition work, but not for additional work launched with `launch {}`.

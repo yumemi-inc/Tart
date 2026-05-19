@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Build all modules: `./gradlew build`
 - Run all tests: `./gradlew test`
-- Run single module tests: `./gradlew :tart-core:test`
+- Run single module tests: `./gradlew :koma-core:test`
 - Run specific test target: `./gradlew iosX64Test`
 - Debug tests with: `./gradlew test --info`
 - Lint: `./gradlew lint`
@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Architecture Pattern
 
-- Follow the Tart state management pattern - one-way data flow
+- Follow the Koma state management pattern - one-way data flow
 - State → Action → New State with optional Event emission
 
 ### Types and Interfaces
@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### DSL Pattern
 
-- Use the @TartStoreDsl annotation for builder APIs
+- Use the @KomaStoreDsl annotation for builder APIs
 - Follow the state{} and action{} block pattern
 - Handle errors in dedicated error{} blocks
 
@@ -39,6 +39,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Documentation
 
 - Include state transition diagrams in tests
-- Document experimental APIs with @ExperimentalTartApi
+- Document experimental APIs with @ExperimentalKomaApi
 - Use KDoc comments for public APIs
 - Put internal design/spec notes under `doc/internal/` so they stay separate from user-facing docs

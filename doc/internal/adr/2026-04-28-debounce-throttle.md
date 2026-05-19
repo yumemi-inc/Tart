@@ -12,7 +12,7 @@
 一方 `debounce` / `throttle` は、時間窓の中で複数回の入力をどうまとめるか、どれを落とすか、いつ実行するかを決める control であり、job 単位の制御より「入力の採否や実行タイミングを決める仕組み」としての意味合いが強い。
 そのため、「どの dispatch が通るのか」「どの dispatch が失われるのか」が、state や action 定義だけでは追えず、時間経過まで含めて考えないと分からなくなりやすい。
 
-また、Tart の Store は、action の処理順序や state transition の見通しを重視している。
+また、Koma の Store は、action の処理順序や state transition の見通しを重視している。
 そこへ時間窓によって dispatch の採否や実行タイミングが変わる制御を built-in で持ち込むと、見かけ上は単純な dispatch でも、内部では遅延、間引き、破棄が起こりうるため、API の読みやすさと説明しやすさが落ちる。
 
 ## 決定

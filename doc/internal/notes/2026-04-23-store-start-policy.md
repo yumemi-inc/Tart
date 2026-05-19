@@ -59,7 +59,7 @@ fun startPolicy(policy: StoreStartPolicy)
 
 ## 未解決事項
 
-- 明示 start API を `Store` interface に載せるか、core 内の extension として追加するかは未決定。interface 追加は fake 実装への影響があり、extension は Tart 実装依存であることをどう見せるかを考える必要がある。
+- 明示 start API を `Store` interface に載せるか、core 内の extension として追加するかは未決定。interface 追加は fake 実装への影響があり、extension は Koma 実装依存であることをどう見せるかを考える必要がある。
 - `collectEvent()` を start trigger に含めるかは未決定。現状は含まれていないが、利用者視点では `event` 監視も start と結び付くと期待される可能性がある。
 - `MANUAL` で start 前に `state` を collect した場合の README 上の説明を明確にする必要がある。current snapshot は流れるが、start に紐づく副作用はまだ走らない、という説明になる見込み。
 - `rememberViewStore()` 利用時に `ON_FIRST_DISPATCH` や `MANUAL` を選んだときのサンプルを README / Compose 側テストに追加する必要がある。

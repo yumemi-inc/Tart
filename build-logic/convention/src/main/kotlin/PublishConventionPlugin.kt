@@ -1,9 +1,9 @@
-import io.yumemi.tart.buildlogic.PublishConventionExtension
-import io.yumemi.tart.buildlogic.dsl.alias
-import io.yumemi.tart.buildlogic.dsl.libs
-import io.yumemi.tart.buildlogic.dsl.mavenPublishing
-import io.yumemi.tart.buildlogic.dsl.plugin
-import io.yumemi.tart.buildlogic.publish.pom
+import io.github.komakt.koma.buildlogic.PublishConventionExtension
+import io.github.komakt.koma.buildlogic.dsl.alias
+import io.github.komakt.koma.buildlogic.dsl.libs
+import io.github.komakt.koma.buildlogic.dsl.mavenPublishing
+import io.github.komakt.koma.buildlogic.dsl.plugin
+import io.github.komakt.koma.buildlogic.publish.pom
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create

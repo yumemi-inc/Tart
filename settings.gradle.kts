@@ -14,9 +14,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Tart"
-include(":tart-core")
-include(":tart-compose")
-include(":tart-logging")
-include(":tart-message")
-include(":tart-test")
+rootProject.name = "Koma"
+include(":koma-core")
+include(":koma-compose")
+include(":koma-logging")
+include(":koma-message")
+include(":koma-test")

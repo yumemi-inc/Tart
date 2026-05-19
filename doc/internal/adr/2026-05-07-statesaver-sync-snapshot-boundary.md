@@ -4,7 +4,7 @@
 
 ## 背景
 
-Tart の Store は `state: StateFlow<S>` と `currentState: S` を同期 API として公開している。
+Koma の Store は `state: StateFlow<S>` と `currentState: S` を同期 API として公開している。
 `StateFlow` は初期値ありで構築されるため、その初期値は Store 作成時に同期的に決定される必要がある。
 現状の実装では、`stateSaver.restore()` の結果があればそれを `_state` / `StateFlow` の初期値として採用している。
 つまり、宣言された `initialState` を一度見せた後で restore 結果に差し替える、という挙動にはしておらず、これを変えると `StateFlow` を扱う利用者も混乱する。
@@ -97,10 +97,10 @@ Store {
 ### 制約とトレードオフ
 
 - `PluginScope` には state を直接書く API は無く（`dispatch` 経由のみ）、利用者は「復元成功 Action」と必要なら「復元失敗 Action」を定義する必要がある。これは one-way data flow を保つ意図的な制約。
-- Tart の DSL では `action {}` は `state {}` 配下にしか書けないため、復元 Action のハンドラは初期 state（典型的には `Loading`）配下にだけ書く。これは「復元 Action は初期 state でだけ意味を持つ」という意図と DSL 上整合する。
+- Koma の DSL では `action {}` は `state {}` 配下にしか書けないため、復元 Action のハンドラは初期 state（典型的には `Loading`）配下にだけ書く。これは「復元 Action は初期 state でだけ意味を持つ」という意図と DSL 上整合する。
 
 ### 配置と提供方針
 
-- `tart-core` 本体に DataStore 等の依存は持ち込まない。`load` / `save` を `suspend` ラムダで受ければ汎用に保てる。
-- 別モジュール（例: `tart-persistence`）またはサンプルとして提供する案。
-- `@ExperimentalTartApi` で出して、利用実態を見てから本流昇格を判断する。
+- `koma-core` 本体に DataStore 等の依存は持ち込まない。`load` / `save` を `suspend` ラムダで受ければ汎用に保てる。
+- 別モジュール（例: `koma-persistence`）またはサンプルとして提供する案。
+- `@ExperimentalKomaApi` で出して、利用実態を見てから本流昇格を判断する。
