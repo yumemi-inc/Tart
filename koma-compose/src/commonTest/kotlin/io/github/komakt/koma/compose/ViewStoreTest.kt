@@ -1,25 +1,21 @@
 package io.github.komakt.koma.compose
 
+import androidx.compose.runtime.mutableStateOf
 import io.github.komakt.koma.core.State
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ViewStoreTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
-
     @Test
-    fun viewStore_equalsWorksCorrectly() = runTest(testDispatcher) {
-        val viewStore1 = ViewStore<CounterState, Nothing, Nothing>(state = CounterState(10))
-        val viewStore2 = ViewStore<CounterState, Nothing, Nothing>(state = CounterState(10))
-        val viewStore3 = ViewStore<CounterState, Nothing, Nothing>(state = CounterState(20))
+    fun viewStore_readsLatestValueFromStateRef() {
+        val stateRef = mutableStateOf(CounterState(10))
+        val viewStore = ViewStore<CounterState, Nothing, Nothing>(stateRef = stateRef)
 
-        assertEquals(viewStore1, viewStore2)
-        assertNotEquals(viewStore1, viewStore3)
+        assertEquals(CounterState(10), viewStore.state)
+
+        stateRef.value = CounterState(20)
+
+        assertEquals(CounterState(20), viewStore.state)
     }
 }
 
