@@ -1,11 +1,13 @@
 package io.github.komakt.koma.logging
 
+import kotlin.concurrent.Volatile
 import co.touchlab.kermit.Logger.Companion as Kermit
 
 /**
  * Default [Logger] implementation backed by Kermit.
  */
 object DefaultLogger : Logger {
+    @Volatile
     private var isDisabled = false
 
     /**
