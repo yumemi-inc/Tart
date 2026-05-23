@@ -5,6 +5,7 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.withRunningRecomposer
 import io.github.komakt.koma.core.Action
 import io.github.komakt.koma.core.Event
@@ -20,6 +21,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -87,6 +91,152 @@ class ViewStoreJvmTest {
                 assertEquals(listOf<UiAction>(UiAction.Increment), store.dispatchedActions)
             },
         )
+    }
+
+    @Test
+    fun rememberViewStore_keepsSameInstanceWhileStateUpdates() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        lateinit var viewStore: ViewStore<UiState, UiAction, UiEvent>
+
+        withComposition(
+            content = {
+                viewStore = rememberViewStore { store }
+            },
+            afterSetContent = {
+                val initialViewStore = viewStore
+                store.state.value = UiState.Ready(2)
+                testScheduler.runCurrent()
+
+                assertSame(initialViewStore, viewStore)
+                assertEquals(UiState.Ready(2), viewStore.state)
+            },
+        )
+    }
+
+    @Test
+    fun rememberViewStore_recreatesWhenKeyChangesEvenIfStateIsEqual() = runTest(testDispatcher) {
+        val firstStore = TestStore(UiState.Loading)
+        val secondStore = TestStore(UiState.Loading)
+        val frameClock = BroadcastFrameClock()
+        var frameTimeNanos = 0L
+        var key = "first"
+        lateinit var latestViewStore: ViewStore<UiState, UiAction, UiEvent>
+
+        suspend fun pumpFrame() {
+            testScheduler.runCurrent()
+            frameTimeNanos += 16_000_000L
+            frameClock.sendFrame(frameTimeNanos)
+            testScheduler.runCurrent()
+        }
+
+        withContext(frameClock) {
+            withRunningRecomposer { recomposer ->
+                val composition = Composition(NoOpApplier(), recomposer)
+                try {
+                    composition.setContent {
+                        latestViewStore = rememberViewStore(key = key) {
+                            if (key == "first") firstStore else secondStore
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+                    val initialViewStore = latestViewStore
+
+                    key = "second"
+                    composition.setContent {
+                        latestViewStore = rememberViewStore(key = key) {
+                            if (key == "first") firstStore else secondStore
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+
+                    assertNotSame(initialViewStore, latestViewStore)
+
+                    latestViewStore.dispatch(UiAction.Increment)
+
+                    assertTrue(firstStore.dispatchedActions.isEmpty())
+                    assertEquals(listOf<UiAction>(UiAction.Increment), secondStore.dispatchedActions)
+                } finally {
+                    composition.dispose()
+                    pumpFrame()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun rememberViewStore_capturedCallbackReadsLatestState() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Loading)
+        lateinit var canHide: () -> Boolean
+
+        withComposition(
+            content = {
+                val viewStore = rememberViewStore { store }
+                canHide = remember {
+                    {
+                        viewStore.state !is UiState.Busy
+                    }
+                }
+            },
+            afterSetContent = {
+                assertTrue(canHide())
+                store.state.value = UiState.Busy
+            },
+        )
+
+        assertFalse(canHide())
+    }
+
+    @Test
+    fun childThatDoesNotReadState_isSkippedOnStateUpdate() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        var childCompositions = 0
+
+        @Composable
+        fun Child(viewStore: ViewStore<UiState, UiAction, UiEvent>) {
+            childCompositions++
+        }
+
+        withComposition(
+            content = {
+                val viewStore = rememberViewStore { store }
+                Child(viewStore)
+            },
+            afterSetContent = {
+                assertEquals(1, childCompositions)
+
+                store.state.value = UiState.Ready(2)
+                testScheduler.runCurrent()
+            },
+        )
+
+        assertEquals(1, childCompositions)
+    }
+
+    @Test
+    fun childThatReadsViewStoreState_isStillSkippedOnStateUpdate() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        var childCompositions = 0
+
+        @Composable
+        fun Child(viewStore: ViewStore<UiState, UiAction, UiEvent>) {
+            viewStore.state
+            childCompositions++
+        }
+
+        withComposition(
+            content = {
+                val viewStore = rememberViewStore { store }
+                Child(viewStore)
+            },
+            afterSetContent = {
+                assertEquals(1, childCompositions)
+
+                store.state.value = UiState.Ready(2)
+                testScheduler.runCurrent()
+            },
+        )
+
+        assertEquals(1, childCompositions)
     }
 
     @Test
@@ -237,6 +387,7 @@ class ViewStoreJvmTest {
 
 private sealed interface UiState : State {
     data object Loading : UiState
+    data object Busy : UiState
     data class Ready(val value: Int) : UiState
 }
 
