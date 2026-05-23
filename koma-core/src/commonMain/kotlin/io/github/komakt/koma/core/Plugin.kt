@@ -49,10 +49,10 @@ interface Plugin<S : State, A : Action, E : Event> {
  * @param onEvent Function called after an event is emitted
  */
 fun <S : State, A : Action, E : Event> Plugin(
-    onStart: suspend PluginScope<S, A>.(S) -> Unit = {},
-    onAction: suspend PluginScope<S, A>.(S, A) -> Unit = { _, _ -> },
-    onState: suspend PluginScope<S, A>.(S, S) -> Unit = { _, _ -> },
-    onEvent: suspend PluginScope<S, A>.(S, E) -> Unit = { _, _ -> },
+    onStart: suspend PluginScope<S, A>.(state: S) -> Unit = {},
+    onAction: suspend PluginScope<S, A>.(state: S, action: A) -> Unit = { _, _ -> },
+    onState: suspend PluginScope<S, A>.(prevState: S, state: S) -> Unit = { _, _ -> },
+    onEvent: suspend PluginScope<S, A>.(state: S, event: E) -> Unit = { _, _ -> },
 ) = object : Plugin<S, A, E> {
     override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
         scope.onStart(state)

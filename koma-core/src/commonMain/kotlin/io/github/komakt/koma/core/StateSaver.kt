@@ -39,7 +39,7 @@ interface StateSaver<S : State> {
 /**
  * Creates a [StateSaver] from save and restore lambdas.
  */
-fun <S : State> StateSaver(save: (S) -> Unit, restore: () -> S?) = object : StateSaver<S> {
+fun <S : State> StateSaver(save: (state: S) -> Unit, restore: () -> S?) = object : StateSaver<S> {
     override fun save(state: S) {
         save.invoke(state)
     }
