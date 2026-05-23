@@ -3,9 +3,10 @@ package io.github.komakt.koma.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State as ComposeState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import io.github.komakt.koma.core.Action
 import io.github.komakt.koma.core.Event
@@ -16,30 +17,41 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 
 /**
- * Compose-friendly wrapper around a [Store] snapshot.
+ * Compose-friendly state holder for a [Store].
  *
- * It exposes the latest state, a dispatch function, and access to the Store's event stream.
+ * A [ViewStore] is tied to a Store instance and exposes its latest state, a dispatch function,
+ * and access to the Store's event stream.
  *
- * @param state The current state
+ * When created by [rememberViewStore], the same [ViewStore] instance is retained while the
+ * underlying Store instance remains the same. Its [state] property always reads the latest
+ * collected Store state from Compose-managed state.
+ *
+ * The secondary constructor that accepts a plain [state] creates a standalone holder with a fixed
+ * initial value, which is useful for previews, tests, and other non-Store-backed usage.
+ *
+ * @param stateRef Compose state that always holds the latest Store state
  * @param dispatch Function to dispatch actions
  * @param eventFlow Flow used to receive one-off events
  */
 @Suppress("unused")
 @Stable
-class ViewStore<S : State, A : Action, E : Event>(
-    val state: S,
+class ViewStore<S : State, A : Action, E : Event> internal constructor(
+    private val stateRef: ComposeState<S>,
     val dispatch: (action: A) -> Unit = {},
     @PublishedApi internal val eventFlow: Flow<E> = emptyFlow(),
 ) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is ViewStore<*, *, *>) return false
-        return this.state == other.state
-    }
+    constructor(
+        state: S,
+        dispatch: (A) -> Unit = {},
+        eventFlow: Flow<E> = emptyFlow(),
+    ) : this(
+        stateRef = mutableStateOf(state),
+        dispatch = dispatch,
+        eventFlow = eventFlow,
+    )
 
-    override fun hashCode(): Int {
-        return state.hashCode()
-    }
+    val state: S
+        get() = stateRef.value
 
     /**
      * Invokes [block] only when the current [state] is of type [S2].
@@ -77,7 +89,7 @@ class ViewStore<S : State, A : Action, E : Event>(
 }
 
 /**
- * Remembers a [Store], collects its state as Compose state, and exposes it as a [ViewStore].
+ * Remembers a [Store], collects its state as Compose state, and exposes it through a [ViewStore].
  *
  * Collecting [Store.state] starts the Store immediately.
  * Because [ViewStore.handle] starts collecting later from a [LaunchedEffect], startup events such
@@ -85,11 +97,14 @@ class ViewStore<S : State, A : Action, E : Event>(
  * composition begin observing them.
  *
  * The [store] lambda is used only when a new remembered Store must be created for [key].
+ * For a given remembered Store instance, this function returns the same [ViewStore] instance across
+ * recompositions. A new [ViewStore] is created only when a new Store instance is remembered for
+ * [key].
  *
  * @param key Key used to remember and retain the Store instance
  * @param autoClose Whether to close the Store when the composable leaves the composition
  * @param store Composable function to create the source Store instance
- * @return A ViewStore instance
+ * @return A ViewStore state holder backed by the remembered Store
  */
 @Suppress("unused")
 @Composable
@@ -103,7 +118,7 @@ fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoC
     }
     val rememberedStore = holder.value ?: store().also { holder.value = it }
 
-    val state by rememberedStore.state.collectAsState()
+    val state = rememberedStore.state.collectAsState()
 
     DisposableEffect(rememberedStore) {
         onDispose {
@@ -113,9 +128,9 @@ fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoC
         }
     }
 
-    return remember(state) {
+    return remember(rememberedStore) {
         ViewStore(
-            state = state,
+            stateRef = state,
             dispatch = rememberedStore::dispatch,
             eventFlow = rememberedStore.event,
         )
