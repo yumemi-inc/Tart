@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.filter
 @Stable
 class ViewStore<S : State, A : Action, E : Event>(
     val state: S,
-    val dispatch: (A) -> Unit = {},
+    val dispatch: (action: A) -> Unit = {},
     @PublishedApi internal val eventFlow: Flow<E> = emptyFlow(),
 ) {
     override fun equals(other: Any?): Boolean {
@@ -67,7 +67,7 @@ class ViewStore<S : State, A : Action, E : Event>(
      */
     @Suppress("ComposableNaming")
     @Composable
-    inline fun <reified E2 : E> handle(crossinline block: ViewStore<S, A, E>.(E2) -> Unit) {
+    inline fun <reified E2 : E> handle(crossinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
         LaunchedEffect(eventFlow) {
             eventFlow.filter { it is E2 }.collect {
                 block(this@ViewStore, it as E2)

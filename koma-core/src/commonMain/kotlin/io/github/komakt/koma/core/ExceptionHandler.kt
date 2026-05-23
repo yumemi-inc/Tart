@@ -47,7 +47,7 @@ interface ExceptionHandler {
 /**
  * Creates an [ExceptionHandler] from a single callback.
  */
-fun ExceptionHandler(block: (Throwable) -> Unit) = object : ExceptionHandler {
+fun ExceptionHandler(block: (error: Throwable) -> Unit) = object : ExceptionHandler {
     override fun handle(error: Throwable) {
         block.invoke(error)
     }

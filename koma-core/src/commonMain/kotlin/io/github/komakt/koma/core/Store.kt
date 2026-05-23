@@ -78,7 +78,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      *
      * @param state Callback called when the state changes
      */
-    fun collectState(state: (S) -> Unit)
+    fun collectState(state: (state: S) -> Unit)
 
     /**
      * Collects one-off events using a callback.
@@ -99,7 +99,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      *
      * @param event Callback called when an event is emitted
      */
-    fun collectEvent(event: (E) -> Unit)
+    fun collectEvent(event: (event: E) -> Unit)
 
     /**
      * Cancels the Store and releases its resources.

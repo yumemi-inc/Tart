@@ -19,7 +19,7 @@ import io.github.komakt.koma.core.State
  * @param block Function to process received messages with [PluginLaunchScope] as receiver
  * @return Plugin that processes shared messages
  */
-fun <S : State, A : Action, E : Event> receiveMessages(block: suspend PluginLaunchScope<S, A>.(Message) -> Unit): Plugin<S, A, E> {
+fun <S : State, A : Action, E : Event> receiveMessages(block: suspend PluginLaunchScope<S, A>.(message: Message) -> Unit): Plugin<S, A, E> {
     return object : Plugin<S, A, E> {
         override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
             scope.launch {
