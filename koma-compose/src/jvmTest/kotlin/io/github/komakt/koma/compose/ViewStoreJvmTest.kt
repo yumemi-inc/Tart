@@ -76,6 +76,60 @@ class ViewStoreJvmTest {
     }
 
     @Test
+    fun handle_usesLatestViewStoreAndLambdaAfterRecomposition() = runTest(testDispatcher) {
+        val events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
+        val handled = mutableListOf<String>()
+        var label = "initial"
+        var viewState: UiState = UiState.Ready(1)
+        val frameClock = BroadcastFrameClock()
+        var frameTimeNanos = 0L
+
+        suspend fun pumpFrame() {
+            testScheduler.runCurrent()
+            frameTimeNanos += 16_000_000L
+            frameClock.sendFrame(frameTimeNanos)
+            testScheduler.runCurrent()
+        }
+
+        withContext(frameClock) {
+            withRunningRecomposer { recomposer ->
+                val composition = Composition(NoOpApplier(), recomposer)
+                try {
+                    composition.setContent {
+                        ViewStore<UiState, UiAction, UiEvent>(
+                            state = viewState,
+                            eventFlow = events,
+                        ).handle<UiEvent.ValueChanged> { event ->
+                            handled += "${(state as UiState.Ready).value}:$label:${event.value}"
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+
+                    label = "updated"
+                    viewState = UiState.Ready(2)
+                    composition.setContent {
+                        ViewStore<UiState, UiAction, UiEvent>(
+                            state = viewState,
+                            eventFlow = events,
+                        ).handle<UiEvent.ValueChanged> { event ->
+                            handled += "${(state as UiState.Ready).value}:$label:${event.value}"
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+
+                    assertTrue(events.tryEmit(UiEvent.ValueChanged(42)))
+                    repeat(2) { pumpFrame() }
+                } finally {
+                    composition.dispose()
+                    pumpFrame()
+                }
+            }
+        }
+
+        assertEquals(listOf("2:updated:42"), handled)
+    }
+
+    @Test
     fun rememberViewStore_providesCurrentStateAndDispatchesAction() = runTest(testDispatcher) {
         val store = TestStore(UiState.Ready(1))
         lateinit var viewStore: ViewStore<UiState, UiAction, UiEvent>

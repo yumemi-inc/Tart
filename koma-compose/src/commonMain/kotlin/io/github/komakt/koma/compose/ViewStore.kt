@@ -3,11 +3,11 @@ package io.github.komakt.koma.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State as ComposeState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import io.github.komakt.koma.core.Action
 import io.github.komakt.koma.core.Event
 import io.github.komakt.koma.core.State
@@ -15,6 +15,7 @@ import io.github.komakt.koma.core.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
+import androidx.compose.runtime.State as ComposeState
 
 /**
  * Compose-friendly state holder for a [Store].
@@ -79,10 +80,12 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      */
     @Suppress("ComposableNaming")
     @Composable
-    inline fun <reified E2 : E> handle(crossinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
+    inline fun <reified E2 : E> handle(noinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
+        val currentViewStore = rememberUpdatedState(this)
+        val currentBlock = rememberUpdatedState(block)
         LaunchedEffect(eventFlow) {
             eventFlow.filter { it is E2 }.collect {
-                block(this@ViewStore, it as E2)
+                currentBlock.value(currentViewStore.value, it as E2)
             }
         }
     }
