@@ -27,7 +27,7 @@ class StorePluginExceptionTest {
 
     private fun createStore(
         plugin: Plugin<AppState, AppAction, Nothing>,
-        exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Ignore,
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Ready()) {
             coroutineContext(Dispatchers.Unconfined)

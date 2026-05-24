@@ -19,9 +19,16 @@ interface ExceptionHandler {
         /**
          * Ignores all handled exceptions.
          */
-        val Noop: ExceptionHandler = object : ExceptionHandler {
+        val Ignore: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {}
         }
+
+        /**
+         * Deprecated alias for [Ignore].
+         */
+        @Deprecated(message = "Use Ignore", replaceWith = ReplaceWith("ExceptionHandler.Ignore"))
+        val Noop: ExceptionHandler
+            get() = Ignore
 
         /**
          * Prints the exception message and stack trace for debugging.
@@ -36,11 +43,18 @@ interface ExceptionHandler {
         /**
          * Rethrows handled exceptions instead of swallowing them.
          */
-        val Unhandled: ExceptionHandler = object : ExceptionHandler {
+        val Rethrow: ExceptionHandler = object : ExceptionHandler {
             override fun handle(error: Throwable) {
                 throw error
             }
         }
+
+        /**
+         * Deprecated alias for [Rethrow].
+         */
+        @Deprecated(message = "Use Rethrow", replaceWith = ReplaceWith("ExceptionHandler.Rethrow"))
+        val Unhandled: ExceptionHandler
+            get() = Rethrow
     }
 }
 

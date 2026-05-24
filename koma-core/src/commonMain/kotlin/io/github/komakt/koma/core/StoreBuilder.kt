@@ -17,7 +17,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storeInitialState: S? = null
     private var storeCoroutineContext: CoroutineContext = Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
-    private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Unhandled
+    private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Rethrow
     private var storeAutoStartPolicy: AutoStartPolicy = AutoStartPolicy.OnDispatchOrStateCollection
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
