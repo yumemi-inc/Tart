@@ -21,7 +21,7 @@ class StoreSaverTest {
     private fun createTestStore(
         initialState: AppState,
         stateSaver: StateSaver<AppState>,
-        exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Ignore,
         errorStateOnException: AppState? = null,
     ): Store<AppState, AppAction, Nothing> {
         return Store(initialState) {

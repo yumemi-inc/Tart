@@ -40,7 +40,7 @@ class StoreActionCoroutineScopeTest {
     private fun createTestStore(
         onLongRunningStart: (() -> Unit)? = null,
         onLongRunningCancelled: (() -> Unit)? = null,
-        exceptionHandler: ExceptionHandler = ExceptionHandler.Noop,
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Ignore,
     ): Store<AppState, AppAction, Nothing> {
         return Store(AppState.Active()) {
             coroutineContext(Dispatchers.Unconfined)
