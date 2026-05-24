@@ -477,9 +477,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             is LaunchControl.CancelPrevious -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 cancelTrackedActionLaunch(stateRuntime, trackedKey)
-                stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
+                stateRuntime.actionLaunchJobs[trackedKey] = launchInStateRuntime(
                     stateRuntime = stateRuntime,
-                    trackedKey = trackedKey,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
@@ -489,36 +488,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             is LaunchControl.DropIfRunning -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 if (stateRuntime.actionLaunchJobs[trackedKey]?.isActive == true) return
-                stateRuntime.actionLaunchJobs[trackedKey] = launchTrackedActionInStateRuntime(
-                    stateRuntime = stateRuntime,
-                    trackedKey = trackedKey,
-                    dispatcher = dispatcher,
-                    buildLaunchScope = buildLaunchScope,
-                    block = block,
-                )
-            }
-        }
-    }
-
-    private fun <LS> launchTrackedActionInStateRuntime(
-        stateRuntime: StateRuntime,
-        trackedKey: Any,
-        dispatcher: CoroutineDispatcher?,
-        buildLaunchScope: () -> LS,
-        block: suspend LS.() -> Unit,
-    ): Job {
-        return stateRuntime.scope.launch(dispatcher ?: EmptyCoroutineContext) {
-            try {
-                executeLaunchInStateRuntime(
+                stateRuntime.actionLaunchJobs[trackedKey] = launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
-            } finally {
-                if (stateRuntime.actionLaunchJobs[trackedKey] === coroutineContext[Job]) {
-                    stateRuntime.actionLaunchJobs.remove(trackedKey)
-                }
             }
         }
     }
