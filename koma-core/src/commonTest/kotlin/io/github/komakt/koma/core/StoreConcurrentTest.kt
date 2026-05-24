@@ -43,17 +43,17 @@ class StoreConcurrentTest {
 
             state<AppState.Initial> {
                 action<AppAction.Increment> {
-                    nextState(AppState.Initial(state.count + 1))
+                    nextState { AppState.Initial(state.count + 1) }
                 }
                 action<AppAction.Decrement> {
-                    nextState(AppState.Initial(state.count - 1))
+                    nextState { AppState.Initial(state.count - 1) }
                 }
                 action<AppAction.DelayedIncrement> {
-                    nextState(AppState.Processing(state.count))
+                    nextState { AppState.Processing(state.count) }
                     event(AppEvent.Processing)
                 }
                 action<AppAction.RequestResult> {
-                    nextState(AppState.Result(state.count))
+                    nextState { AppState.Result(state.count) }
                 }
             }
 
@@ -64,7 +64,7 @@ class StoreConcurrentTest {
                         delay(100)
                         transaction {
                             val newCount = state.count + 1
-                            nextState(AppState.Result(newCount))
+                            nextState { AppState.Result(newCount) }
                             event(AppEvent.Completed(newCount))
                         }
                     }
@@ -73,16 +73,16 @@ class StoreConcurrentTest {
                 action<AppAction.RequestResult> {
                     // This will wait for the transaction from enter to complete
                     // due to mutex locking
-                    nextState(AppState.Result(state.count))
+                    nextState { AppState.Result(state.count) }
                 }
             }
 
             state<AppState.Result> {
                 action<AppAction.Increment> {
-                    nextState(AppState.Result(state.count + 1))
+                    nextState { AppState.Result(state.count + 1) }
                 }
                 action<AppAction.Decrement> {
-                    nextState(AppState.Result(state.count - 1))
+                    nextState { AppState.Result(state.count - 1) }
                 }
             }
         }

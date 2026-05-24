@@ -129,7 +129,7 @@ class WebSocketUseCaseTest {
 
             state<AppState.Disconnected> {
                 action<AppAction.Connect> {
-                    nextState(AppState.Connected(connectionStatus = AppState.ConnectionStatus.CONNECTING))
+                    nextState { AppState.Connected(connectionStatus = AppState.ConnectionStatus.CONNECTING) }
                 }
             }
 
@@ -149,19 +149,19 @@ class WebSocketUseCaseTest {
                             when (event) {
                                 is WebSocketService.ConnectionEvent.Connected -> {
                                     transaction {
-                                        nextState(state.copy(connectionStatus = AppState.ConnectionStatus.CONNECTED))
+                                        nextState { state.copy(connectionStatus = AppState.ConnectionStatus.CONNECTED) }
                                     }
                                 }
 
                                 is WebSocketService.ConnectionEvent.Error -> {
                                     transaction {
-                                        nextState(AppState.Error(event.throwable))
+                                        nextState { AppState.Error(event.throwable) }
                                     }
                                 }
 
                                 is WebSocketService.ConnectionEvent.Disconnected -> {
                                     transaction {
-                                        nextState(AppState.Disconnected)
+                                        nextState { AppState.Disconnected }
                                     }
                                 }
                             }
@@ -173,7 +173,7 @@ class WebSocketUseCaseTest {
                             transaction {
                                 // Only update messages if in CONNECTED status
                                 if (state.connectionStatus == AppState.ConnectionStatus.CONNECTED) {
-                                    nextState(state.copy(latestMessage = message))
+                                    nextState { state.copy(latestMessage = message) }
                                 }
                                 // Otherwise ignore messages that arrive before fully connected
                                 // or after disconnecting has started
@@ -184,7 +184,7 @@ class WebSocketUseCaseTest {
 
                 action<AppAction.Disconnect> {
                     // First update state to disconnecting
-                    nextState(state.copy(connectionStatus = AppState.ConnectionStatus.DISCONNECTING))
+                    nextState { state.copy(connectionStatus = AppState.ConnectionStatus.DISCONNECTING) }
 
                     // Then initiate disconnect
                     webSocketService.disconnect()
@@ -194,7 +194,7 @@ class WebSocketUseCaseTest {
 
             state<AppState.Error> {
                 action<AppAction.Connect> {
-                    nextState(AppState.Connected(connectionStatus = AppState.ConnectionStatus.CONNECTING))
+                    nextState { AppState.Connected(connectionStatus = AppState.ConnectionStatus.CONNECTING) }
                 }
             }
         }

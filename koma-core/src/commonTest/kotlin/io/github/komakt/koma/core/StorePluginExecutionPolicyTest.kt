@@ -54,7 +54,7 @@ class StorePluginExecutionPolicyTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(state.copy(count = state.count + 1))
+                    nextState { state.copy(count = state.count + 1) }
                 }
             }
         }

@@ -50,7 +50,7 @@ class StoreActionCoroutineScopeTest {
                 action<AppAction.LaunchIncrement> {
                     launch {
                         transaction {
-                            nextState(state.copy(value = state.value + 1))
+                            nextState { state.copy(value = state.value + 1) }
                         }
                     }
                 }
@@ -59,7 +59,7 @@ class StoreActionCoroutineScopeTest {
                     launch {
                         val delta = action.delta
                         transaction {
-                            nextState(state.copy(value = state.value + delta + action.delta))
+                            nextState { state.copy(value = state.value + delta + action.delta) }
                         }
                     }
                 }
@@ -76,14 +76,14 @@ class StoreActionCoroutineScopeTest {
                 }
 
                 action<AppAction.MoveToCompleted> {
-                    nextState(AppState.Completed(value = state.value))
+                    nextState { AppState.Completed(value = state.value) }
                 }
 
                 action<AppAction.MoveToCompletedThenLaunch> {
-                    nextState(AppState.Completed(value = state.value + 1))
+                    nextState { AppState.Completed(value = state.value + 1) }
                     launch {
                         transaction {
-                            nextState(AppState.Completed(value = 999))
+                            nextState { AppState.Completed(value = 999) }
                         }
                     }
                 }
@@ -125,7 +125,7 @@ class StoreActionCoroutineScopeTest {
 
             state<AppState> {
                 error<Exception> {
-                    nextState(AppState.Failed(error.message ?: "unknown"))
+                    nextState { AppState.Failed(error.message ?: "unknown") }
                 }
             }
         }

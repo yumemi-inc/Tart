@@ -1,6 +1,10 @@
 # State 遷移指定 API は `nextState()` と `nextStateBy {}` の 2 本を維持する
 
-- 更新日: 2026-04-30
+- 更新日: 2026-05-24
+
+> [!NOTE]
+> この ADR の決定は、[State 遷移指定 API は `nextState {}` を正規系にする](./2026-05-24-nextstate-block-api.md) で supersede された。
+> 現在の public API では `nextState { ... }` が正規系であり、`nextState(state)` と `nextStateBy { ... }` は deprecated alias として互換性のために残している。
 
 ## 背景
 

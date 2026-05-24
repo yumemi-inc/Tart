@@ -142,7 +142,7 @@ class EventStreamUseCaseTest {
             state<AppState.Idle> {
                 action<AppAction.Subscribe> {
                     // Direct transition to Active state
-                    nextState(AppState.Active())
+                    nextState { AppState.Active() }
                 }
             }
 
@@ -155,12 +155,12 @@ class EventStreamUseCaseTest {
                                 onSuccess = { event ->
                                     transaction {
                                         // Update state with new data while staying in Active state
-                                        nextState(AppState.Active(lastProcessedData = event.data))
+                                        nextState { AppState.Active(lastProcessedData = event.data) }
                                     }
                                 },
                                 onFailure = { error ->
                                     transaction {
-                                        nextState(AppState.Error(error))
+                                        nextState { AppState.Error(error) }
                                     }
                                 },
                             )
@@ -169,17 +169,17 @@ class EventStreamUseCaseTest {
                 }
 
                 action<AppAction.Unsubscribe> {
-                    nextState(AppState.Idle)
+                    nextState { AppState.Idle }
                 }
             }
 
             state<AppState.Error> {
                 action<AppAction.Subscribe> {
-                    nextState(AppState.Active())
+                    nextState { AppState.Active() }
                 }
 
                 action<AppAction.Unsubscribe> {
-                    nextState(AppState.Idle)
+                    nextState { AppState.Idle }
                 }
             }
         }

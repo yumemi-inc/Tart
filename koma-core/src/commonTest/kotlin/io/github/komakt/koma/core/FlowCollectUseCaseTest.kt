@@ -57,7 +57,7 @@ class FlowCollectUseCaseTest {
             // Initial state handling
             state<AppState.Initial> {
                 action<AppAction.StartCollecting> {
-                    nextState(AppState.Active(0)) // Start with a default value before flow collection
+                    nextState { AppState.Active(0) } // Start with a default value before flow collection
                 }
             }
 
@@ -68,14 +68,14 @@ class FlowCollectUseCaseTest {
                     launch {
                         dataFlow.collect { value ->
                             transaction {
-                                nextStateBy { state.copy(value = value) }
+                                nextState { state.copy(value = value) }
                             }
                         }
                     }
                 }
 
                 action<AppAction.Complete> {
-                    nextState(AppState.Completed)
+                    nextState { AppState.Completed }
                 }
             }
 

@@ -41,7 +41,7 @@ class StorePendingActionCancellationTest {
                     delay(100)
                     clearPendingActions()
                     onHoldAndCancelCompleted?.complete(Unit)
-                    nextState(state.copy(value = state.value + 100))
+                    nextState { state.copy(value = state.value + 100) }
                 }
 
                 action<AppAction.LaunchTransactionAndCancel>(testDispatcher) {
@@ -51,13 +51,13 @@ class StorePendingActionCancellationTest {
                             delay(100)
                             clearPendingActions()
                             onTransactionCompleted?.complete(Unit)
-                            nextState(state.copy(value = state.value + 100))
+                            nextState { state.copy(value = state.value + 100) }
                         }
                     }
                 }
 
                 action<AppAction.Increment>(testDispatcher) {
-                    nextState(state.copy(value = state.value + 1))
+                    nextState { state.copy(value = state.value + 1) }
                 }
             }
         }

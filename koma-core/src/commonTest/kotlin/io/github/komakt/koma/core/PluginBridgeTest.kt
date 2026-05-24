@@ -72,7 +72,7 @@ class PluginBridgeTest {
 
             state<AppState> {
                 action<AppAction.UpdateMessage> {
-                    nextState(state.copy(message = action.message))
+                    nextState { state.copy(message = action.message) }
                 }
             }
         }

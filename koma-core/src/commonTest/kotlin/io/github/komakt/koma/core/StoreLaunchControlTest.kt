@@ -58,7 +58,7 @@ class StoreLaunchControlTest {
                         control = LaunchControl.CancelPrevious(primaryLane),
                     ) {
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 1))
+                            nextState { state.copy(value = state.value + 1) }
                         }
                     }
                     launch(
@@ -66,7 +66,7 @@ class StoreLaunchControlTest {
                         control = LaunchControl.CancelPrevious(secondaryLane),
                     ) {
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 10))
+                            nextState { state.copy(value = state.value + 10) }
                         }
                     }
                 }
@@ -77,7 +77,7 @@ class StoreLaunchControlTest {
                         control = LaunchControl.CancelPrevious(),
                     ) {
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 1))
+                            nextState { state.copy(value = state.value + 1) }
                         }
                     }
                     launch(
@@ -85,7 +85,7 @@ class StoreLaunchControlTest {
                         control = LaunchControl.CancelPrevious(),
                     ) {
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 10))
+                            nextState { state.copy(value = state.value + 10) }
                         }
                     }
                 }
@@ -97,7 +97,7 @@ class StoreLaunchControlTest {
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 1))
+                            nextState { state.copy(value = state.value + 1) }
                         }
                     }
                     launch(
@@ -105,7 +105,7 @@ class StoreLaunchControlTest {
                         control = LaunchControl.DropIfRunning(),
                     ) {
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + 10))
+                            nextState { state.copy(value = state.value + 10) }
                         }
                     }
                 }
@@ -117,7 +117,7 @@ class StoreLaunchControlTest {
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + action.delta))
+                            nextState { state.copy(value = state.value + action.delta) }
                         }
                     }
                 }
@@ -129,13 +129,13 @@ class StoreLaunchControlTest {
                     ) {
                         delay(100)
                         transaction(testDispatcher) {
-                            nextState(state.copy(value = state.value + action.delta))
+                            nextState { state.copy(value = state.value + action.delta) }
                         }
                     }
                 }
 
                 action<AppAction.MoveToCompleted> {
-                    nextState(AppState.Completed)
+                    nextState { AppState.Completed }
                 }
             }
         }

@@ -30,11 +30,11 @@ class StoreSaverTest {
             exceptionHandler(exceptionHandler)
             state<AppState> {
                 action<AppAction.Update> {
-                    nextState(state.copy(value = action.value))
+                    nextState { state.copy(value = action.value) }
                 }
                 if (errorStateOnException != null) {
                     error<Exception> {
-                        nextState(errorStateOnException)
+                        nextState { errorStateOnException }
                     }
                 }
             }

@@ -360,11 +360,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ActionScope<S, A, E, S> {
                 override val state = state
                 override val action = action
-                override fun nextState(state: S) {
-                    newState = state
-                }
-
-                override fun nextStateBy(block: () -> S) {
+                override fun nextState(block: () -> S) {
                     newState = block()
                 }
 
@@ -411,11 +407,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         onEnter.invoke(
             object : EnterScope<S, E, S> {
                 override val state = state
-                override fun nextState(state: S) {
-                    newState = state
-                }
-
-                override fun nextStateBy(block: () -> S) {
+                override fun nextState(block: () -> S) {
                     newState = block()
                 }
 
@@ -547,11 +539,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             val transactionScope = object : EnterTransactionScope<S, E, S> {
                                 override val state: S = currentState
 
-                                override fun nextState(state: S) {
-                                    newState = state
-                                }
-
-                                override fun nextStateBy(block: () -> S) {
+                                override fun nextState(block: () -> S) {
                                     newState = block()
                                 }
 
@@ -600,11 +588,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                 override val state: S = currentState
                                 override val action: A = launchedAction
 
-                                override fun nextState(state: S) {
-                                    newState = state
-                                }
-
-                                override fun nextStateBy(block: () -> S) {
+                                override fun nextState(block: () -> S) {
                                     newState = block()
                                 }
 
@@ -673,11 +657,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             object : ErrorScope<S, E, S, Exception> {
                 override val state = state
                 override val error = throwable
-                override fun nextState(state: S) {
-                    newState = state
-                }
-
-                override fun nextStateBy(block: () -> S) {
+                override fun nextState(block: () -> S) {
                     newState = block()
                 }
 

@@ -77,7 +77,7 @@ class LoginUseCaseTest {
                     // Validate input values
                     val isValidInput = action.username.isNotBlank() && action.password.isNotBlank()
 
-                    nextStateBy {
+                    nextState {
                         if (isValidInput) {
                             // For valid input, transition to loading state
                             AppState.Loading(action.username, action.password)
@@ -98,13 +98,13 @@ class LoginUseCaseTest {
                         // Process for successful login
                         event(AppEvent.NavigateToHome(state.username))
 
-                        nextStateBy {
+                        nextState {
                             // Transition to success state
                             AppState.Success(state.username)
                         }
                     } else {
                         // Process for failed login
-                        nextStateBy {
+                        nextState {
                             // Transition to error state
                             AppState.Error("Authentication failed")
                         }
@@ -114,13 +114,13 @@ class LoginUseCaseTest {
             // Processing for Error state
             state<AppState.Error> {
                 action<AppAction.RetryFromError> {
-                    nextState(AppState.Initial)
+                    nextState { AppState.Initial }
                 }
             }
             // Error handling for all states
             state<AppState> {
                 error<Exception> {
-                    nextState(AppState.Error(error.message ?: "Unknown error"))
+                    nextState { AppState.Error(error.message ?: "Unknown error") }
                 }
             }
         }
