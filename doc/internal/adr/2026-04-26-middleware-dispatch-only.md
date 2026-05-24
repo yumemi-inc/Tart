@@ -62,7 +62,7 @@ override suspend fun onStart(
         repository.observe().collect { value ->
             transaction {
                 val current = this.state as? AppState.Ready ?: return@transaction
-                nextState(current.copy(value = value))
+                nextState { current.copy(value = value) }
             }
         }
     }
