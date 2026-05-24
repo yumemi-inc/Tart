@@ -14,29 +14,42 @@ sealed interface StoreScope
 interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     /**
      * The current state snapshot when this handler is executing.
-     * This value does not change immediately when [nextState] or [nextStateBy] is called.
+     * This value does not change immediately when a next state is registered.
      */
     val state: S2
-
-    /**
-     * Registers the next state to apply after the current enter handler finishes.
-     * This does not update [state] immediately.
-     * If called multiple times in the same handler, the last specified state is used.
-     *
-     * @param state The new state value to update to
-     */
-    fun nextState(state: S)
 
     /**
      * Registers the next state to apply after the current enter handler finishes
      * by computing it in the given block.
      * This does not update [state] immediately.
      * If called multiple times in the same handler, the last specified state is used.
-     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
+     * If no next state is registered, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextState(block: () -> S)
+
+    /**
+     * @deprecated Use `nextState { ... }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState(block)"),
+    )
+    fun nextStateBy(block: () -> S) {
+        nextState(block)
+    }
+
+    /**
+     * @deprecated Use `nextState { state }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState { state }"),
+    )
+    fun nextState(state: S) {
+        nextState { state }
+    }
 
     /**
      * Cancels queued actions that have not started executing yet.
@@ -101,29 +114,42 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
         interface TransactionScope<S : State, E : Event, S2 : S> : StoreScope {
             /**
              * The current state snapshot when this transaction is executing.
-             * This value does not change immediately when [nextState] or [nextStateBy] is called.
+             * This value does not change immediately when a next state is registered.
              */
             val state: S2
-
-            /**
-             * Registers the next state to apply after the current transaction finishes.
-             * This does not update [state] immediately.
-             * If called multiple times in the same transaction, the last specified state is used.
-             *
-             * @param state The new state value to update to
-             */
-            fun nextState(state: S)
 
             /**
              * Registers the next state to apply after the current transaction finishes
              * by computing it in the given block.
              * This does not update [state] immediately.
              * If called multiple times in the same transaction, the last specified state is used.
-             * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
+             * If no next state is registered, the current [state] is kept.
              *
              * @param block A function that computes and returns the new state
              */
-            fun nextStateBy(block: () -> S)
+            fun nextState(block: () -> S)
+
+            /**
+             * @deprecated Use `nextState { ... }`.
+             */
+            @Deprecated(
+                message = "Use nextState { ... }",
+                replaceWith = ReplaceWith("nextState(block)"),
+            )
+            fun nextStateBy(block: () -> S) {
+                nextState(block)
+            }
+
+            /**
+             * @deprecated Use `nextState { state }`.
+             */
+            @Deprecated(
+                message = "Use nextState { ... }",
+                replaceWith = ReplaceWith("nextState { state }"),
+            )
+            fun nextState(state: S) {
+                nextState { state }
+            }
 
             /**
              * Cancels queued actions that have not started executing yet.
@@ -187,7 +213,7 @@ interface ExitScope<S : State, E : Event, S2 : S> : StoreScope {
 interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     /**
      * The current state snapshot when this handler is executing.
-     * This value does not change immediately when [nextState] or [nextStateBy] is called.
+     * This value does not change immediately when a next state is registered.
      */
     val state: S2
 
@@ -197,24 +223,37 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
     val action: A
 
     /**
-     * Registers the next state to apply after the current action handler finishes.
-     * This does not update [state] immediately.
-     * If called multiple times in the same handler, the last specified state is used.
-     *
-     * @param state The new state value to update to
-     */
-    fun nextState(state: S)
-
-    /**
      * Registers the next state to apply after the current action handler finishes
      * by computing it in the given block.
      * This does not update [state] immediately.
      * If called multiple times in the same handler, the last specified state is used.
-     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
+     * If no next state is registered, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextState(block: () -> S)
+
+    /**
+     * @deprecated Use `nextState { ... }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState(block)"),
+    )
+    fun nextStateBy(block: () -> S) {
+        nextState(block)
+    }
+
+    /**
+     * @deprecated Use `nextState { state }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState { state }"),
+    )
+    fun nextState(state: S) {
+        nextState { state }
+    }
 
     /**
      * Cancels queued actions that have not started executing yet.
@@ -297,7 +336,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
         interface TransactionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             /**
              * The current state snapshot when this transaction is executing.
-             * This value does not change immediately when [nextState] or [nextStateBy] is called.
+             * This value does not change immediately when a next state is registered.
              */
             val state: S2
 
@@ -307,24 +346,37 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
             val action: A
 
             /**
-             * Registers the next state to apply after the current transaction finishes.
-             * This does not update [state] immediately.
-             * If called multiple times in the same transaction, the last specified state is used.
-             *
-             * @param state The new state value to update to
-             */
-            fun nextState(state: S)
-
-            /**
              * Registers the next state to apply after the current transaction finishes
              * by computing it in the given block.
              * This does not update [state] immediately.
              * If called multiple times in the same transaction, the last specified state is used.
-             * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
+             * If no next state is registered, the current [state] is kept.
              *
              * @param block A function that computes and returns the new state
              */
-            fun nextStateBy(block: () -> S)
+            fun nextState(block: () -> S)
+
+            /**
+             * @deprecated Use `nextState { ... }`.
+             */
+            @Deprecated(
+                message = "Use nextState { ... }",
+                replaceWith = ReplaceWith("nextState(block)"),
+            )
+            fun nextStateBy(block: () -> S) {
+                nextState(block)
+            }
+
+            /**
+             * @deprecated Use `nextState { state }`.
+             */
+            @Deprecated(
+                message = "Use nextState { ... }",
+                replaceWith = ReplaceWith("nextState { state }"),
+            )
+            fun nextState(state: S) {
+                nextState { state }
+            }
 
             /**
              * Cancels queued actions that have not started executing yet.
@@ -365,7 +417,7 @@ typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.Transact
 interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     /**
      * The current state snapshot when this handler is executing.
-     * This value does not change immediately when [nextState] or [nextStateBy] is called.
+     * This value does not change immediately when a next state is registered.
      */
     val state: S2
 
@@ -375,24 +427,37 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     val error: T
 
     /**
-     * Registers the next state to apply after the current error handler finishes.
-     * This does not update [state] immediately.
-     * If called multiple times in the same handler, the last specified state is used.
-     *
-     * @param state The new state value to update to
-     */
-    fun nextState(state: S)
-
-    /**
      * Registers the next state to apply after the current error handler finishes
      * by computing it in the given block.
      * This does not update [state] immediately.
      * If called multiple times in the same handler, the last specified state is used.
-     * If neither [nextState] nor [nextStateBy] is called, the current [state] is kept.
+     * If no next state is registered, the current [state] is kept.
      *
      * @param block A function that computes and returns the new state
      */
-    fun nextStateBy(block: () -> S)
+    fun nextState(block: () -> S)
+
+    /**
+     * @deprecated Use `nextState { ... }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState(block)"),
+    )
+    fun nextStateBy(block: () -> S) {
+        nextState(block)
+    }
+
+    /**
+     * @deprecated Use `nextState { state }`.
+     */
+    @Deprecated(
+        message = "Use nextState { ... }",
+        replaceWith = ReplaceWith("nextState { state }"),
+    )
+    fun nextState(state: S) {
+        nextState { state }
+    }
 
     /**
      * Cancels queued actions that have not started executing yet.

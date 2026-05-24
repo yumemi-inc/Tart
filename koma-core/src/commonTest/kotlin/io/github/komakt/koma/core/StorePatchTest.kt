@@ -66,7 +66,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -97,7 +97,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -126,7 +126,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -151,7 +151,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -179,13 +179,13 @@ class StorePatchTest {
             state<PendingPolicyState.Initial> {
                 action<PendingPolicyAction.EnterActiveAfterDelay>(testDispatcher) {
                     delay(100)
-                    nextState(PendingPolicyState.Active())
+                    nextState { PendingPolicyState.Active() }
                 }
             }
 
             state<PendingPolicyState.Active> {
                 action<PendingPolicyAction.Increment>(testDispatcher) {
-                    nextState(state.copy(value = state.value + 1))
+                    nextState { state.copy(value = state.value + 1) }
                 }
             }
         }.patchForTest {
@@ -211,7 +211,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -232,7 +232,7 @@ class StorePatchTest {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }.patchForTest {
@@ -247,7 +247,7 @@ class StorePatchTest {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }
@@ -266,7 +266,7 @@ class StorePatchTest {
         val store = Store<AppState, AppAction, Nothing>(initialState = AppState(count = 0)) {
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }
@@ -288,7 +288,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }
@@ -312,7 +312,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }
@@ -334,7 +334,7 @@ class StorePatchTest {
 
             state<AppState> {
                 action<AppAction.Increment> {
-                    nextState(AppState(count = state.count + 1))
+                    nextState { AppState(count = state.count + 1) }
                 }
             }
         }

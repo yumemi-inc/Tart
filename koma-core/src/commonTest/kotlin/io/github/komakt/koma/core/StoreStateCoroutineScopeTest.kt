@@ -70,7 +70,7 @@ class StoreStateCoroutineScopeTest {
             // Initial state handling
             state<AppState.Initial> {
                 action<AppAction.Start> {
-                    nextState(AppState.Running())
+                    nextState { AppState.Running() }
                 }
             }
 
@@ -93,7 +93,7 @@ class StoreStateCoroutineScopeTest {
                             }
                         } else {
                             transaction {
-                                nextState(state.copy(value = 5))
+                                nextState { state.copy(value = 5) }
                             }
 
                             // Emit event
@@ -104,7 +104,7 @@ class StoreStateCoroutineScopeTest {
 
                 // Stop action transitions to Final
                 action<AppAction.Stop> {
-                    nextState(AppState.Final)
+                    nextState { AppState.Final }
                 }
             }
 
@@ -182,7 +182,7 @@ class StoreStateCoroutineScopeTest {
 
             state<AppState.Initial> {
                 action<AppAction.Start> {
-                    nextState(AppState.Running())
+                    nextState { AppState.Running() }
                 }
             }
 
@@ -198,7 +198,7 @@ class StoreStateCoroutineScopeTest {
 
             state<AppState> {
                 error<Exception> {
-                    nextState(AppState.Failed(error.message ?: "unknown"))
+                    nextState { AppState.Failed(error.message ?: "unknown") }
                 }
             }
         }

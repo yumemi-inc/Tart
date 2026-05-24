@@ -40,18 +40,18 @@ class StorePendingActionPolicyTest {
                     onTransitionStarted?.complete(Unit)
                     delay(100)
                     onTransitionCompleted?.complete(Unit)
-                    nextState(AppState.Active())
+                    nextState { AppState.Active() }
                 }
             }
 
             state<AppState.Active> {
                 action<AppAction.UpdateInPlaceAfterDelay>(testDispatcher) {
                     delay(100)
-                    nextState(state.copy(value = state.value + 100))
+                    nextState { state.copy(value = state.value + 100) }
                 }
 
                 action<AppAction.Increment>(testDispatcher) {
-                    nextState(state.copy(value = state.value + 1))
+                    nextState { state.copy(value = state.value + 1) }
                 }
             }
         }
@@ -114,11 +114,11 @@ class StorePendingActionPolicyTest {
                 action<AppAction.UpdateInPlaceAfterDelay>(testDispatcher) {
                     inPlaceUpdateStarted.complete(Unit)
                     delay(100)
-                    nextState(state.copy(value = state.value + 100))
+                    nextState { state.copy(value = state.value + 100) }
                 }
 
                 action<AppAction.Increment>(testDispatcher) {
-                    nextState(state.copy(value = state.value + 1))
+                    nextState { state.copy(value = state.value + 1) }
                 }
             }
         }

@@ -99,9 +99,7 @@ val store: Store<CounterState, CounterAction, Nothing> = Store {
 ```
 
 Define how *Action*s change *State* using the `state{}` and `action{}` blocks.
-Specify the resulting *State* with `nextState()`.
-If you want to compute and return the next state inside a block, use `nextStateBy { ... }`.
-If neither `nextState()` nor `nextStateBy()` is specified, the current state remains unchanged.
+Specify the resulting *State* with `nextState { ... }`.
 
 ```kt
 val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(count = 0)) {
@@ -109,12 +107,12 @@ val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(coun
     state<CounterState> {
 
         action<CounterAction.Increment> {
-            nextState(state.copy(count = state.count + 1))
+            nextState { state.copy(count = state.count + 1) }
         }
 
         action<CounterAction.Decrement> {
             if (0 < state.count) {
-                nextState(state.copy(count = state.count - 1))
+                nextState { state.copy(count = state.count - 1) }
             } else {
                 // do not change State
             }
@@ -123,10 +121,13 @@ val store: Store<CounterState, CounterAction, Nothing> = Store(CounterState(coun
 }
 ```
 
-For conditional or complex updates, `nextStateBy {}` can make the computation easier to read.
+If `nextState { ... }` is not specified, the current state remains unchanged.
+If `nextState { ... }` is called multiple times in the same handler, the last computed value is applied.
+
+For conditional or complex updates, `nextState {}` can make the computation easier to read. The value of the block's final expression is used as the next state.
 
 ```kt
-nextStateBy {
+nextState {
     // ...
     val newCount = ...
     state.copy(count = newCount)
@@ -171,7 +172,7 @@ In an `action{}` block, specify an Event with `event()`.
 ```kt
 action<CounterAction.Decrement> {
     if (0 < state.count) {
-        nextState(state.copy(count = state.count - 1))
+        nextState { state.copy(count = state.count - 1) }
     } else {
         event(CounterEvent.ShowToast("Can not Decrement.")) // raise event
     }
@@ -193,13 +194,13 @@ fun CounterStore(
 
         action<CounterAction.Load> {
             val count = counterRepository.get() // load
-            nextState(state.copy(count = count))
+            nextState { state.copy(count = count) }
         }
 
         action<CounterAction.Increment> {
             val count = state.count + 1
             counterRepository.set(count) // save
-            nextState(state.copy(count = count))
+            nextState { state.copy(count = count) }
         }
 
         // ...
@@ -237,7 +238,7 @@ fun CounterStore(
     state<CounterState> {
 
         action<CounterAction.Load> {
-            nextState(state.copy(count = loadCount())) // call the function
+            nextState { state.copy(count = loadCount()) } // call the function
         }
 
         // ...
@@ -266,7 +267,7 @@ fun CounterStore(
     state<CounterState.Loading> { // for Loading state
         action<CounterAction.Load> {
             val count = counterRepository.get()
-            nextState(CounterState.Main(count = count)) // transition to Main state
+            nextState { CounterState.Main(count = count) } // transition to Main state
         }
     }
 
@@ -286,7 +287,7 @@ fun CounterStore(
     state<CounterState.Loading> {
         enter {
             val count = counterRepository.get()
-            nextState(CounterState.Main(count = count)) // transition to Main state
+            nextState { CounterState.Main(count = count) } // transition to Main state
         }
     }
 
@@ -372,9 +373,9 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             try {
                 val count = counterRepository.get()
-                nextState(CounterState.Main(count = count))
+                nextState { CounterState.Main(count = count) }
             } catch (e: Exception) {
-                nextState(CounterState.Error(error = e))
+                nextState { CounterState.Error(error = e) }
             }
         }
     }
@@ -392,19 +393,19 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         enter {
             // no error handling code
             val count = counterRepository.get()
-            nextState(CounterState.Main(count = count))
+            nextState { CounterState.Main(count = count) }
         }
 
         // more specific exceptions should be placed first
         error<IllegalStateException> {
             // ...
-            nextState(CounterState.Error(error = error))
+            nextState { CounterState.Error(error = error) }
         }
 
         // more general exception handlers should come last
         error<Exception> {
             // ...
-            nextState(CounterState.Error(error = error))
+            nextState { CounterState.Error(error = error) }
         }
     }
 }
@@ -439,7 +440,7 @@ state<MyState.Active> {
             dataRepository.observeData().collect { newData ->
                 // update state with the new data in a transaction
                 transaction {
-                    nextState(state.copy(data = newData))
+                    nextState { state.copy(data = newData) }
                 }
             }
         }
@@ -455,13 +456,13 @@ state<MyState.Active> {
         launch {
             // state updates in launch must be done in transaction{} block
             transaction {
-                nextState(state.copy(isRefreshing = true))
+                nextState { state.copy(isRefreshing = true) }
             }
 
             dataRepository.refresh()
 
             transaction {
-                nextState(state.copy(isRefreshing = false))
+                nextState { state.copy(isRefreshing = false) }
             }
         }
     }
@@ -480,31 +481,31 @@ val store = Store(MyState.Active()) {
 
     state<MyState.Active> {
         action<MyAction.QueryChanged> {
-            nextState(state.copy(query = action.query, isLoading = true))
+            nextState { state.copy(query = action.query, isLoading = true) }
 
             launch(control = LaunchControl.CancelPrevious(searchLane)) {
                 delay(300)
                 val result = repository.search(action.query)
                 transaction {
-                    nextState(
+                    nextState {
                         state.copy(
                             result = result,
                             isLoading = false,
-                        ),
-                    )
+                        )
+                    }
                 }
             }
         }
 
         action<MyAction.ClearQuery> {
             cancelLaunch(searchLane)
-            nextState(
+            nextState {
                 state.copy(
                     query = "",
                     result = emptyList(),
                     isLoading = false,
-                ),
-            )
+                )
+            }
         }
 
         action<MyAction.Submit> {

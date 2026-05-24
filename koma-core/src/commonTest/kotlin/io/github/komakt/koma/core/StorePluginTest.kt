@@ -69,13 +69,13 @@ class StorePluginTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
 
             state<AppState.Ready> {
                 action<AppAction.Increment> {
-                    nextState(state.copy(count = state.count + 1))
+                    nextState { state.copy(count = state.count + 1) }
                 }
 
                 action<AppAction.Emit> {
@@ -89,7 +89,7 @@ class StorePluginTest {
 
             state<AppState> {
                 error<Exception> {
-                    nextState(AppState.Failed(error.message ?: "unknown"))
+                    nextState { AppState.Failed(error.message ?: "unknown") }
                 }
             }
         }
@@ -149,7 +149,7 @@ class StorePluginTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
 
@@ -159,7 +159,7 @@ class StorePluginTest {
                 }
 
                 action<AppAction.Increment> {
-                    nextState(state.copy(count = state.count + 1))
+                    nextState { state.copy(count = state.count + 1) }
                 }
             }
         }
@@ -197,7 +197,7 @@ class StorePluginTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
 
@@ -207,7 +207,7 @@ class StorePluginTest {
                 }
 
                 action<AppAction.Increment> {
-                    nextState(state.copy(count = state.count + 1))
+                    nextState { state.copy(count = state.count + 1) }
                 }
             }
         }
@@ -241,7 +241,7 @@ class StorePluginTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
         }
@@ -263,7 +263,7 @@ class StorePluginTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
         }

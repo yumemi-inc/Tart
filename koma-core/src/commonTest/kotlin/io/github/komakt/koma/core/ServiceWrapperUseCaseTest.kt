@@ -93,7 +93,7 @@ class ServiceWrapperUseCaseTest {
 
             state<AppState.Idle> {
                 action<AppAction.Start> {
-                    nextState(AppState.Running(count = 0))
+                    nextState { AppState.Running(count = 0) }
                 }
             }
 
@@ -102,14 +102,14 @@ class ServiceWrapperUseCaseTest {
                     launch {
                         myServiceMonitor.count.collect {
                             transaction {
-                                nextState(state.copy(count = it))
+                                nextState { state.copy(count = it) }
                             }
                         }
                     }
                 }
 
                 action<AppAction.Stop> {
-                    nextState(AppState.Idle)
+                    nextState { AppState.Idle }
                 }
             }
         }

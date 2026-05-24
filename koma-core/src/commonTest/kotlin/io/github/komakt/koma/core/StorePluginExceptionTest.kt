@@ -36,7 +36,7 @@ class StorePluginExceptionTest {
 
             state<AppState.Ready> {
                 action<AppAction.Increment> {
-                    nextState(state.copy(value = state.value + 1))
+                    nextState { state.copy(value = state.value + 1) }
                 }
 
                 action<AppAction.Throw> {
@@ -46,7 +46,7 @@ class StorePluginExceptionTest {
 
             state<AppState> {
                 error<Exception> {
-                    nextState(AppState.Failed(error.message ?: "unknown"))
+                    nextState { AppState.Failed(error.message ?: "unknown") }
                 }
             }
         }
@@ -126,7 +126,7 @@ class StorePluginExceptionTest {
 
             state<AppState.Loading> {
                 enter {
-                    nextState(AppState.Ready())
+                    nextState { AppState.Ready() }
                 }
             }
 

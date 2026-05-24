@@ -73,7 +73,7 @@ class CounterUseCaseTest {
             // Initial state handling
             state<AppState.Initial> {
                 action<AppAction.Start> {
-                    nextState(AppState.Active(0))
+                    nextState { AppState.Active(0) }
                 }
             }
 
@@ -93,29 +93,29 @@ class CounterUseCaseTest {
                         event(AppEvent.ThresholdReached(10))
                     }
 
-                    nextState(state.copy(count = newCount))
+                    nextState { state.copy(count = newCount) }
                 }
 
                 action<AppAction.Decrement> {
                     val newCount = state.count - 1
                     event(AppEvent.CountChanged(newCount))
-                    nextState(state.copy(count = newCount))
+                    nextState { state.copy(count = newCount) }
                 }
 
                 action<AppAction.Reset> {
                     event(AppEvent.CountChanged(0))
-                    nextState(state.copy(count = 0))
+                    nextState { state.copy(count = 0) }
                 }
 
                 action<AppAction.Pause> {
-                    nextState(AppState.Paused(state.count))
+                    nextState { AppState.Paused(state.count) }
                 }
             }
 
             // Paused state handling
             state<AppState.Paused> {
                 action<AppAction.Resume> {
-                    nextState(AppState.Active(state.count))
+                    nextState { AppState.Active(state.count) }
                 }
             }
 
@@ -126,7 +126,7 @@ class CounterUseCaseTest {
                 }
                 error<Exception> {
                     event(AppEvent.ErrorOccurred(error.message ?: "Unknown error"))
-                    nextState(AppState.Error(error.message ?: "Unknown error"))
+                    nextState { AppState.Error(error.message ?: "Unknown error") }
                 }
             }
         }
