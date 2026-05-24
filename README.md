@@ -757,37 +757,37 @@ Text(
 )
 ```
 
-If there are multiple *States*, use the `.render()` method for the target *State*.
+If there are multiple *States*, use the `.renderState()` method for the target *State*.
 
 ```kt
-viewStore.render<CounterState.Main> {
+viewStore.renderState<CounterState.Main> {
     Text(
         text = state.count.toString(),
     )
 }
 ```
 
-When drawing the UI, if it does not match the target *State*, the `.render()` will not be executed.
+When drawing the UI, if it does not match the target *State*, the `.renderState()` will not be executed.
 Therefore, you can define components for each *State* side by side.
 
 ```kt
-viewStore.render<CounterState.Loading> {
+viewStore.renderState<CounterState.Loading> {
     Text(
         text = "loading..",
     )
 }
 
-viewStore.render<CounterState.Main> {
+viewStore.renderState<CounterState.Main> {
     Text(
         text = state.count.toString(),
     )
 }
 ```
 
-If you use lower components in the `render()` block, pass its instance.
+If you use lower components in the `renderState()` block, pass its instance.
 
 ```kt
-viewStore.render<CounterState.Main> {
+viewStore.renderState<CounterState.Main> {
     YourComposable(
         viewStore = this, // ViewStore instance for CounterState.Main
     )
@@ -822,10 +822,10 @@ Button(
 
 ### Handling Events
 
-Use ViewStore's `.handle()` with the target *Event*.
+Use ViewStore's `.collectEvent()` with the target *Event*.
 
 ```kt
-viewStore.handle<CounterEvent.ShowToast> { event ->
+viewStore.collectEvent<CounterEvent.ShowToast> { event ->
     // do something..
 }
 ```
@@ -833,7 +833,7 @@ viewStore.handle<CounterEvent.ShowToast> { event ->
 In the above example, you can also subscribe to the parent *Event* type.
 
 ```kt
-viewStore.handle<CounterEvent> { event ->
+viewStore.collectEvent<CounterEvent> { event ->
     when (event) {
         is CounterEvent.ShowToast -> // do something..
         is CounterEvent.GoBack -> // do something..

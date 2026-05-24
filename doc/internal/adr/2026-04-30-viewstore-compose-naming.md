@@ -4,23 +4,23 @@
 
 ## 背景
 
-`ViewStore.render` / `ViewStore.handle` は `@Composable` であり、Compose の naming guideline にそのまま寄せるなら、`Unit` を返す public composable として PascalCase の名前にしたくなる。
+`ViewStore.renderState` / `ViewStore.collectEvent` は `@Composable` であり、Compose の naming guideline にそのまま寄せるなら、`Unit` を返す public composable として PascalCase の名前にしたくなる。
 
 このため、次の 2 方向を検討した。
 
 - トップレベル関数として `StateContent(viewStore) {}` / `EventHandler(viewStore) {}`
 - `ViewStore` のメンバ関数として `viewStore.StateContent {}` / `viewStore.EventHandler {}`
 
-ただし、どちらも現在の `viewStore.render {}` / `viewStore.handle {}` が持つ DSL としての自然さを崩す懸念があった。
+ただし、どちらも現在の `viewStore.renderState {}` / `viewStore.collectEvent {}` が持つ DSL としての自然さを崩す懸念があった。
 
 ## 決定
 
-`ViewStore.render` / `ViewStore.handle` を PascalCase の別 API に置き換える案は採用しない。
+`ViewStore.renderState` / `ViewStore.collectEvent` を PascalCase の別 API に置き換える案は採用しない。
 
 現時点では、既存の lowerCamelCase API を維持する。
 
-- `viewStore.render<...> { ... }`
-- `viewStore.handle<...> { ... }`
+- `viewStore.renderState<...> { ... }`
+- `viewStore.collectEvent<...> { ... }`
 
 ## 補足
 

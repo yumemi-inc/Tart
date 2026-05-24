@@ -63,12 +63,21 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      */
     @Suppress("ComposableNaming")
     @Composable
-    inline fun <reified S2 : S> render(block: @Composable ViewStore<S2, A, E>.() -> Unit) {
+    inline fun <reified S2 : S> renderState(block: @Composable ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
             @Suppress("UNCHECKED_CAST")
             block(this as ViewStore<S2, A, E>)
         }
     }
+
+    @Deprecated(
+        message = "Use renderState instead.",
+        replaceWith = ReplaceWith("renderState<S2>(block)"),
+        level = DeprecationLevel.WARNING,
+    )
+    @Suppress("ComposableNaming")
+    @Composable
+    inline fun <reified S2 : S> render(block: @Composable ViewStore<S2, A, E>.() -> Unit) = renderState<S2>(block)
 
     /**
      * Collects only events of type [E2] while this composable is in the composition.
@@ -80,7 +89,7 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      */
     @Suppress("ComposableNaming")
     @Composable
-    inline fun <reified E2 : E> handle(noinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
+    inline fun <reified E2 : E> collectEvent(noinline block: ViewStore<S, A, E>.(event: E2) -> Unit) {
         val currentViewStore = rememberUpdatedState(this)
         val currentBlock = rememberUpdatedState(block)
         LaunchedEffect(eventFlow) {
@@ -89,15 +98,24 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
             }
         }
     }
+
+    @Deprecated(
+        message = "Use collectEvent instead.",
+        replaceWith = ReplaceWith("collectEvent<E2>(block)"),
+        level = DeprecationLevel.WARNING,
+    )
+    @Suppress("ComposableNaming")
+    @Composable
+    inline fun <reified E2 : E> handle(noinline block: ViewStore<S, A, E>.(event: E2) -> Unit) = collectEvent<E2>(block)
 }
 
 /**
  * Remembers a [Store], collects its state as Compose state, and exposes it through a [ViewStore].
  *
  * Collecting [Store.state] starts the Store immediately.
- * Because [ViewStore.handle] starts collecting later from a [LaunchedEffect], startup events such
- * as events emitted from an initial `enter {}` handler may be emitted before handlers in the same
- * composition begin observing them.
+ * Because [ViewStore.collectEvent] starts collecting later from a [LaunchedEffect], startup events
+ * such as events emitted from an initial `enter {}` handler may be emitted before handlers in the
+ * same composition begin observing them.
  *
  * The [store] lambda is used only when a new remembered Store must be created for [key].
  * For a given remembered Store instance, this function returns the same [ViewStore] instance across
