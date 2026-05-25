@@ -6,7 +6,7 @@
 
 `#190` では、`action { launch { ... } }` で開始した仕事を lane 単位で明示的に止める `cancelLaunch(lane)` を検討している。
 
-一方で、`launch` を使わない通常の `action {}`、`enter {}`、`exit {}`、`error {}`、および `transaction {}` には、いま実行中の処理を途中で止める API はない。
+一方で、`launch` を使わない通常の `action {}`、`enter {}`、`exit {}`、`recover {}`、および `transaction {}` には、いま実行中の処理を途中で止める API はない。
 
 ここで判断したいのは、`#190` のような cancellation を非 `launch` の store work にも広げるべきかどうかである。
 
@@ -14,7 +14,7 @@
 
 非 `launch` の store work には、in-flight cancellation API を追加しない。
 
-- 通常の `action {}`、`enter {}`、`exit {}`、`error {}`、`transaction {}` は、短く終わる直列・原子的な store work として扱う。
+- 通常の `action {}`、`enter {}`、`exit {}`、`recover {}`、`transaction {}` は、短く終わる直列・原子的な store work として扱う。
 - cancellation が必要な非同期処理や長く生きる仕事は、`launch {}` に出して扱う。
 - `clearPendingActions()` は引き続き「後ろに積まれた pending action を捨てる API」として扱い、現在実行中の store work は止めない。
 

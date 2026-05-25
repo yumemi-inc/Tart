@@ -27,7 +27,7 @@ Koma の設計上の基本方針は次のとおり。
 - Store が lazy start で、start 前でも `currentState` や restore 済み state snapshot を読めるのは、「宣言としての Store」と「副作用が走り始めた Store」を分けるためである。
 - middleware の default が並行実行なのは、middleware 同士の順序依存を強い設計前提にしないためである。
 - `overrides` が state/action handler を触れず、設定だけを上書きできるのは、「その Store がどんな state machine か」は identity に近く、テストや debug 用に変える対象ではないという線引きによる。
-- `error{}` と `exceptionHandler` が分かれていて、`Error` や cancellation を state 遷移の材料にしないのは、業務エラーと実行系の失敗を分けるためである。
+- `recover{}` と `exceptionHandler` が分かれていて、`Error` や cancellation を state 遷移の材料にしないのは、業務エラーと実行系の失敗を分けるためである。
 
 ## 関連
 
