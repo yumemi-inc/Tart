@@ -23,7 +23,7 @@ class StoreCancelLaunchTest {
         data class StartDropIfRunningShared(val marker: Int) : AppAction
         data class StartDropIfRunningOther(val marker: Int) : AppAction
         data class StartCancelPreviousShared(val marker: Int) : AppAction
-        data class StartConcurrentShared(val marker: Int) : AppAction
+        data class StartUntrackedShared(val marker: Int) : AppAction
         data object StartEnterLaunch : AppAction
         data object CancelShared : AppAction
         data object CancelMissing : AppAction
@@ -91,10 +91,10 @@ class StoreCancelLaunchTest {
                     }
                 }
 
-                action<AppAction.StartConcurrentShared> {
+                action<AppAction.StartUntrackedShared> {
                     launch(
                         dispatcher = testDispatcher,
-                        control = LaunchControl.Concurrent,
+                        control = LaunchControl.Untracked,
                     ) {
                         onStart?.invoke(action.marker)
                         try {
@@ -221,7 +221,7 @@ class StoreCancelLaunchTest {
     }
 
     @Test
-    fun cancelLaunch_doesNotCancelConcurrentLaunches() = runTest {
+    fun cancelLaunch_doesNotCancelUntrackedLaunches() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val cancelled = mutableListOf<Int>()
         val store = createStore(
@@ -229,7 +229,7 @@ class StoreCancelLaunchTest {
             onCancel = { cancelled += it },
         )
 
-        store.dispatch(AppAction.StartConcurrentShared(marker = 7))
+        store.dispatch(AppAction.StartUntrackedShared(marker = 7))
         runCurrent()
 
         store.dispatch(AppAction.CancelShared)

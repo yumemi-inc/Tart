@@ -15,7 +15,7 @@
 
 `LaunchControl` は、次の case を持つ API として公開する。
 
-- `LaunchControl.Concurrent` (デフォルト。通常は省略される。)
+- `LaunchControl.Untracked` (デフォルト。通常は省略される。)
 - `LaunchControl.CancelPrevious`
 - `LaunchControl.DropIfRunning`
 

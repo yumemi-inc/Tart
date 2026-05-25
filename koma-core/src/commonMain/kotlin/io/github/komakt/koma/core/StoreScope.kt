@@ -292,7 +292,7 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * explicit [LaunchLane] or the default lane for the current action type.
      * @param block The suspending block of code to execute
      */
-    fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Concurrent, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
+    fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Untracked, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a state-scoped coroutine launched from `action {}`.
