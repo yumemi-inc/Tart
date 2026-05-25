@@ -37,4 +37,4 @@ annotation class InternalKomaApi
 @DslMarker
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
-internal annotation class KomaStoreDsl
+annotation class KomaStoreDsl
