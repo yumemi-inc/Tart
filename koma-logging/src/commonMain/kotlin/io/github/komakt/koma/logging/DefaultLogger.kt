@@ -21,7 +21,6 @@ object DefaultLogger : Logger {
             Logger.Severity.Info -> Kermit.i(tag, throwable, message)
             Logger.Severity.Warn -> Kermit.w(tag, throwable, message)
             Logger.Severity.Error -> Kermit.e(tag, throwable, message)
-            Logger.Severity.Assert -> Kermit.a(tag, throwable, message)
         }
     }
 
