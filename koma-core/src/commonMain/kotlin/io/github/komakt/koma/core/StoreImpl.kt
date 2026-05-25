@@ -457,7 +457,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         block: suspend LS.() -> Unit,
     ) {
         when (control) {
-            LaunchControl.Concurrent -> {
+            LaunchControl.Untracked -> {
                 launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     dispatcher = dispatcher,
@@ -492,7 +492,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun resolveTrackedActionLaunchKey(action: A, control: LaunchControl): Any {
         return when (control) {
-            LaunchControl.Concurrent -> error("Concurrent launches do not have a tracked lane")
+            LaunchControl.Untracked -> error("Untracked launches do not have a tracked lane")
             is LaunchControl.CancelPrevious -> control.lane ?: action::class
             is LaunchControl.DropIfRunning -> control.lane ?: action::class
         }

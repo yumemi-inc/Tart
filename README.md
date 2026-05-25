@@ -520,8 +520,8 @@ val store = Store(MyState.Active()) {
 `LaunchControl.CancelPrevious(lane)` cancels the previous tracked launch in the same lane before starting the next one.
 `LaunchControl.DropIfRunning(lane)` ignores a new launch while tracked work in the same lane is still active.
 When the lane is omitted, `LaunchControl.CancelPrevious()` and `LaunchControl.DropIfRunning()` use the same internal default lane for that `action {}` block.
-`LaunchControl.Concurrent` keeps the default behavior and runs launches independently.
-`cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.CancelPrevious(...)` and `LaunchControl.DropIfRunning(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Concurrent` launches or `enter { launch { ... } }`.
+`LaunchControl.Untracked` keeps the default behavior and runs launches independently.
+`cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.CancelPrevious(...)` and `LaunchControl.DropIfRunning(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Untracked` launches or `enter { launch { ... } }`.
 
 ### Specifying coroutineContext
 

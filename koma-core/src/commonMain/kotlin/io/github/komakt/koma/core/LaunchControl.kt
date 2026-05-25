@@ -11,7 +11,7 @@ class LaunchLane
 /**
  * Controls how `action {}` launches coordinate with other tracked launches in the same lane.
  *
- * [Concurrent] launches are not tracked by lane.
+ * [Untracked] launches are not tracked by lane.
  * [CancelPrevious] and [DropIfRunning] create tracked lanes. When [LaunchLane] is omitted, the
  * launch uses a default lane derived from the current action type, so matching launches
  * coordinate across dispatches of that action type.
@@ -21,7 +21,7 @@ sealed interface LaunchControl {
     /**
      * Launch every invocation independently without lane tracking.
      */
-    data object Concurrent : LaunchControl
+    data object Untracked : LaunchControl
 
     /**
      * Cancel the previous tracked launch in the same lane before starting a new one.
