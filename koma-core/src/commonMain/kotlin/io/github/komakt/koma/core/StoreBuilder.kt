@@ -106,15 +106,23 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         storePlugins.addAll(rest)
     }
 
-    class StateHandler<P, SC : StoreScope>(
+    @PublishedApi
+    internal class StateHandler<P, SC : StoreScope>(
         val predicate: P,
         val handler: suspend SC.() -> Unit,
     )
 
-    val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
-    val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
-    val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E, S>>>()
-    val registeredErrorHandlers = mutableListOf<StateHandler<(S, Exception) -> Boolean, ErrorScope<S, E, S, Exception>>>()
+    @PublishedApi
+    internal val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
+
+    @PublishedApi
+    internal val registeredActionHandlers = mutableListOf<StateHandler<(S, A) -> Boolean, ActionScope<S, A, E, S>>>()
+
+    @PublishedApi
+    internal val registeredExitHandlers = mutableListOf<StateHandler<(S) -> Boolean, ExitScope<S, E, S>>>()
+
+    @PublishedApi
+    internal val registeredErrorHandlers = mutableListOf<StateHandler<(S, Exception) -> Boolean, ErrorScope<S, E, S, Exception>>>()
 
     private val onEnter: suspend EnterScope<S, E, S>.() -> Unit = {
         val matchingHandler = this@StoreBuilder.registeredEnterHandlers.firstOrNull { it.predicate(state) }
@@ -139,7 +147,8 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     @KomaStoreDsl
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
 
-        class ThreadedHandler<P, SC : StoreScope>(
+        @PublishedApi
+        internal class ThreadedHandler<P, SC : StoreScope>(
             private val dispatcher: CoroutineDispatcher?,
             val predicate: P,
             private val handler: suspend SC.() -> Unit,
@@ -155,10 +164,17 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             }
         }
 
-        val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, E, S2>>>()
-        val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
-        val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
-        val stateErrorHandlers = mutableListOf<ThreadedHandler<(Exception) -> Boolean, ErrorScope<S, E, S2, Exception>>>()
+        @PublishedApi
+        internal val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, E, S2>>>()
+
+        @PublishedApi
+        internal val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
+
+        @PublishedApi
+        internal val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
+
+        @PublishedApi
+        internal val stateErrorHandlers = mutableListOf<ThreadedHandler<(Exception) -> Boolean, ErrorScope<S, E, S2, Exception>>>()
 
         /**
          * Registers a handler to be invoked when entering this state with the specified CoroutineDispatcher.
