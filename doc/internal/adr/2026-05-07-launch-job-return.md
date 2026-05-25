@@ -27,5 +27,5 @@ Koma の `enter { launch { ... } }`、`action { launch { ... } }`、`PluginScope
 - `ActionScope.launch` にはすでに `LaunchControl.CancelPrevious(...)`、`LaunchControl.DropIfRunning(...)`、`cancelLaunch(lane)` があり、tracked launch の coordination は lane 単位の高水準 API として表現している。ここに生の `Job` を追加すると、「lane で止めるべきか」「保持していた job を直接止めるべきか」が二重化する。
 - 特に `LaunchControl.DropIfRunning(...)` は、新しい launch 要求が無視される場合がある。このとき `launch()` の戻り値を `Job` にすると、「今回の呼び出しで何が返るのか」を別途決める必要があり、API 意味論が余計に重くなる。
 - `EnterScope.launch` の仕事は state exit で自動停止し、`PluginScope.launch` の仕事は store root scope の終了で自動停止する。これらは Koma 側が lifecycle を所有しているため、公開 surface でもその ownership を保った方が自然である。
-- launched work 内の recoverable な `Exception` は `error {}` の回復経路に流す設計であり、利用者に見せたい境界は job failure そのものより state machine の recovery path である。`Job` を前面に出すと、失敗モデルも coroutine primitive 寄りに読まれやすくなる。
+- launched work 内の recoverable な `Exception` は `recover {}` の回復経路に流す設計であり、利用者に見せたい境界は job failure そのものより state machine の recovery path である。`Job` を前面に出すと、失敗モデルも coroutine primitive 寄りに読まれやすくなる。
 - ただし、「Store は生かしたまま特定の background work だけを owner が明示停止したい」といった要件が将来増える可能性までは否定しない。その場合は `Job` をそのまま返すより、「何を止めるための handle なのか」が分かる専用型の方が Koma の API surface と整合しやすい。

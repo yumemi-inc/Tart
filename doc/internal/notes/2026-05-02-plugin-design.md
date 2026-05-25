@@ -184,4 +184,4 @@ background work の完了順や、そこで起こした `dispatch()` の interle
 ## 関連
 
 - [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
-- [`error {}` に流さない framework boundary の例外処理は当面現状維持とする](../adr/2026-05-07-framework-boundary-exception-handling.md)
+- [`recover {}` に流さない framework boundary の例外処理は当面現状維持とする](../adr/2026-05-07-framework-boundary-exception-handling.md)
