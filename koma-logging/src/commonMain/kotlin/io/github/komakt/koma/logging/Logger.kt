@@ -37,8 +37,5 @@ fun interface Logger {
 
         /** Error information */
         Error,
-
-        /** Critical error information */
-        Assert,
     }
 }
