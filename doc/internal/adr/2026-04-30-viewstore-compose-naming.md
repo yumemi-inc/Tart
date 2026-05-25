@@ -1,6 +1,6 @@
 # `ViewStore.render` / `handle` の PascalCase 置き換えは採用しない
 
-- 更新日: 2026-04-30
+- 更新日: 2026-05-25
 
 ## 背景
 
@@ -29,3 +29,8 @@
 - そのため今回は「Compose guideline への整合」より、「`ViewStore` DSL としての自然さ」を優先する。
 - 既存 API には `@Suppress("ComposableNaming")` が必要だが、このコストは上記の不自然さを受け入れるより小さいと判断する。
 - 将来、トップレベルでもメンバでもない、より自然な API 形が見つかった場合はあらためて検討してよい。
+
+## 2026-05-25 追記
+
+その後、API 名は `render` / `handle` から `stateContent` / `eventEffect` へリネームされた。
+この rename により、API の意味は Compose 文脈により沿うようになったが、member composable を PascalCase にするかという論点自体は変わっていない。

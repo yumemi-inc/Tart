@@ -32,18 +32,18 @@ class ViewStoreJvmTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Test
-    fun render_callsBlockOnlyForMatchingState() = runTest(testDispatcher) {
+    fun stateContent_callsBlockOnlyForMatchingState() = runTest(testDispatcher) {
         val renderedValues = mutableListOf<Int>()
 
         withComposition(
             content = {
                 ViewStore<UiState, Nothing, Nothing>(state = UiState.Ready(10))
-                    .render<UiState.Ready> {
+                    .stateContent<UiState.Ready> {
                         renderedValues += state.value
                     }
 
                 ViewStore<UiState, Nothing, Nothing>(state = UiState.Loading)
-                    .render<UiState.Ready> {
+                    .stateContent<UiState.Ready> {
                         renderedValues += state.value
                     }
             },
@@ -53,7 +53,7 @@ class ViewStoreJvmTest {
     }
 
     @Test
-    fun handle_collectsOnlySpecifiedEventType() = runTest(testDispatcher) {
+    fun eventEffect_collectsOnlySpecifiedEventType() = runTest(testDispatcher) {
         val events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
         val handled = mutableListOf<UiEvent.ValueChanged>()
 
@@ -62,7 +62,7 @@ class ViewStoreJvmTest {
                 ViewStore<UiState, UiAction, UiEvent>(
                     state = UiState.Ready(0),
                     eventFlow = events,
-                ).handle<UiEvent.ValueChanged> { event ->
+                ).eventEffect<UiEvent.ValueChanged> { event ->
                     handled += event
                 }
             },
@@ -76,7 +76,7 @@ class ViewStoreJvmTest {
     }
 
     @Test
-    fun handle_usesLatestViewStoreAndLambdaAfterRecomposition() = runTest(testDispatcher) {
+    fun eventEffect_usesLatestViewStoreAndLambdaAfterRecomposition() = runTest(testDispatcher) {
         val events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
         val handled = mutableListOf<String>()
         var label = "initial"
@@ -99,7 +99,7 @@ class ViewStoreJvmTest {
                         ViewStore<UiState, UiAction, UiEvent>(
                             state = viewState,
                             eventFlow = events,
-                        ).handle<UiEvent.ValueChanged> { event ->
+                        ).eventEffect<UiEvent.ValueChanged> { event ->
                             handled += "${(state as UiState.Ready).value}:$label:${event.value}"
                         }
                     }
@@ -111,7 +111,7 @@ class ViewStoreJvmTest {
                         ViewStore<UiState, UiAction, UiEvent>(
                             state = viewState,
                             eventFlow = events,
-                        ).handle<UiEvent.ValueChanged> { event ->
+                        ).eventEffect<UiEvent.ValueChanged> { event ->
                             handled += "${(state as UiState.Ready).value}:$label:${event.value}"
                         }
                     }
@@ -127,6 +127,46 @@ class ViewStoreJvmTest {
         }
 
         assertEquals(listOf("2:updated:42"), handled)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun render_delegatesToStateContent() = runTest(testDispatcher) {
+        val renderedValues = mutableListOf<Int>()
+
+        withComposition(
+            content = {
+                ViewStore<UiState, Nothing, Nothing>(state = UiState.Ready(7))
+                    .render<UiState.Ready> {
+                        renderedValues += state.value
+                    }
+            },
+        )
+
+        assertEquals(listOf(7), renderedValues)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun handle_delegatesToEventEffect() = runTest(testDispatcher) {
+        val events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
+        val handled = mutableListOf<UiEvent.ValueChanged>()
+
+        withComposition(
+            content = {
+                ViewStore<UiState, UiAction, UiEvent>(
+                    state = UiState.Ready(0),
+                    eventFlow = events,
+                ).handle<UiEvent.ValueChanged> { event ->
+                    handled += event
+                }
+            },
+            afterSetContent = {
+                assertTrue(events.tryEmit(UiEvent.ValueChanged(100)))
+            },
+        )
+
+        assertEquals(listOf(UiEvent.ValueChanged(100)), handled)
     }
 
     @Test
