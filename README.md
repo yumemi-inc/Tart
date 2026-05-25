@@ -28,7 +28,7 @@ The architecture is inspired by [Flux](https://facebookarchive.github.io/flux/) 
 ## When Koma Fits Best
 
 Koma works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
-By combining Kotlin `sealed class`/`sealed interface` with Koma's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `error{}` behavior close together and make the transition rules easy to follow.
+By combining Kotlin `sealed class`/`sealed interface` with Koma's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `recover{}` behavior close together and make the transition rules easy to follow.
 
 ## Current Scope
 
@@ -382,7 +382,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-This works, but you can also handle exceptions with the `error{}` block.
+This works, but you can also handle exceptions with the `recover{}` block.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -397,13 +397,13 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
         }
 
         // more specific exceptions should be placed first
-        error<IllegalStateException> {
+        recover<IllegalStateException> {
             // ...
             nextState { CounterState.Error(error = error) }
         }
 
         // more general exception handlers should come last
-        error<Exception> {
+        recover<Exception> {
             // ...
             nextState { CounterState.Error(error = error) }
         }
@@ -412,7 +412,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 ```
 
 Exceptions can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
-In other words, your business logic exceptions can be handled in the `error{}` block.
+In other words, your business logic exceptions can be handled in the `recover{}` block.
 
 On the other hand, fatal errors and other uncaught non-`Exception` throwables in the entire Store can be handled with the `exceptionHandler()` specification:
 
@@ -541,7 +541,7 @@ Then, processing of all Coroutines will stop.
 
 #### Specifying CoroutineDispatchers
 
-You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `error{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
+You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `recover{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
 If you omit the dispatcher parameter, Koma keeps using the Store's current execution context for that operation.
 
 ```kt
@@ -605,7 +605,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 }
 ```
 
-Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `error{}`, or inside `transaction{}` from a launched coroutine.
+Regardless of the configured `PendingActionPolicy`, you can still discard already queued actions at a specific point by calling `clearPendingActions()` inside `enter{}`, `action{}`, `exit{}`, `recover{}`, or inside `transaction{}` from a launched coroutine.
 
 ### Using Control Flow in `Store{}`
 

@@ -88,7 +88,7 @@ class StorePluginTest {
             }
 
             state<AppState> {
-                error<Exception> {
+                recover<Exception> {
                     nextState { AppState.Failed(error.message ?: "unknown") }
                 }
             }

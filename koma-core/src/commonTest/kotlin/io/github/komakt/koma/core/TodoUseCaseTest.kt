@@ -222,7 +222,7 @@ class TodoUseCaseTest {
 
             // Global error handling
             state<AppState> {
-                error<Exception> {
+                recover<Exception> {
                     nextState { AppState.Error(error.message ?: "Unknown error") }
                 }
             }

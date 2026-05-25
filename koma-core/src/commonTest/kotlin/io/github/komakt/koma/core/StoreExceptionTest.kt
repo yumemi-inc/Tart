@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -42,5 +43,25 @@ class StoreExceptionTest {
         store.collectState { } // start Store
 
         assertNotNull(handledException)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun deprecated_errorDslAlias_shouldStillRecover() = runTest(testDispatcher) {
+        val store: Store<AppState, Nothing, Nothing> = Store(AppState(0)) {
+            this.coroutineContext(Dispatchers.Unconfined)
+            state<AppState> {
+                enter {
+                    throw RuntimeException("error")
+                }
+                error<RuntimeException> {
+                    nextState { AppState(1) }
+                }
+            }
+        }
+
+        store.collectState { } // start Store
+
+        assertEquals(AppState(1), store.currentState)
     }
 }

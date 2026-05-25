@@ -124,7 +124,7 @@ class CounterUseCaseTest {
                 action<AppAction.ForceError> {
                     throw RuntimeException(action.message)
                 }
-                error<Exception> {
+                recover<Exception> {
                     event(AppEvent.ErrorOccurred(error.message ?: "Unknown error"))
                     nextState { AppState.Error(error.message ?: "Unknown error") }
                 }

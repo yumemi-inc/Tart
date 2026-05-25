@@ -21,7 +21,7 @@ internal object MessageHub {
 /**
  * Sends a [Message] to Koma's process-wide shared message bus.
  *
- * Any DSL scope that implements [StoreScope] can call this, including enter, action, exit, error,
+ * Any DSL scope that implements [StoreScope] can call this, including enter, action, exit, recover,
  * launch, and transaction scopes.
  * Messages are not replayed, so receivers that are not actively collecting when a message is sent
  * will not receive that past message.
