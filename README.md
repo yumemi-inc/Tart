@@ -757,37 +757,37 @@ Text(
 )
 ```
 
-If there are multiple *States*, use the `.renderState()` method for the target *State*.
+If there are multiple *States*, use the `.stateContent()` method for the target *State*.
 
 ```kt
-viewStore.renderState<CounterState.Main> {
+viewStore.stateContent<CounterState.Main> {
     Text(
         text = state.count.toString(),
     )
 }
 ```
 
-When drawing the UI, if it does not match the target *State*, the `.renderState()` will not be executed.
+When drawing the UI, if it does not match the target *State*, the `.stateContent()` will not be executed.
 Therefore, you can define components for each *State* side by side.
 
 ```kt
-viewStore.renderState<CounterState.Loading> {
+viewStore.stateContent<CounterState.Loading> {
     Text(
         text = "loading..",
     )
 }
 
-viewStore.renderState<CounterState.Main> {
+viewStore.stateContent<CounterState.Main> {
     Text(
         text = state.count.toString(),
     )
 }
 ```
 
-If you use lower components in the `renderState()` block, pass its instance.
+If you use lower components in the `stateContent()` block, pass its instance.
 
 ```kt
-viewStore.renderState<CounterState.Main> {
+viewStore.stateContent<CounterState.Main> {
     YourComposable(
         viewStore = this, // ViewStore instance for CounterState.Main
     )
@@ -822,10 +822,10 @@ Button(
 
 ### Handling Events
 
-Use ViewStore's `.collectEvent()` with the target *Event*.
+Use ViewStore's `.eventEffect()` with the target *Event*.
 
 ```kt
-viewStore.collectEvent<CounterEvent.ShowToast> { event ->
+viewStore.eventEffect<CounterEvent.ShowToast> { event ->
     // do something..
 }
 ```
@@ -833,7 +833,7 @@ viewStore.collectEvent<CounterEvent.ShowToast> { event ->
 In the above example, you can also subscribe to the parent *Event* type.
 
 ```kt
-viewStore.collectEvent<CounterEvent> { event ->
+viewStore.eventEffect<CounterEvent> { event ->
     when (event) {
         is CounterEvent.ShowToast -> // do something..
         is CounterEvent.GoBack -> // do something..

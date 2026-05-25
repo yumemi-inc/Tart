@@ -1,26 +1,26 @@
 # `ViewStore.render` / `handle` の PascalCase 置き換えは採用しない
 
-- 更新日: 2026-04-30
+- 更新日: 2026-05-25
 
 ## 背景
 
-`ViewStore.renderState` / `ViewStore.collectEvent` は `@Composable` であり、Compose の naming guideline にそのまま寄せるなら、`Unit` を返す public composable として PascalCase の名前にしたくなる。
+`ViewStore.render` / `ViewStore.handle` は `@Composable` であり、Compose の naming guideline にそのまま寄せるなら、`Unit` を返す public composable として PascalCase の名前にしたくなる。
 
 このため、次の 2 方向を検討した。
 
 - トップレベル関数として `StateContent(viewStore) {}` / `EventHandler(viewStore) {}`
 - `ViewStore` のメンバ関数として `viewStore.StateContent {}` / `viewStore.EventHandler {}`
 
-ただし、どちらも現在の `viewStore.renderState {}` / `viewStore.collectEvent {}` が持つ DSL としての自然さを崩す懸念があった。
+ただし、どちらも現在の `viewStore.render {}` / `viewStore.handle {}` が持つ DSL としての自然さを崩す懸念があった。
 
 ## 決定
 
-`ViewStore.renderState` / `ViewStore.collectEvent` を PascalCase の別 API に置き換える案は採用しない。
+`ViewStore.render` / `ViewStore.handle` を PascalCase の別 API に置き換える案は採用しない。
 
 現時点では、既存の lowerCamelCase API を維持する。
 
-- `viewStore.renderState<...> { ... }`
-- `viewStore.collectEvent<...> { ... }`
+- `viewStore.render<...> { ... }`
+- `viewStore.handle<...> { ... }`
 
 ## 補足
 
@@ -29,3 +29,8 @@
 - そのため今回は「Compose guideline への整合」より、「`ViewStore` DSL としての自然さ」を優先する。
 - 既存 API には `@Suppress("ComposableNaming")` が必要だが、このコストは上記の不自然さを受け入れるより小さいと判断する。
 - 将来、トップレベルでもメンバでもない、より自然な API 形が見つかった場合はあらためて検討してよい。
+
+## 2026-05-25 追記
+
+その後、API 名は `render` / `handle` から `stateContent` / `eventEffect` へリネームされた。
+この rename により、API の意味は Compose 文脈により沿うようになったが、member composable を PascalCase にするかという論点自体は変わっていない。
