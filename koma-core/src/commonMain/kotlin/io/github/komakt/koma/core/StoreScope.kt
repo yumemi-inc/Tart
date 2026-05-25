@@ -410,7 +410,6 @@ typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.Transact
 
 /**
  * Scope available to a `recover {}` handler after a non-fatal exception is caught.
- * This scope is also used by the deprecated `error {}` alias.
  *
  * Use this to recover from exceptions or update state accordingly.
  */

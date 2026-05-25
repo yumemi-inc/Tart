@@ -248,7 +248,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      * Configures handlers for a specific state subtype.
      *
      * Inside the block, you can register `enter {}`, `action {}`, `exit {}`, and `recover {}`
-     * handlers narrowed to [S2]. The deprecated `error {}` alias remains available for compatibility.
+     * handlers narrowed to [S2].
      * Handler selection is first-match in registration order.
      * If both broad and specific handlers can match, place broader handlers later.
      *
