@@ -226,16 +226,16 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
 
         /**
-         * Registers a handler for a specific exception type in the current state configuration
+         * Registers a recovery handler for a specific exception type in the current state configuration
          * with an optional CoroutineDispatcher.
-         * If multiple `error {}` handlers can match the current state and error,
+         * If multiple `recover {}` handlers can match the current state and error,
          * the first registered handler is used.
          * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
-         * @param dispatcher Optional CoroutineDispatcher override for executing the error handler
-         * @param block The handler function that processes the error and updates the state
+         * @param dispatcher Optional CoroutineDispatcher override for executing the recover handler
+         * @param block The handler function that processes the exception and updates the state
          */
-        inline fun <reified T : Exception> error(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
+        inline fun <reified T : Exception> recover(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
             stateErrorHandlers.add(
                 ThreadedHandler(
                     dispatcher = dispatcher,
@@ -247,12 +247,23 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                 ),
             )
         }
+
+        /**
+         * @deprecated Use `recover {}`.
+         */
+        @Deprecated(
+            message = "Use recover<T>(dispatcher, block)",
+            replaceWith = ReplaceWith("recover<T>(dispatcher, block)"),
+        )
+        inline fun <reified T : Exception> error(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ErrorScope<S, E, S2, T>.() -> Unit) {
+            recover(dispatcher, block)
+        }
     }
 
     /**
      * Configures handlers for a specific state subtype.
      *
-     * Inside the block, you can register `enter {}`, `action {}`, `exit {}`, and `error {}`
+     * Inside the block, you can register `enter {}`, `action {}`, `exit {}`, and `recover {}`
      * handlers narrowed to [S2].
      * Handler selection is first-match in registration order.
      * If both broad and specific handlers can match, place broader handlers later.

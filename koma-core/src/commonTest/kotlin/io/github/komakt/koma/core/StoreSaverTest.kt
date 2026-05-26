@@ -33,7 +33,7 @@ class StoreSaverTest {
                     nextState { state.copy(value = action.value) }
                 }
                 if (errorStateOnException != null) {
-                    error<Exception> {
+                    recover<Exception> {
                         nextState { errorStateOnException }
                     }
                 }

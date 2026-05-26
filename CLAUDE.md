@@ -28,11 +28,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Use the @KomaStoreDsl annotation for builder APIs
 - Follow the state{} and action{} block pattern
-- Handle errors in dedicated error{} blocks
+- Handle recoverable exceptions in dedicated recover{} blocks
 
 ### Error Handling
 
-- Use store.error{} for business logic errors
+- Use store.recover{} for business logic exceptions
 - Use store.exceptionHandler() for system errors
 - Prefer modeling errors as state transitions
 

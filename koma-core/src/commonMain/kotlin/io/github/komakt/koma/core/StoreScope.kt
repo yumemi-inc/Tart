@@ -409,7 +409,7 @@ typealias ActionLaunchScope<S, A, E, S2> = ActionScope.LaunchScope<S, A, E, S2>
 typealias ActionTransactionScope<S, A, E, S2> = ActionScope.LaunchScope.TransactionScope<S, A, E, S2>
 
 /**
- * Scope available to an `error {}` handler after a non-fatal exception is caught.
+ * Scope available to a `recover {}` handler after a non-fatal exception is caught.
  *
  * Use this to recover from exceptions or update state accordingly.
  */
@@ -427,7 +427,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     val error: T
 
     /**
-     * Registers the next state to apply after the current error handler finishes
+     * Registers the next state to apply after the current recover handler finishes
      * by computing it in the given block.
      * This does not update [state] immediately.
      * If called multiple times in the same handler, the last specified state is used.
@@ -467,7 +467,7 @@ interface ErrorScope<S : State, E : Event, S2 : S, T : Exception> : StoreScope {
     fun clearPendingActions()
 
     /**
-     * Emits an event immediately from the current error handler.
+     * Emits an event immediately from the current recover handler.
      * Emission is not deferred until after a next state registered in this handler is applied.
      *
      * @param event The event to emit

@@ -119,7 +119,7 @@ class LoginUseCaseTest {
             }
             // Error handling for all states
             state<AppState> {
-                error<Exception> {
+                recover<Exception> {
                     nextState { AppState.Error(error.message ?: "Unknown error") }
                 }
             }
