@@ -334,7 +334,7 @@ class ViewStoreJvmTest {
     }
 
     @Test
-    fun rememberViewStore_closeBehaviorUsesInitialAutoCloseValue() = runTest(testDispatcher) {
+    fun rememberViewStore_closeBehaviorIsFixedPerRememberedStore() = runTest(testDispatcher) {
         val neverCloseStore = TestStore(UiState.Ready(0))
         var autoClose = mutableStateOf(false)
 
@@ -349,14 +349,67 @@ class ViewStoreJvmTest {
 
         assertEquals(0, neverCloseStore.closeCount)
 
-        val closeStore = TestStore(UiState.Ready(0))
+        val alwaysCloseStore = TestStore(UiState.Ready(0))
+        autoClose.value = true
         withComposition(
             content = {
-                rememberViewStore(autoClose = true) { closeStore }
+                rememberViewStore(autoClose = autoClose.value) { alwaysCloseStore }
+            },
+            afterSetContent = {
+                autoClose.value = false
             },
         )
 
-        assertEquals(1, closeStore.closeCount)
+        assertEquals(1, alwaysCloseStore.closeCount)
+    }
+
+    @Test
+    fun rememberViewStore_keyChangeAppliesAutoCloseToNewRememberedStore() = runTest(testDispatcher) {
+        val firstStore = TestStore(UiState.Ready(0))
+        val secondStore = TestStore(UiState.Ready(0))
+        val frameClock = BroadcastFrameClock()
+        var frameTimeNanos = 0L
+        var key = "first"
+        var autoClose = false
+
+        suspend fun pumpFrame() {
+            testScheduler.runCurrent()
+            frameTimeNanos += 16_000_000L
+            frameClock.sendFrame(frameTimeNanos)
+            testScheduler.runCurrent()
+        }
+
+        withContext(frameClock) {
+            withRunningRecomposer { recomposer ->
+                val composition = Composition(NoOpApplier(), recomposer)
+                try {
+                    composition.setContent {
+                        rememberViewStore(key = key, autoClose = autoClose) {
+                            if (key == "first") firstStore else secondStore
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+
+                    autoClose = true
+                    key = "second"
+                    composition.setContent {
+                        rememberViewStore(key = key, autoClose = autoClose) {
+                            if (key == "first") firstStore else secondStore
+                        }
+                    }
+                    repeat(2) { pumpFrame() }
+
+                    assertEquals(0, firstStore.closeCount)
+                    assertEquals(0, secondStore.closeCount)
+                } finally {
+                    composition.dispose()
+                    pumpFrame()
+                }
+            }
+        }
+
+        assertEquals(0, firstStore.closeCount)
+        assertEquals(1, secondStore.closeCount)
     }
 
     @Test

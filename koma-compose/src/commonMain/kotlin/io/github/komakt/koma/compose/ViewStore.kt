@@ -121,6 +121,9 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
  * For a given remembered Store instance, this function returns the same [ViewStore] instance across
  * recompositions. A new [ViewStore] is created only when a new Store instance is remembered for
  * [key].
+ * The [autoClose] value is fixed when that remembered Store instance is adopted. Recomposition
+ * alone does not change close ownership for the same Store, but when [key] causes a different
+ * Store instance to be remembered, the current [autoClose] value is used for that new Store.
  *
  * @param key Key used to remember and retain the Store instance
  * @param autoClose Whether to close the Store when the composable leaves the composition
@@ -130,20 +133,19 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
 @Suppress("unused")
 @Composable
 fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoClose: Boolean = false, store: @Composable () -> Store<S, A, E>): ViewStore<S, A, E> {
-    val fixedAutoClose = remember { autoClose }
-
     val holder = remember(key) {
         object {
             var value: Store<S, A, E>? = null
         }
     }
     val rememberedStore = holder.value ?: store().also { holder.value = it }
+    val closeStoreOnDispose = remember(rememberedStore) { autoClose }
 
     val state = rememberedStore.state.collectAsState()
 
     DisposableEffect(rememberedStore) {
         onDispose {
-            if (fixedAutoClose) {
+            if (closeStoreOnDispose) {
                 rememberedStore.close()
             }
         }
